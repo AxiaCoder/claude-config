@@ -10,7 +10,8 @@
 # Le dossier perso, optionnel, porte ce qui est propre à l'utilisateur : ses
 # settings.json et settings.macos.json s'ajoutent par-dessus ceux du dépôt, et
 # son CLAUDE.md prend la place de {{PERSO_CLAUDE_MD}}, avec {{PERSO}} remplacé
-# par le chemin du dossier. Il
+# par le chemin du dossier. Son CLAUDE.complet.md, s'il en a un, remplace tout le
+# CLAUDE.md du dépôt et fait ignorer son CLAUDE.md. Il
 # est mémorisé dans ~/.claude/claude-config.perso : les passes suivantes le
 # reprennent sans --perso.
 #
@@ -88,21 +89,34 @@ for dir in "${LINKED_DIRS[@]}"; do
   run ln -s "$source" "$target"
 done
 
-echo "  CLAUDE.md : rendu, avec le CLAUDE.md du dossier perso s'il en a un"
+if [ -n "$PERSO" ] && [ -f "$PERSO/CLAUDE.complet.md" ]; then
+  echo "  CLAUDE.md : remplacé par le CLAUDE.complet.md du dossier perso"
+  [ -f "$PERSO/CLAUDE.md" ] && echo "  CLAUDE.md : le CLAUDE.md du dossier perso est ignoré, CLAUDE.complet.md le remplace"
+else
+  echo "  CLAUDE.md : rendu, avec le CLAUDE.md du dossier perso s'il en a un"
+fi
 run python3 - "$REPO/CLAUDE.md" "$CLAUDE_HOME/CLAUDE.md" "$PERSO" <<'PY'
 import os, pathlib, re, sys
 src, dest, perso = sys.argv[1:4]
 perso_md = pathlib.Path(perso) / "CLAUDE.md" if perso else None
-insert = ""
-if perso_md and perso_md.exists():
+perso_complet = pathlib.Path(perso) / "CLAUDE.complet.md" if perso else None
+
+def resolve_perso(content):
+    """Replace each {{PERSO}} marker and its path tail with the normalized absolute path under perso."""
     def resolve(m):
         tail = m.group("tail")
         path = os.path.normpath(perso + tail)
         return path + "/" if tail.endswith("/") else path
-    insert = re.sub(r"\{\{PERSO\}\}(?P<tail>[\w./\[\]-]*)", resolve,
-                    perso_md.read_text(encoding="utf-8")) + "\n"
-text = re.sub(r"\{\{PERSO_CLAUDE_MD\}\}\r?\n(?:\r?\n)?", lambda m: insert,
-              pathlib.Path(src).read_text(encoding="utf-8"))
+    return re.sub(r"\{\{PERSO\}\}(?P<tail>[\w./\[\]-]*)", resolve, content)
+
+if perso_complet and perso_complet.exists():
+    text = resolve_perso(perso_complet.read_text(encoding="utf-8"))
+else:
+    insert = ""
+    if perso_md and perso_md.exists():
+        insert = resolve_perso(perso_md.read_text(encoding="utf-8")) + "\n"
+    text = re.sub(r"\{\{PERSO_CLAUDE_MD\}\}\r?\n(?:\r?\n)?", lambda m: insert,
+                  pathlib.Path(src).read_text(encoding="utf-8"))
 if "{{PERSO" in text:
     sys.exit("CLAUDE.md : un marqueur {{PERSO…}} survit au rendu, ~/.claude/CLAUDE.md n'est pas écrit.")
 pathlib.Path(dest).write_text(text, encoding="utf-8")
