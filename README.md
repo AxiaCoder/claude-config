@@ -28,7 +28,8 @@
   traiter une review, vérifier avant d'annoncer, auditer un dépôt ou le SEO d'une page publique.
 - **Des commandes** — `/pr`, `/pr-review`, `/start-ticket`, `/new-ticket`.
 - **De la télémétrie** — l'OpenTelemetry natif de Claude Code, plus un collecteur qui rend aux
-  sous-agents leur nom.
+  sous-agents leur nom. Ce dépôt émet ; la pile qui reçoit et affiche est
+  [**home-server-telemetry**](https://github.com/AxiaCoder/home-server-telemetry).
 
 ## Inspiration
 
@@ -166,7 +167,9 @@ Un marqueur qui survit au rendu arrête l'installation avant d'écrire le fichie
 | `statusline` | en continu | modèle, dossier, branche, contexte, quotas |
 
 La télémétrie demande une instance VictoriaMetrics et son adresse dans le dossier perso
-(`TELEMETRIE_ENDPOINTS`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`). Déclarer un hook, le vérifier, et
+(`TELEMETRIE_ENDPOINTS`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`) — VictoriaMetrics, Grafana et
+les dashboards qui lisent ces métriques sont dans
+[home-server-telemetry](https://github.com/AxiaCoder/home-server-telemetry). Déclarer un hook, le vérifier, et
 ce dont chacun a besoin → [`HOOKS.md`](./HOOKS.md).
 
 ### Hooks git globaux
