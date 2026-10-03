@@ -91,8 +91,9 @@ Le dossier peut contenir, chacun facultatif :
 | `settings.json` | fusionné par-dessus les réglages du dépôt, sur les deux OS — `env` clé par clé, `hooks` et `permissions` ajoutés à ceux du dépôt, les autres clés — `statusLine` comprise — en bloc |
 | `settings.macos.json` / `settings.windows.json` | fusionné ensuite, sur cet OS seulement |
 | `CLAUDE.md` | inséré dans le `CLAUDE.md` rendu, à la place de `{{PERSO_CLAUDE_MD}}` |
+| `CLAUDE.complet.md` | remplace tout le `CLAUDE.md` du dépôt, et fait ignorer le `CLAUDE.md` perso — pour une machine qui n'a que des sessions sans humain, un serveur ou une CI. ⚠️ Les règles du dépôt ne suivent plus : à recopier quand elles changent |
 
-Dans ce `CLAUDE.md`, `{{PERSO}}` est remplacé par le chemin du dossier perso, normalisé :
+Dans ce `CLAUDE.md` comme dans `CLAUDE.complet.md`, `{{PERSO}}` est remplacé par le chemin du dossier perso, normalisé :
 `{{PERSO}}/../notes/USER.md` devient le chemin absolu du `notes/USER.md` voisin.
 
 ➡️ Un exemple prêt à copier : [`exemple-perso/`](./exemple-perso/).
@@ -147,7 +148,7 @@ L'état d'avant la passe est copié en `settings.json.prev`.
 | `{{REPO}}` | le chemin de ce dépôt, ouvert à Claude Code par `permissions.additionalDirectories` |
 | `{{PYTHON}}` | sous Windows : l'interpréteur trouvé par `py -3`, sinon `python` |
 | `{{PERSO_CLAUDE_MD}}` | le `CLAUDE.md` du dossier perso, ou rien |
-| `{{PERSO}}` | dans ce `CLAUDE.md` perso : le chemin du dossier perso |
+| `{{PERSO}}` | dans le `CLAUDE.md` ou le `CLAUDE.complet.md` perso : le chemin du dossier perso |
 
 Un marqueur qui survit au rendu arrête l'installation avant d'écrire le fichier.
 

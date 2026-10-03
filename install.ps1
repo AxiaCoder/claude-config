@@ -12,7 +12,9 @@
 .PARAMETER Perso
   Dossier perso, optionnel : ses settings.json et settings.windows.json
   s'ajoutent par-dessus ceux du depot, et son CLAUDE.md prend la place de
-  {{PERSO_CLAUDE_MD}}, avec {{PERSO}} remplace par le chemin du dossier. Memorise dans
+  {{PERSO_CLAUDE_MD}}, avec {{PERSO}} remplace par le chemin du dossier. Son
+  CLAUDE.complet.md, s'il en a un, remplace tout le CLAUDE.md du depot et fait
+  ignorer son CLAUDE.md. Memorise dans
   ~/.claude/claude-config.perso, repris sans -Perso aux passes suivantes.
 
 .PARAMETER WhatIfOnly
@@ -108,26 +110,45 @@ foreach ($dir in $LinkedDirs) {
 }
 
 # --- Fichiers rendus ------------------------------------------------------
-$insert = ''
 $persoMd = if ($Perso) { Join-Path $Perso 'CLAUDE.md' } else { $null }
-if ($persoMd -and (Test-Path $persoMd)) {
+$persoComplet = if ($Perso) { Join-Path $Perso 'CLAUDE.complet.md' } else { $null }
+$useComplet = $persoComplet -and (Test-Path $persoComplet)
+
+function Resolve-PersoMarker([string] $Text) {
+  <# Replaces each {{PERSO}} marker and the path tail following it with the normalized absolute path under $Perso. #>
   # Le marqueur et la suite du chemin partent ensemble : sinon seul le premier
   # separateur passe en Windows et la ligne rendue melange les deux formes.
-  $insert = [regex]::Replace(
-    (Get-Content $persoMd -Raw),
+  [regex]::Replace(
+    $Text,
     '\{\{PERSO\}\}(?<tail>[\w./\[\]-]*)',
     { param($m) [System.IO.Path]::GetFullPath($Perso + $m.Groups['tail'].Value.Replace('/', [char]92)) }
-  ) + "`n"
+  )
 }
-$claudeMd = [regex]::Replace(
-  (Get-Content (Join-Path $Repo 'CLAUDE.md') -Raw),
-  '\{\{PERSO_CLAUDE_MD\}\}\r?\n(?:\r?\n)?',
-  { param($m) $insert }
-)
+
+if ($useComplet) {
+  $claudeMd = Resolve-PersoMarker (Get-Content $persoComplet -Raw)
+}
+else {
+  $insert = ''
+  if ($persoMd -and (Test-Path $persoMd)) {
+    $insert = (Resolve-PersoMarker (Get-Content $persoMd -Raw)) + "`n"
+  }
+  $claudeMd = [regex]::Replace(
+    (Get-Content (Join-Path $Repo 'CLAUDE.md') -Raw),
+    '\{\{PERSO_CLAUDE_MD\}\}\r?\n(?:\r?\n)?',
+    { param($m) $insert }
+  )
+}
 if ($claudeMd.Contains('{{PERSO')) {
   throw "CLAUDE.md : un marqueur {{PERSO...}} survit au rendu, ~/.claude/CLAUDE.md n'est pas ecrit."
 }
-Step "CLAUDE.md : rendu, avec le CLAUDE.md du dossier perso s'il en a un"
+if ($useComplet) {
+  Step "CLAUDE.md : remplace par le CLAUDE.complet.md du dossier perso"
+  if (Test-Path $persoMd) {
+    Step "CLAUDE.md : le CLAUDE.md du dossier perso est ignore, CLAUDE.complet.md le remplace"
+  }
+}
+else { Step "CLAUDE.md : rendu, avec le CLAUDE.md du dossier perso s'il en a un" }
 if (-not $WhatIfOnly) {
   Set-Content (Join-Path $ClaudeHome 'CLAUDE.md') $claudeMd -NoNewline -Encoding utf8
   Copy-Item (Join-Path $Repo 'CAVEMAN.md') (Join-Path $ClaudeHome 'CAVEMAN.md') -Force
