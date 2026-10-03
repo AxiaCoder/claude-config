@@ -97,7 +97,7 @@ ferait sinon vérifier que `python3`, qui existe toujours. Et il lit `settings.l
 | Brique | Ce qu'elle demande |
 |---|---|
 | `guardrail.py` | rien — bibliothèque standard. **Commandes destructrices : outil `Bash` seulement, pas l'outil PowerShell** |
-| `collecteur-agents.py` | une adresse de collecte dans `env` (dossier perso), et une instance VictoriaMetrics derrière |
+| `collecteur-agents.py` | une adresse de collecte dans `env` (dossier perso), et une instance VictoriaMetrics derrière — celle de [home-server-telemetry](https://github.com/AxiaCoder/home-server-telemetry), par exemple |
 | `session-git-context`, `post-write-lint` | `sh` sur macOS ; `pwsh` (PowerShell 7) sous Windows. `post-write-lint` demande aussi `pnpm` dans un projet AdonisJS |
 | `statusline.py` | rien — bibliothèque standard |
 | `garde-push.py` | python — bibliothèque standard. Refuse une commande de l'agent qui désarmerait `git-hooks/pre-push` |
