@@ -1,0 +1,87 @@
+{
+  "permissions": {
+    "additionalDirectories": ["{{REPO}}"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{CLAUDE_HOME}}/hooks/post-write-lint.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/collecteur-agents.py\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{CLAUDE_HOME}}/hooks/session-git-context.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/collecteur-agents.py\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{CLAUDE_HOME}}/hooks/guardrail.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/garde-push.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{CLAUDE_HOME}}/hooks/guardrail.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{CLAUDE_HOME}}/hooks/guardrail.py"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"{{CLAUDE_HOME}}/hooks/statusline.py\""
+  },
+  "env": {
+    "OTEL_RESOURCE_ATTRIBUTES": "machine=mac"
+  }
+}

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Relaie le hook post-applypatch vers celui du dépôt, voir _relais.
+exec "$(dirname "$0")/_relais" "$(basename "$0")" "$@"

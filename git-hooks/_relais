@@ -1,0 +1,26 @@
+#!/bin/sh
+# Relais commun des hooks git globaux : lance le hook propre au dépôt
+# (<git-common-dir>/hooks/<nom>) avec les mêmes arguments et la même entrée,
+# et prend son code de sortie. Sans hook local exécutable, hors dépôt git, ou si le
+# hook local est le hook global lui-même, sort en 0.
+#
+# Arguments : $1 nom du hook, la suite est transmise telle quelle au hook local.
+
+nom=$1
+shift
+
+# Affiche le chemin absolu de $1, dossiers parents résolus.
+chemin_resolu() {
+	dossier=$(cd "$(dirname "$1")" 2>/dev/null && pwd -P) || return 1
+	printf '%s/%s\n' "$dossier" "$(basename "$1")"
+}
+
+dossier_commun=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+suivant="$dossier_commun/hooks/$nom"
+[ -f "$suivant" ] && [ -x "$suivant" ] || exit 0
+
+global=$(chemin_resolu "$(dirname "$0")/$nom")
+local_=$(chemin_resolu "$suivant")
+[ "$global" = "$local_" ] && exit 0
+
+exec "$suivant" "$@"

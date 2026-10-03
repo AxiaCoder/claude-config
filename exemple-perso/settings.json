@@ -1,0 +1,7 @@
+{
+  "tui": "fullscreen",
+  "env": {
+    "TELEMETRIE_ENDPOINTS": "http://192.0.2.10:8428",
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "http://192.0.2.10:8428/opentelemetry/v1/metrics"
+  }
+}

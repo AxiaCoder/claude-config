@@ -1,0 +1,33 @@
+# Cinq dossiers de ~/.claude sont des liens vers ce repo : ce que Claude Code y
+# écrit à l'exécution (cache de skills, bytecode Python des hooks) atterrit ici.
+# D'où un deny-all : rien n'entre dans le repo sans figurer dans cette liste.
+
+/*
+
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/LICENSE
+!/CLAUDE.md
+!/HOOKS.md
+!/CAVEMAN.md
+!/agents/
+!/commands/
+!/skills/
+!/hooks/
+!/git-hooks/
+!/scripts/
+!/exemple-perso/
+!/settings.base.json
+!/settings.windows.json
+!/settings.macos.json
+!/install.ps1
+!/install.sh
+
+# Le cache que le harness synchronise sous ~/.claude/skills, et qui atterrit ici
+# par le lien symbolique vers skills/.
+/skills/synced/
+
+# Bytecode Python des hooks et des scripts
+__pycache__/
+*.pyc

@@ -1,0 +1,88 @@
+#!/bin/sh
+# Hook git pre-push global : refuse un push vers main ou master d'un remote GitHub,
+# suppression de la branche comprise. Les autres remotes et branches passent.
+#
+# Activation (tous les dépôts) :
+#   git config --global core.hooksPath <chemin>/claude-config/git-hooks
+#
+# Contournement ponctuel :
+#   ALLOW_PUSH_MAIN=1 git push …
+#
+# Désactivation pour un dépôt :
+#   git config --local garde.pushMain off
+#
+# Quand le push est autorisé, le hook propre au dépôt (<git-common-dir>/hooks/pre-push),
+# s'il existe et est exécutable, est lancé avec les mêmes arguments et la même entrée ;
+# son code de sortie devient celui de ce hook.
+#
+# Arguments : $1 nom du remote, $2 URL. Entrée : une ligne par ref poussée,
+# « <ref locale> <sha local> <ref distante> <sha distant> ».
+
+remote_nom=$1
+remote_url=$2
+entree=$(cat)
+
+# Affiche la première branche protégée visée par l'entrée, rien sinon.
+branche_protegee_visee() {
+	printf '%s\n' "$entree" | while read -r _ref_locale _sha_local ref_distante _sha_distant; do
+		case "$ref_distante" in
+		refs/heads/main | refs/heads/master)
+			printf '%s\n' "${ref_distante#refs/heads/}"
+			break
+			;;
+		esac
+	done
+}
+
+# Rend le chemin absolu résolu (liens symboliques suivis) du fichier $1.
+chemin_resolu() {
+	dossier=$(cd "$(dirname "$1")" 2>/dev/null && pwd -P) || return 1
+	printf '%s/%s\n' "$dossier" "$(basename "$1")"
+}
+
+if [ "$(git config --get garde.pushMain 2>/dev/null)" != "off" ]; then
+	case "$remote_url" in
+	*[Gg][Ii][Tt][Hh][Uu][Bb].[Cc][Oo][Mm]*)
+		cible=$(branche_protegee_visee)
+		if [ -n "$cible" ]; then
+			if [ "${ALLOW_PUSH_MAIN:-}" = "1" ]; then
+				echo "pre-push : push vers « $cible » autorisé par ALLOW_PUSH_MAIN=1." >&2
+			else
+				cat >&2 <<MSG
+
+  ⛔  Push direct vers « $cible » refusé ($remote_nom → $remote_url).
+
+  Marche à suivre :
+    git switch -c ma-branche
+    git push -u $remote_nom ma-branche
+    gh pr create --base $cible
+
+  Contournement ponctuel :
+    ALLOW_PUSH_MAIN=1 git push …
+
+  Désactiver ce garde pour ce dépôt :
+    git config --local garde.pushMain off
+
+MSG
+				exit 1
+			fi
+		fi
+		;;
+	esac
+fi
+
+dossier_commun=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+suivant="$dossier_commun/hooks/pre-push"
+if [ -f "$suivant" ] && [ -x "$suivant" ]; then
+	moi=$(chemin_resolu "$0")
+	lui=$(chemin_resolu "$suivant")
+	if [ "$moi" != "$lui" ]; then
+		if [ -n "$entree" ]; then
+			printf '%s\n' "$entree" | "$suivant" "$@"
+		else
+			"$suivant" "$@" </dev/null
+		fi
+		exit $?
+	fi
+fi
+exit 0
