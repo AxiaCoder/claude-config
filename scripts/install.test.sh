@@ -1,7 +1,7 @@
 #!/bin/sh
 # Cas de test de la fusion de settings.json par install.sh. Sortie 0 si tous passent.
 #
-# Cas de test du rendu de CLAUDE.md, avec ou sans le CLAUDE.md du dossier perso.
+# Cas de test du rendu de CLAUDE.md, avec ou sans le CLAUDE.md ou le CLAUDE.complet.md du dossier perso.
 #
 # install.sh tourne sur une copie, avec un faux dépôt, un faux dossier perso et un HOME
 # jetables : ni le vrai ~/.claude, ni le vrai dossier perso, ni la config git globale.
@@ -159,6 +159,33 @@ printf '## perso\nreste {{PERSO_CLAUDE_MD}}\n' >"$tmp/marqueur-residuel/perso/CL
 installer marqueur-residuel --perso "$tmp/marqueur-residuel/perso"
 verdict refus "$([ "$?" -ne 0 ] && echo refus || echo accepte)" "marqueur résiduel : install refusée"
 verdict nomme "$(grep -q 'PERSO' "$tmp/marqueur-residuel/sortie" && echo nomme || echo muet)" "marqueur résiduel : le refus nomme le marqueur"
+
+# Un perso avec CLAUDE.complet.md seul : il devient le CLAUDE.md rendu, {{PERSO}} résolu, celui du dépôt non lu.
+monter complet-seul
+printf '# complet\nvoir {{PERSO}}/../x\n' >"$tmp/complet-seul/perso/CLAUDE.complet.md"
+installer complet-seul --perso "$tmp/complet-seul/perso"; verdict 0 "$?" "complet seul : install sans erreur"
+complet_parent=$(cd "$tmp/complet-seul" && pwd)
+verdict "# complet|voir $complet_parent/x|" "$(rendu complet-seul)" "complet seul : rendu = complet, {{PERSO}} résolu"
+verdict absent "$(grep -qE '^# (avant|apres)$' "$tmp/complet-seul/home/.claude/CLAUDE.md" && echo present || echo absent)" "complet seul : CLAUDE.md du dépôt non lu"
+verdict muet "$(grep -qF 'est ignoré' "$tmp/complet-seul/sortie" && echo annonce || echo muet)" "complet seul : aucun CLAUDE.md perso annoncé ignoré"
+
+# CLAUDE.complet.md et CLAUDE.md dans le perso : le complet gagne, l'install annonce l'autre ignoré.
+monter complet-et-md
+printf '# complet gagne\n' >"$tmp/complet-et-md/perso/CLAUDE.complet.md"
+printf '## perso ignore\n' >"$tmp/complet-et-md/perso/CLAUDE.md"
+installer complet-et-md --perso "$tmp/complet-et-md/perso"; verdict 0 "$?" "complet + CLAUDE.md : install sans erreur"
+verdict '# complet gagne|' "$(rendu complet-et-md)" "complet + CLAUDE.md : le complet gagne"
+verdict annonce "$(grep -qF "CLAUDE.md : le CLAUDE.md du dossier perso est ignoré, CLAUDE.complet.md le remplace" "$tmp/complet-et-md/sortie" && echo annonce || echo muet)" "complet + CLAUDE.md : CLAUDE.md perso annoncé ignoré"
+
+# Sans CLAUDE.complet.md, un perso avec CLAUDE.md : aucune annonce d'un CLAUDE.md ignoré.
+verdict muet "$(grep -qF 'est ignoré' "$tmp/perso-md/sortie" && echo annonce || echo muet)" "CLAUDE.md perso sans complet : rien annoncé ignoré"
+
+# Un CLAUDE.complet.md qui garde {{PERSO_CLAUDE_MD}} : refus, CLAUDE.md non écrit.
+monter complet-marqueur
+printf '# complet\n{{PERSO_CLAUDE_MD}}\n' >"$tmp/complet-marqueur/perso/CLAUDE.complet.md"
+installer complet-marqueur --perso "$tmp/complet-marqueur/perso"
+verdict refus "$([ "$?" -ne 0 ] && echo refus || echo accepte)" "complet à marqueur : install refusée"
+verdict absent "$([ -f "$tmp/complet-marqueur/home/.claude/CLAUDE.md" ] && echo present || echo absent)" "complet à marqueur : CLAUDE.md non écrit"
 
 # --brain est retiré : refus.
 monter option-brain
