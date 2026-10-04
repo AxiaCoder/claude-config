@@ -216,27 +216,53 @@ function Expand-Markers($Text) {
   return $Text.Replace('{{REPO}}', $Repo.Replace('\', '\\'))
 }
 
-function Test-OurHook($Hook) {
-  <# Tells whether a hook's command, markers expanded, names a file under <ClaudeHome>\hooks; each rooted word or quoted string is normalized, '\' and '/' alike. #>
+$HooksMemo = Join-Path $ClaudeHome 'claude-config.hooks.json'
+function Get-HookKey($HookEvent, $Block, $Hook) {
+  <# Returns the canonical identity of a hook: its event, its block's matcher ('' when absent) and its command, joined by newlines. #>
+  return "$HookEvent`n$([string]$Block.matcher)`n$([string]$Hook.command)"
+}
+function Read-HooksMemo {
+  <# Returns the hook keys rendered by the previous pass; empty when the memo is absent, or unreadable (reported, then ignored). #>
+  $keys = New-Object 'System.Collections.Generic.HashSet[string]'
+  if (-not (Test-Path $HooksMemo)) { return , $keys }
+  try {
+    foreach ($entry in @(Get-Content $HooksMemo -Raw | ConvertFrom-Json)) {
+      if ($entry -isnot [System.Management.Automation.PSCustomObject] -or
+          $null -eq $entry.event -or $null -eq $entry.matcher -or $null -eq $entry.command) { throw 'entree mal formee' }
+      [void]$keys.Add("$($entry.event)`n$($entry.matcher)`n$($entry.command)")
+    }
+  } catch {
+    Write-Warning "$HooksMemo illisible ($($_.Exception.Message)) : ignore, seuls les hooks sous hooks/ sont reconnus comme les notres."
+    $keys.Clear()
+  }
+  return , $keys
+}
+function Test-UnderHooksDir($Hook) {
+  <# Tells whether a hook's command, markers expanded, names a file under <ClaudeHome>\hooks or <Repo>\hooks; each rooted word or quoted string is normalized, '\' and '/' alike. #>
   $command = [string]$Hook.command
   $command = $command.Replace('{{CLAUDE_HOME}}', $ClaudeHome).Replace('{{PYTHON}}', $Python).Replace('{{REPO}}', $Repo)
   $sep = [IO.Path]::DirectorySeparatorChar
-  $hooksDir = [IO.Path]::GetFullPath((Join-Path $ClaudeHome 'hooks').Replace('\', '/')).TrimEnd($sep) + $sep
+  $hooksDirs = foreach ($base in $ClaudeHome, $Repo) {
+    [IO.Path]::GetFullPath((Join-Path $base 'hooks').Replace('\', '/')).TrimEnd($sep) + $sep
+  }
   $comparison = if ($sep -eq '\') { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
   foreach ($match in [regex]::Matches($command, '"([^"]*)"|''([^'']*)''|(\S+)')) {
     $word = ($match.Groups[1].Value + $match.Groups[2].Value + $match.Groups[3].Value).Replace('\', '/')
     if ($word -match '^~/') { $word = $HOME.Replace('\', '/') + $word.Substring(1) }
     if (-not [IO.Path]::IsPathRooted($word)) { continue }
-    if ([IO.Path]::GetFullPath($word).StartsWith($hooksDir, $comparison)) { return $true }
+    $full = [IO.Path]::GetFullPath($word)
+    foreach ($dir in $hooksDirs) { if ($full.StartsWith($dir, $comparison)) { return $true } }
   }
   return $false
 }
-function Get-ForeignBlocks($Blocks) {
-  <# Returns the blocks of an event stripped of our hooks, blocks left empty dropped. #>
+function Get-ForeignBlocks($HookEvent, $Blocks, $Memo) {
+  <# Returns the blocks of an event stripped of our hooks (in $Memo, or under a hooks dir), blocks left empty dropped. #>
   $kept = New-Object System.Collections.Generic.List[object]
   foreach ($block in @($Blocks)) {
     if ($block -isnot [System.Management.Automation.PSCustomObject]) { continue }
-    $foreign = @(@($block.hooks) | Where-Object { $null -ne $_ -and -not (Test-OurHook $_) })
+    $foreign = @(@($block.hooks) | Where-Object {
+      $null -ne $_ -and -not $Memo.Contains((Get-HookKey $HookEvent $block $_)) -and -not (Test-UnderHooksDir $_)
+    })
     if ($foreign.Count -eq 0) { continue }
     if ($foreign.Count -eq @($block.hooks).Count) { [void]$kept.Add($block); continue }
     $copy = [ordered]@{}
@@ -291,10 +317,21 @@ foreach ($layer in $layers) {
       }
     }
 }
+$rendered = New-Object System.Collections.Generic.List[object]
 if ($null -ne $hooks) {
+  $renderedKeys = New-Object 'System.Collections.Generic.HashSet[string]'
+  foreach ($hookEvent in $hooks.Keys) {
+    foreach ($block in $hooks[$hookEvent]) {
+      foreach ($hook in @($block.hooks)) {
+        if ($null -eq $hook -or -not $renderedKeys.Add((Get-HookKey $hookEvent $block $hook))) { continue }
+        [void]$rendered.Add([ordered]@{ event = $hookEvent; matcher = [string]$block.matcher; command = [string]$hook.command })
+      }
+    }
+  }
+  $memo = Read-HooksMemo
   if ($existingHooks -is [System.Management.Automation.PSCustomObject]) {
     foreach ($hookEvent in $existingHooks.PSObject.Properties) {
-      $foreign = Get-ForeignBlocks $hookEvent.Value
+      $foreign = Get-ForeignBlocks $hookEvent.Name $hookEvent.Value $memo
       if ($foreign.Count -eq 0) { continue }
       if (-not $hooks.Contains($hookEvent.Name)) {
         $hooks[$hookEvent.Name] = New-Object System.Collections.Generic.List[object]
@@ -311,6 +348,9 @@ if ($json -cmatch '\{\{[A-Z_]+\}\}') {
 }
 Step "settings.json : base + overlay Windows + dossier perso, fusionnes sur l'existant"
 if (-not $WhatIfOnly) { Set-Content $settingsPath $json -Encoding utf8 }
+if (-not $WhatIfOnly -and $null -ne $hooks) {
+  Set-Content $HooksMemo (ConvertTo-Json -InputObject $rendered.ToArray() -Depth 5) -Encoding utf8
+}
 
 # --- Hooks git globaux -----------------------------------------------------
 $hooksPath = (Join-Path $ClaudeHome 'git-hooks').Replace('\', '/')

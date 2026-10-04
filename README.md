@@ -56,8 +56,7 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
    et dans `~/.claude/settings.json` les clés que ce dépôt définit — `hooks`, `statusLine`,
    `permissions` : les permissions ajoutées à la main dans `~/.claude/settings.json` sont
    effacées à chaque passe. Les hooks d'autres outils (iTerm2…) sont gardés, ceux ajoutés à la
-   main aussi ; seuls disparaissent ceux qui lancent un fichier de `~/.claude/hooks` que le dépôt
-   ne déclare plus. À la première passe, ces trois fichiers sont d'abord copiés dans
+   main aussi ; seuls disparaissent ceux que le dépôt ou le dossier perso ne déclarent plus. À la première passe, ces trois fichiers sont d'abord copiés dans
    `~/.claude/config-backup-<date>/`. Ce qui doit rester se remet ensuite dans le dossier perso,
    vos permissions comprises : elles s'y **ajoutent** à celles du dépôt, sans en retirer
    aucune. `statusLine`, elle, remplace celle du dépôt.
@@ -142,8 +141,10 @@ clé par clé :
 La fusion repart du `settings.json` existant : les clés que Claude Code écrit lui-même et que ce
 dépôt ne gère pas sont conservées. Sauf `hooks` et `permissions`, rebâtis à chaque passe à partir
 des couches : un hook retiré du dépôt ou du dossier perso disparaît du fichier rendu. Des hooks
-existants, ceux d'autres outils — iTerm2… — sont conservés, après ceux des couches : est à
-nous un hook dont la commande désigne un fichier sous `~/.claude/hooks`, tout autre est gardé.
+existants, ceux d'autres outils — iTerm2… — sont conservés, après ceux des couches. L'installation
+mémorise les hooks qu'elle rend dans `~/.claude/claude-config.hooks.json` pour les reconnaître à
+la passe suivante : est à nous un hook qui y figure, ou dont la commande désigne un fichier sous
+`~/.claude/hooks` ou sous `hooks/` du dépôt ; tout autre est gardé.
 ⚠️ Un script à vous ne se range donc pas dans `~/.claude/hooks` : c'est un lien vers ce dépôt,
 et son hook y serait pris pour un hook du dépôt, effacé s'il n'y est pas déclaré. Le ranger
 ailleurs — dans le dossier perso, par exemple.
@@ -278,7 +279,8 @@ python3 scripts/verifier-les-ecrits.py .   # renvois morts et notes en double da
    ⚠️ Ne pas garder le `settings.json` rendu : ses hooks pointeraient vers `~/.claude/hooks/`,
    qui n'existe plus, et échoueraient à chaque appel d'outil. `settings.json.prev` n'aide pas —
    il ne garde que l'état d'avant la dernière passe.
-4. Supprimer `~/.claude/claude-config.perso`, `~/.claude/settings.json.prev`, puis les
+4. Supprimer `~/.claude/claude-config.perso`, `~/.claude/claude-config.hooks.json`,
+   `~/.claude/settings.json.prev`, puis les
    `~/.claude/config-backup-*` une fois leur contenu remis en place.
 
 ## Ce qui n'entre jamais dans le dépôt

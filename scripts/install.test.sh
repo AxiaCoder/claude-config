@@ -379,5 +379,39 @@ installer marqueur-developpe --perso "$tmp/marqueur-developpe/perso"; verdict 0 
 verdict "$md_home/hooks/guardrail.py" "$(commandes marqueur-developpe PreToolUse)" "hooks : bloc à marqueur et son rendu perso, une fois"
 verdict "[\"$md_repo\"]" "$(lire_json marqueur-developpe permissions.additionalDirectories)" "permissions : {{REPO}} et son rendu perso, une fois"
 
+# Un hook déclaré par le perso hors <CLAUDE_HOME>/hooks, puis retiré du perso : la passe suivante le retire.
+monter perso-retire
+socle_hooks perso-retire
+printf '{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "{{REPO}}/../perso/mine.sh"}]}]}}\n' >"$tmp/perso-retire/perso/settings.json"
+installer perso-retire --perso "$tmp/perso-retire/perso"; verdict 0 "$?" "perso retiré : 1re passe sans erreur"
+verdict "$tmp/perso-retire/repo/../perso/mine.sh" "$(commandes perso-retire Stop)" "perso retiré : hook Stop posé à la 1re passe"
+printf '{}\n' >"$tmp/perso-retire/perso/settings.json"
+installer perso-retire; verdict 0 "$?" "perso retiré : 2e passe sans erreur"
+verdict "(aucune)" "$(commandes perso-retire Stop)" "hooks : celui que le perso ne déclare plus, retiré"
+
+# L'existant porte un hook au chemin du dépôt (<repo>/hooks, cible du lien), qu'aucune couche ne déclare : retiré.
+monter hook-depot
+socle_hooks hook-depot
+cat >"$tmp/hook-depot/home/.claude/settings.json" <<EOF
+{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "$tmp/hook-depot/repo/hooks/x.py"}]}]}}
+EOF
+installer hook-depot; verdict 0 "$?" "hook du dépôt : install sans erreur"
+verdict "(aucune)" "$(commandes hook-depot Stop)" "hooks : celui au chemin réel du dépôt, retiré"
+
+# Un hook d'un autre outil, posé à la main entre deux passes : conservé aux passes suivantes.
+monter etranger-manuel
+socle_hooks etranger-manuel
+installer etranger-manuel; verdict 0 "$?" "étranger manuel : 1re passe sans erreur"
+python3 - "$tmp/etranger-manuel/home/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+d["hooks"].setdefault("Notification", []).append({"hooks": [{"type": "command", "command": "/opt/tiers/notifier.sh"}]})
+json.dump(d, open(sys.argv[1], "w", encoding="utf-8"), indent=2)
+PY
+installer etranger-manuel; verdict 0 "$?" "étranger manuel : 2e passe sans erreur"
+verdict /opt/tiers/notifier.sh "$(commandes etranger-manuel Notification)" "hooks : étranger posé à la main, gardé à la 2e passe"
+installer etranger-manuel; verdict 0 "$?" "étranger manuel : 3e passe sans erreur"
+verdict /opt/tiers/notifier.sh "$(commandes etranger-manuel Notification)" "hooks : étranger posé à la main, gardé à la 3e passe"
+
 echo "$nb cas, $([ "$echec" -eq 0 ] && echo 'tous passent' || echo 'ECHEC')"
 exit "$echec"

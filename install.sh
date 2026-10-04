@@ -158,11 +158,35 @@ def render(text):
     return text
 
 
-HOOKS_DIR = os.path.normpath(str(home / "hooks"))
+HOOKS_DIRS = {path for base in (home / "hooks", repo / "hooks")
+              for path in (os.path.normpath(str(base)), os.path.realpath(str(base)))}
+HOOKS_MEMO = home / "claude-config.hooks.json"
 
 
-def is_ours(hook):
-    """Tell whether a hook's command, markers expanded, names a file under <CLAUDE_HOME>/hooks.
+def hook_key(event, block, hook):
+    """Return the canonical identity of a hook: its event, its block's matcher ("" when absent), its command."""
+    matcher = block.get("matcher", "") if isinstance(block, dict) else ""
+    command = hook.get("command", "") if isinstance(hook, dict) else ""
+    return (str(event), str(matcher or ""), str(command))
+
+
+def read_memo():
+    """Return the hook keys rendered by the previous pass, or an empty set when the memo is absent or unreadable.
+
+    An unreadable or malformed memo is reported on stderr and ignored.
+    """
+    if not HOOKS_MEMO.exists():
+        return set()
+    try:
+        entries = json.loads(HOOKS_MEMO.read_text(encoding="utf-8"))
+        return {(str(e["event"]), str(e["matcher"]), str(e["command"])) for e in entries}
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        print(f"  ATTENTION : {HOOKS_MEMO} illisible ({error}) : ignoré, seuls les hooks sous hooks/ sont reconnus comme les nôtres.", file=sys.stderr)
+        return set()
+
+
+def is_under_hooks_dir(hook):
+    """Tell whether a hook's command, markers expanded, names a file under <CLAUDE_HOME>/hooks or <REPO>/hooks.
 
     Each absolute word or quoted string of the command is normalized, `\\` read as `/`.
     """
@@ -171,18 +195,25 @@ def is_ours(hook):
         command = command.replace(marker, str(value))
     for quoted, single, bare in re.findall(r'"([^"]*)"|\'([^\']*)\'|(\S+)', command):
         word = os.path.expanduser((quoted or single or bare).replace("\\", "/"))
-        if os.path.isabs(word) and os.path.normpath(word).startswith(HOOKS_DIR + os.sep):
-            return True
+        if not os.path.isabs(word):
+            continue
+        for path in (os.path.normpath(word), os.path.realpath(word)):
+            if any(path.startswith(directory + os.sep) for directory in HOOKS_DIRS):
+                return True
     return False
 
 
-def foreign_blocks(blocks):
-    """Return the blocks of an event stripped of our hooks, blocks left empty dropped."""
+def foreign_blocks(event, blocks, memo):
+    """Return the blocks of an event stripped of our hooks, blocks left empty dropped.
+
+    Ours: a hook the previous pass rendered from the layers (memo), or one under a hooks dir.
+    """
     kept = []
     for block in blocks if isinstance(blocks, list) else []:
         if not isinstance(block, dict):
             continue
-        foreign = [hook for hook in block.get("hooks", []) if not is_ours(hook)]
+        foreign = [hook for hook in block.get("hooks", [])
+                   if hook_key(event, block, hook) not in memo and not is_under_hooks_dir(hook)]
         if foreign:
             kept.append({**block, "hooks": foreign})
     return kept
@@ -218,9 +249,17 @@ for layer in layers:
     merged.update(data)
     if env:
         merged["env"] = env
+rendered = []
 if hooks is not None:
+    for event, blocks in hooks.items():
+        for block in blocks if isinstance(blocks, list) else []:
+            for hook in block.get("hooks", []) if isinstance(block, dict) else []:
+                key = dict(zip(("event", "matcher", "command"), hook_key(event, block, hook)))
+                if key not in rendered:
+                    rendered.append(key)
+    memo = read_memo()
     for event, blocks in (merged.get("hooks") or {}).items():
-        foreign = foreign_blocks(blocks)
+        foreign = foreign_blocks(event, blocks, memo)
         if foreign:
             add_unique(hooks.setdefault(event, []), foreign)
     merged["hooks"] = hooks
@@ -231,6 +270,8 @@ reste = re.search(r"\{\{[A-Z_]+\}\}", text)
 if reste:
     sys.exit(f"settings.json : le marqueur {reste.group(0)} survit au rendu, ~/.claude/settings.json n'est pas écrit.")
 target.write_text(text + "\n", encoding="utf-8")
+if hooks is not None:
+    HOOKS_MEMO.write_text(json.dumps(rendered, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
 
 hooks_path="$CLAUDE_HOME/git-hooks"
