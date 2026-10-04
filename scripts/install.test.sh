@@ -318,7 +318,7 @@ verdict repo-garde,commun,perso-garde "$(commandes fusion PreToolUse)" "hooks : 
 verdict '["Read","Grep","Bash(ls:*)"]' "$(lire_json fusion permissions.allow)" "permissions : allow en union sans doublon"
 verdict '["/repo-dir"]' "$(lire_json fusion permissions.additionalDirectories)" "permissions : liste du dépôt gardée sous le perso"
 verdict '"acceptEdits"' "$(lire_json fusion permissions.defaultMode)" "permissions : non-liste, le perso gagne"
-verdict '(absent)' "$(lire_json fusion hooks.Notification)" "hooks : celui de l'existant retiré"
+verdict vieux "$(commandes fusion Notification)" "hooks : celui d'un autre outil, dans l'existant, gardé"
 verdict absent "$(lire_json fusion permissions.allow | grep -qF '"X"' && echo present || echo absent)" "permissions : allow de l'existant retiré"
 verdict '"le mien"' "$(lire_json fusion model)" "hors couches : model de l'existant gardé"
 
@@ -326,6 +326,32 @@ verdict '"le mien"' "$(lire_json fusion model)" "hors couches : model de l'exist
 cp "$tmp/fusion/home/.claude/settings.json" "$tmp/fusion/settings-passe-1.json"
 installer fusion; verdict 0 "$?" "fusion 2e passe : install sans erreur"
 verdict identique "$(cmp -s "$tmp/fusion/settings-passe-1.json" "$tmp/fusion/home/.claude/settings.json" && echo identique || echo differe)" "fusion 2e passe : settings.json identique"
+
+# L'existant mêle des hooks d'autres outils et des hooks à nous (sous <CLAUDE_HOME>/hooks).
+monter etrangers
+socle_hooks etrangers
+et_home="$tmp/etrangers/home/.claude"
+cat >"$et_home/settings.json" <<EOF
+{"hooks": {
+   "PreToolUse": [
+     {"matcher": "Edit", "hooks": [{"type": "command", "command": "commun"}]},
+     {"matcher": "Bash", "hooks": [{"type": "command", "command": "tiers"}]},
+     {"matcher": "Write", "hooks": [
+       {"type": "command", "command": "tiers-mixte"},
+       {"type": "command", "command": "$et_home/hooks/ancien.py"}]}],
+   "Stop": [{"hooks": [{"type": "command", "command": "$et_home/hooks/ancien.py"}]}],
+   "SessionStart": [{"hooks": [
+     {"type": "command", "command": "python3 \"$et_home/hooks/demarrage.py\""},
+     {"type": "command", "command": "{{CLAUDE_HOME}}/hooks/autre.py"}]}]}}
+EOF
+installer etrangers; verdict 0 "$?" "étrangers : install sans erreur"
+verdict repo-garde,commun,tiers,tiers-mixte "$(commandes etrangers PreToolUse)" "hooks : étrangers après les couches, identique une fois"
+verdict '[{"type":"command","command":"tiers-mixte"}]' "$(python3 -c 'import json,sys; print(json.dumps([b["hooks"] for b in json.load(open(sys.argv[1]))["hooks"]["PreToolUse"] if b.get("matcher") == "Write"][0], separators=(",", ":")))' "$et_home/settings.json" 2>&1)" "hooks : bloc mixte, seul l'étranger reste, matcher Write gardé"
+verdict '(absent)' "$(lire_json etrangers hooks.Stop)" "hooks : celui à nous de l'existant retiré"
+verdict '(absent)' "$(lire_json etrangers hooks.SessionStart)" "hooks : bloc de l'existant tout à nous retiré"
+cp "$et_home/settings.json" "$tmp/etrangers/settings-passe-1.json"
+installer etrangers; verdict 0 "$?" "étrangers 2e passe : install sans erreur"
+verdict identique "$(cmp -s "$tmp/etrangers/settings-passe-1.json" "$et_home/settings.json" && echo identique || echo differe)" "étrangers 2e passe : settings.json identique"
 
 # Aucune couche ne définit hooks ni permissions : ceux de l'existant restent.
 monter sans-cle
@@ -352,6 +378,40 @@ EOF
 installer marqueur-developpe --perso "$tmp/marqueur-developpe/perso"; verdict 0 "$?" "marqueur développé : install sans erreur"
 verdict "$md_home/hooks/guardrail.py" "$(commandes marqueur-developpe PreToolUse)" "hooks : bloc à marqueur et son rendu perso, une fois"
 verdict "[\"$md_repo\"]" "$(lire_json marqueur-developpe permissions.additionalDirectories)" "permissions : {{REPO}} et son rendu perso, une fois"
+
+# Un hook déclaré par le perso hors <CLAUDE_HOME>/hooks, puis retiré du perso : la passe suivante le retire.
+monter perso-retire
+socle_hooks perso-retire
+printf '{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "{{REPO}}/../perso/mine.sh"}]}]}}\n' >"$tmp/perso-retire/perso/settings.json"
+installer perso-retire --perso "$tmp/perso-retire/perso"; verdict 0 "$?" "perso retiré : 1re passe sans erreur"
+verdict "$tmp/perso-retire/repo/../perso/mine.sh" "$(commandes perso-retire Stop)" "perso retiré : hook Stop posé à la 1re passe"
+printf '{}\n' >"$tmp/perso-retire/perso/settings.json"
+installer perso-retire; verdict 0 "$?" "perso retiré : 2e passe sans erreur"
+verdict "(aucune)" "$(commandes perso-retire Stop)" "hooks : celui que le perso ne déclare plus, retiré"
+
+# L'existant porte un hook au chemin du dépôt (<repo>/hooks, cible du lien), qu'aucune couche ne déclare : retiré.
+monter hook-depot
+socle_hooks hook-depot
+cat >"$tmp/hook-depot/home/.claude/settings.json" <<EOF
+{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "$tmp/hook-depot/repo/hooks/x.py"}]}]}}
+EOF
+installer hook-depot; verdict 0 "$?" "hook du dépôt : install sans erreur"
+verdict "(aucune)" "$(commandes hook-depot Stop)" "hooks : celui au chemin réel du dépôt, retiré"
+
+# Un hook d'un autre outil, posé à la main entre deux passes : conservé aux passes suivantes.
+monter etranger-manuel
+socle_hooks etranger-manuel
+installer etranger-manuel; verdict 0 "$?" "étranger manuel : 1re passe sans erreur"
+python3 - "$tmp/etranger-manuel/home/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+d["hooks"].setdefault("Notification", []).append({"hooks": [{"type": "command", "command": "/opt/tiers/notifier.sh"}]})
+json.dump(d, open(sys.argv[1], "w", encoding="utf-8"), indent=2)
+PY
+installer etranger-manuel; verdict 0 "$?" "étranger manuel : 2e passe sans erreur"
+verdict /opt/tiers/notifier.sh "$(commandes etranger-manuel Notification)" "hooks : étranger posé à la main, gardé à la 2e passe"
+installer etranger-manuel; verdict 0 "$?" "étranger manuel : 3e passe sans erreur"
+verdict /opt/tiers/notifier.sh "$(commandes etranger-manuel Notification)" "hooks : étranger posé à la main, gardé à la 3e passe"
 
 echo "$nb cas, $([ "$echec" -eq 0 ] && echo 'tous passent' || echo 'ECHEC')"
 exit "$echec"
