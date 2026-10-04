@@ -134,7 +134,7 @@ fi
 
 echo "  settings.json : base + overlay macOS + dossier perso, fusionnés sur l'existant"
 run python3 - "$CLAUDE_HOME" "$REPO" "$PERSO" <<'PY'
-import json, pathlib, re, sys
+import json, os, pathlib, re, sys
 home, repo = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
 perso = [pathlib.Path(sys.argv[3]) / name for name in ("settings.json", "settings.macos.json")] if sys.argv[3] else []
 target = home / "settings.json"
@@ -158,9 +158,40 @@ def render(text):
     return text
 
 
+HOOKS_DIR = os.path.normpath(str(home / "hooks"))
+
+
+def is_ours(hook):
+    """Tell whether a hook's command, markers expanded, names a file under <CLAUDE_HOME>/hooks.
+
+    Each absolute word or quoted string of the command is normalized, `\\` read as `/`.
+    """
+    command = str(hook.get("command", "")) if isinstance(hook, dict) else ""
+    for marker, value in (("{{CLAUDE_HOME}}", home), ("{{REPO}}", repo)):
+        command = command.replace(marker, str(value))
+    for quoted, single, bare in re.findall(r'"([^"]*)"|\'([^\']*)\'|(\S+)', command):
+        word = os.path.expanduser((quoted or single or bare).replace("\\", "/"))
+        if os.path.isabs(word) and os.path.normpath(word).startswith(HOOKS_DIR + os.sep):
+            return True
+    return False
+
+
+def foreign_blocks(blocks):
+    """Return the blocks of an event stripped of our hooks, blocks left empty dropped."""
+    kept = []
+    for block in blocks if isinstance(blocks, list) else []:
+        if not isinstance(block, dict):
+            continue
+        foreign = [hook for hook in block.get("hooks", []) if not is_ours(hook)]
+        if foreign:
+            kept.append({**block, "hooks": foreign})
+    return kept
+
+
 layers = [repo / "settings.base.json", repo / "settings.macos.json", *perso]
-# hooks et permissions se rebâtissent à partir des couches seules : None tant
-# qu'aucune couche ne les définit, et l'existant est alors conservé.
+# hooks et permissions se rebâtissent à partir des couches : None tant
+# qu'aucune couche ne les définit, et l'existant est alors conservé. Des hooks
+# existants, seuls ceux d'autres outils sont repris, après ceux des couches.
 hooks, permissions = None, None
 for layer in layers:
     if not layer.exists():
@@ -188,6 +219,10 @@ for layer in layers:
     if env:
         merged["env"] = env
 if hooks is not None:
+    for event, blocks in (merged.get("hooks") or {}).items():
+        foreign = foreign_blocks(blocks)
+        if foreign:
+            add_unique(hooks.setdefault(event, []), foreign)
     merged["hooks"] = hooks
 if permissions is not None:
     merged["permissions"] = permissions

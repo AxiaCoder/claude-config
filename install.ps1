@@ -216,8 +216,41 @@ function Expand-Markers($Text) {
   return $Text.Replace('{{REPO}}', $Repo.Replace('\', '\\'))
 }
 
-# hooks et permissions se rebatissent a partir des couches seules : $null tant
-# qu'aucune couche ne les definit, et l'existant est alors conserve.
+function Test-OurHook($Hook) {
+  <# Tells whether a hook's command, markers expanded, names a file under <ClaudeHome>\hooks; each rooted word or quoted string is normalized, '\' and '/' alike. #>
+  $command = [string]$Hook.command
+  $command = $command.Replace('{{CLAUDE_HOME}}', $ClaudeHome).Replace('{{PYTHON}}', $Python).Replace('{{REPO}}', $Repo)
+  $sep = [IO.Path]::DirectorySeparatorChar
+  $hooksDir = [IO.Path]::GetFullPath((Join-Path $ClaudeHome 'hooks').Replace('\', '/')).TrimEnd($sep) + $sep
+  $comparison = if ($sep -eq '\') { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+  foreach ($match in [regex]::Matches($command, '"([^"]*)"|''([^'']*)''|(\S+)')) {
+    $word = ($match.Groups[1].Value + $match.Groups[2].Value + $match.Groups[3].Value).Replace('\', '/')
+    if ($word -match '^~/') { $word = $HOME.Replace('\', '/') + $word.Substring(1) }
+    if (-not [IO.Path]::IsPathRooted($word)) { continue }
+    if ([IO.Path]::GetFullPath($word).StartsWith($hooksDir, $comparison)) { return $true }
+  }
+  return $false
+}
+function Get-ForeignBlocks($Blocks) {
+  <# Returns the blocks of an event stripped of our hooks, blocks left empty dropped. #>
+  $kept = New-Object System.Collections.Generic.List[object]
+  foreach ($block in @($Blocks)) {
+    if ($block -isnot [System.Management.Automation.PSCustomObject]) { continue }
+    $foreign = @(@($block.hooks) | Where-Object { $null -ne $_ -and -not (Test-OurHook $_) })
+    if ($foreign.Count -eq 0) { continue }
+    if ($foreign.Count -eq @($block.hooks).Count) { [void]$kept.Add($block); continue }
+    $copy = [ordered]@{}
+    foreach ($property in $block.PSObject.Properties) { $copy[$property.Name] = $property.Value }
+    $copy['hooks'] = $foreign
+    [void]$kept.Add([PSCustomObject]$copy)
+  }
+  return , $kept
+}
+
+# hooks et permissions se rebatissent a partir des couches : $null tant
+# qu'aucune couche ne les definit, et l'existant est alors conserve. Des hooks
+# existants, seuls ceux d'autres outils sont repris, apres ceux des couches.
+$existingHooks = $merged['hooks']
 $hooks = $null
 $permissions = $null
 foreach ($layer in $layers) {
@@ -258,7 +291,19 @@ foreach ($layer in $layers) {
       }
     }
 }
-if ($null -ne $hooks) { $merged['hooks'] = $hooks }
+if ($null -ne $hooks) {
+  if ($existingHooks -is [System.Management.Automation.PSCustomObject]) {
+    foreach ($hookEvent in $existingHooks.PSObject.Properties) {
+      $foreign = Get-ForeignBlocks $hookEvent.Value
+      if ($foreign.Count -eq 0) { continue }
+      if (-not $hooks.Contains($hookEvent.Name)) {
+        $hooks[$hookEvent.Name] = New-Object System.Collections.Generic.List[object]
+      }
+      Add-Unique $hooks[$hookEvent.Name] $foreign
+    }
+  }
+  $merged['hooks'] = $hooks
+}
 if ($null -ne $permissions) { $merged['permissions'] = $permissions }
 $json = $merged | ConvertTo-Json -Depth 20
 if ($json -cmatch '\{\{[A-Z_]+\}\}') {

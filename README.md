@@ -54,11 +54,13 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
 
    ⚠️ L'installation **remplace** votre `~/.claude/CLAUDE.md` et votre `~/.claude/CAVEMAN.md`,
    et dans `~/.claude/settings.json` les clés que ce dépôt définit — `hooks`, `statusLine`,
-   `permissions` : les hooks et permissions ajoutés à la main dans `~/.claude/settings.json`
-   sont effacés à chaque passe. À la première passe, ces trois fichiers sont d'abord copiés dans
+   `permissions` : les permissions ajoutées à la main dans `~/.claude/settings.json` sont
+   effacées à chaque passe. Les hooks d'autres outils (iTerm2…) sont gardés, ceux ajoutés à la
+   main aussi ; seuls disparaissent ceux qui lancent un fichier de `~/.claude/hooks` que le dépôt
+   ne déclare plus. À la première passe, ces trois fichiers sont d'abord copiés dans
    `~/.claude/config-backup-<date>/`. Ce qui doit rester se remet ensuite dans le dossier perso,
-   vos hooks et permissions compris : ils s'y **ajoutent** à ceux du dépôt, sans en retirer
-   aucun. `statusLine`, elle, remplace celle du dépôt.
+   vos permissions comprises : elles s'y **ajoutent** à celles du dépôt, sans en retirer
+   aucune. `statusLine`, elle, remplace celle du dépôt.
 
    ```bash
    bash install.sh                                # macOS / Linux
@@ -139,7 +141,9 @@ clé par clé :
 
 La fusion repart du `settings.json` existant : les clés que Claude Code écrit lui-même et que ce
 dépôt ne gère pas sont conservées. Sauf `hooks` et `permissions`, rebâtis à chaque passe à partir
-des seules couches : un hook retiré du dépôt ou du dossier perso disparaît du fichier rendu.
+des couches : un hook retiré du dépôt ou du dossier perso disparaît du fichier rendu. Des hooks
+existants, ceux d'autres outils — iTerm2… — sont conservés, après ceux des couches : est à
+nous un hook dont la commande désigne un fichier sous `~/.claude/hooks`, tout autre est gardé.
 L'état d'avant la passe est copié en `settings.json.prev`.
 
 | Marqueur | Remplacé par |
