@@ -318,7 +318,7 @@ verdict repo-garde,commun,perso-garde "$(commandes fusion PreToolUse)" "hooks : 
 verdict '["Read","Grep","Bash(ls:*)"]' "$(lire_json fusion permissions.allow)" "permissions : allow en union sans doublon"
 verdict '["/repo-dir"]' "$(lire_json fusion permissions.additionalDirectories)" "permissions : liste du dépôt gardée sous le perso"
 verdict '"acceptEdits"' "$(lire_json fusion permissions.defaultMode)" "permissions : non-liste, le perso gagne"
-verdict '(absent)' "$(lire_json fusion hooks.Notification)" "hooks : celui de l'existant retiré"
+verdict vieux "$(commandes fusion Notification)" "hooks : celui d'un autre outil, dans l'existant, gardé"
 verdict absent "$(lire_json fusion permissions.allow | grep -qF '"X"' && echo present || echo absent)" "permissions : allow de l'existant retiré"
 verdict '"le mien"' "$(lire_json fusion model)" "hors couches : model de l'existant gardé"
 
@@ -326,6 +326,32 @@ verdict '"le mien"' "$(lire_json fusion model)" "hors couches : model de l'exist
 cp "$tmp/fusion/home/.claude/settings.json" "$tmp/fusion/settings-passe-1.json"
 installer fusion; verdict 0 "$?" "fusion 2e passe : install sans erreur"
 verdict identique "$(cmp -s "$tmp/fusion/settings-passe-1.json" "$tmp/fusion/home/.claude/settings.json" && echo identique || echo differe)" "fusion 2e passe : settings.json identique"
+
+# L'existant mêle des hooks d'autres outils et des hooks à nous (sous <CLAUDE_HOME>/hooks).
+monter etrangers
+socle_hooks etrangers
+et_home="$tmp/etrangers/home/.claude"
+cat >"$et_home/settings.json" <<EOF
+{"hooks": {
+   "PreToolUse": [
+     {"matcher": "Edit", "hooks": [{"type": "command", "command": "commun"}]},
+     {"matcher": "Bash", "hooks": [{"type": "command", "command": "tiers"}]},
+     {"matcher": "Write", "hooks": [
+       {"type": "command", "command": "tiers-mixte"},
+       {"type": "command", "command": "$et_home/hooks/ancien.py"}]}],
+   "Stop": [{"hooks": [{"type": "command", "command": "$et_home/hooks/ancien.py"}]}],
+   "SessionStart": [{"hooks": [
+     {"type": "command", "command": "python3 \"$et_home/hooks/demarrage.py\""},
+     {"type": "command", "command": "{{CLAUDE_HOME}}/hooks/autre.py"}]}]}}
+EOF
+installer etrangers; verdict 0 "$?" "étrangers : install sans erreur"
+verdict repo-garde,commun,tiers,tiers-mixte "$(commandes etrangers PreToolUse)" "hooks : étrangers après les couches, identique une fois"
+verdict '[{"type":"command","command":"tiers-mixte"}]' "$(python3 -c 'import json,sys; print(json.dumps([b["hooks"] for b in json.load(open(sys.argv[1]))["hooks"]["PreToolUse"] if b.get("matcher") == "Write"][0], separators=(",", ":")))' "$et_home/settings.json" 2>&1)" "hooks : bloc mixte, seul l'étranger reste, matcher Write gardé"
+verdict '(absent)' "$(lire_json etrangers hooks.Stop)" "hooks : celui à nous de l'existant retiré"
+verdict '(absent)' "$(lire_json etrangers hooks.SessionStart)" "hooks : bloc de l'existant tout à nous retiré"
+cp "$et_home/settings.json" "$tmp/etrangers/settings-passe-1.json"
+installer etrangers; verdict 0 "$?" "étrangers 2e passe : install sans erreur"
+verdict identique "$(cmp -s "$tmp/etrangers/settings-passe-1.json" "$et_home/settings.json" && echo identique || echo differe)" "étrangers 2e passe : settings.json identique"
 
 # Aucune couche ne définit hooks ni permissions : ceux de l'existant restent.
 monter sans-cle

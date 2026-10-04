@@ -144,6 +144,9 @@ dépôt ne gère pas sont conservées. Sauf `hooks` et `permissions`, rebâtis �
 des couches : un hook retiré du dépôt ou du dossier perso disparaît du fichier rendu. Des hooks
 existants, ceux d'autres outils — iTerm2… — sont conservés, après ceux des couches : est à
 nous un hook dont la commande désigne un fichier sous `~/.claude/hooks`, tout autre est gardé.
+⚠️ Un script à vous ne se range donc pas dans `~/.claude/hooks` : c'est un lien vers ce dépôt,
+et son hook y serait pris pour un hook du dépôt, effacé s'il n'y est pas déclaré. Le ranger
+ailleurs — dans le dossier perso, par exemple.
 L'état d'avant la passe est copié en `settings.json.prev`.
 
 | Marqueur | Remplacé par |
