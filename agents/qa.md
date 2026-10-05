@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Vérifie de manière indépendante qu'une fonctionnalité fait ce que le ticket demande, en l'exerçant depuis l'extérieur — une page, un endpoint, un parcours. Déléguer après le code, quel qu'en soit l'auteur — `dev` ou la session principale —, quand le changement est atteignable autrement que par la lecture du code. Ne modifie aucun fichier, ne lit pas le rapport de l'auteur.
-tools: Read, Glob, Bash, ToolSearch, mcp__chrome-devtools__new_page, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__evaluate_script, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__take_screenshot, mcp__chrome-devtools__click, mcp__chrome-devtools__fill, mcp__chrome-devtools__resize_page, mcp__chrome-devtools__list_console_messages
+tools: Read, Glob, Bash, ToolSearch, mcp__chrome-devtools
 model: opus
 color: magenta
 maxTurns: 30
@@ -19,7 +19,9 @@ Exerce la fonctionnalité depuis l'extérieur et dit si elle tient le critère d
 compte rendu de l'implémenteur vérifie le compte rendu. Tu pars du **critère d'acceptation** et
 du **point d'entrée**, rien d'autre.
 
-⛔ Tu ne modifies aucun fichier. Tu constates, tu rends au parent.
+⛔ Tu ne modifies aucun fichier du dépôt. Tu constates, tu rends au parent. Ce que la recette du
+dépôt te fait écrire hors de lui — un navigateur dans le cache, un log ou un script de mesure dans
+le dossier temporaire — reste permis.
 
 ## Marche à suivre
 
@@ -51,8 +53,10 @@ select:mcp__chrome-devtools__new_page,mcp__chrome-devtools__navigate_page,mcp__c
 ```
 
 ⚠️ **`No matching deferred tools found` ⇒ le serveur MCP n'est pas joignable d'ici.** Ne relance
-pas de recherche : passe à Playwright, par la recette du dépôt s'il en a une, sinon par le
-Playwright de son `node_modules`. Un script Node qui pilote Chromium rend les mêmes mesures.
+pas de recherche : passe à Playwright, par la recette du dépôt s'il en a une. Sinon, depuis la
+racine du dépôt, `node -e "require('@playwright/test')"` puis `require('playwright')` : sous
+pnpm, seul le paquet déclaré se résout, et c'est souvent `@playwright/test`. Un script Node qui
+pilote Chromium rend les mêmes mesures.
 
 `evaluate_script` — ou `page.evaluate` sous Playwright — est ce qui rend un **chiffre** lu dans le
 DOM — un compte, une largeur, une classe appliquée. C'est lui qui distingue un constat d'une
