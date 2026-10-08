@@ -268,43 +268,37 @@ describe('pane', () => {
 })
 
 describe('session end', () => {
+  const REASONS = ['clear', 'resume', 'logout', 'prompt_input_exit', 'other'] as const
   const standInForSessionEnd = (on: On) => on('session.end', (_, e) => ({ sessionId: e.sessionId }))
-  const end = ($: Engine, reason: 'clear' | 'prompt_input_exit') =>
+  const end = ($: Engine, reason: (typeof REASONS)[number]) =>
     $.session.end({ reason, sessionId: 'test-session', resume: { id: 'test-session' } })
 
-  test('/clear empties the band and closes the pane', async ($, on) => {
-    const panes = standInForPanes(on)
-    standInForSessionEnd(on)
-    const id = await pin($, 'Survives a clear?', '## Context')
-    const band = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
-    await band.press({ key: `details:${id}` })
-    await band.unmount()
+  for (const reason of REASONS) {
+    test(`${reason} empties the band and closes the pane`, async ($, on) => {
+      const panes = standInForPanes(on)
+      standInForSessionEnd(on)
+      const id = await pin($, 'Survives the end?', '## Context')
+      const band = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+      await band.press({ key: `details:${id}` })
+      await band.unmount()
 
-    await end($, 'clear')
+      await end($, reason)
 
-    expect(panes.closed).toContain('open-question')
-    const after = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
-    expect(await after.find({ key: 'frame' })).toBeUndefined()
-    await after.unmount()
-    expect((await call($, UNPIN, { id })).deny).toMatch(/no pinned question/)
-  })
+      expect(panes.closed).toContain('open-question')
+      const after = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+      expect(await after.find({ key: 'frame' })).toBeUndefined()
+      await after.unmount()
+      expect((await call($, UNPIN, { id })).deny).toMatch(/no pinned question/)
+    })
+  }
 
-  test('/clear frees the three slots', async ($, on) => {
+  test('an ended session frees the three slots', async ($, on) => {
     standInForPanes(on)
     standInForSessionEnd(on)
     await pin($, 'One?')
     await pin($, 'Two?')
     await pin($, 'Three?')
-    await end($, 'clear')
+    await end($, 'resume')
     expect((await call($, PIN, { question: 'Four?' })).deny).toBeUndefined()
-  })
-
-  test('another end reason keeps the questions', async ($, on) => {
-    const panes = standInForPanes(on)
-    standInForSessionEnd(on)
-    const id = await pin($, 'Still there?')
-    await end($, 'prompt_input_exit')
-    expect(panes.closed).not.toContain('open-question')
-    expect((await call($, UNPIN, { id })).deny).toBeUndefined()
   })
 })

@@ -95,7 +95,7 @@ export const register: Register = on => {
     await $.tool.register({
       name: 'pin_question',
       description:
-        'Pins a question that awaits the user\'s answer above the prompt, so it stays visible while you keep working. Use it for a question you asked the user that does not block your current work. `question`: one line, at most 100 characters. `context`: optional Markdown the user can open for details. At most 3 pinned at once. Returns the question\'s id.',
+        'Pins a question that awaits the user\'s answer above the prompt, so it stays visible while you keep working. Use it for any question that awaits the user\'s answer; pinning never blocks your work. `question`: one line, at most 100 characters. `context`: optional Markdown the user can open for details. At most 3 pinned at once. Returns the question\'s id.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -124,11 +124,9 @@ export const register: Register = on => {
   })
 
   on('session.end', async ($, e, next) => {
-    if (e.reason === 'clear') {
-      await update($, questions, () => [])
-      await update($, shownId, () => null)
-      await $.ui.close({ id: PANE })
-    }
+    await update($, questions, () => [])
+    await update($, shownId, () => null)
+    await $.ui.close({ id: PANE })
 
     return next(e)
   })
