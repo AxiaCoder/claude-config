@@ -524,3 +524,41 @@ describe('answer edge cases', () => {
     await band.unmount()
   })
 })
+
+describe('review pass 3', () => {
+  test('options are trimmed at pin, so a padded option is swapped whole', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on)
+    const id = (await call($, PIN, { question: 'Keep it?', options: [' Oui', 'Non'] })).result as string
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: `option:${id}:0` })
+    expect(box.text).toBe('Réponse à « Keep it? » : Oui')
+    await ui.press({ key: `option:${id}:1` })
+    expect(box.text).toBe('Réponse à « Keep it? » : Non')
+    await ui.unmount()
+  })
+
+  test('the question is trimmed at pin, and the limits apply after trimming', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on)
+    const id = (await call($, PIN, { question: '  Keep it?  ', options: [`  ${'c'.repeat(30)}  `, 'Non'] }))
+      .result as string
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: `answer:${id}` })
+    expect(box.text).toBe('Réponse à « Keep it? » : ')
+    expect((await ui.find({ key: `option:${id}:0` }))?.text).toBe('c'.repeat(30))
+    await ui.unmount()
+    expect((await call($, PIN, { question: 'Other?' })).deny).toMatch(/already pinned/)
+    await call($, UNPIN, { id })
+    expect((await call($, PIN, { question: ` ${'a'.repeat(100)} ` })).deny).toBeUndefined()
+  })
+
+  test('a prompt dropped beneath the mod keeps its question pinned', async ($, on) => {
+    standInForPanes(on)
+    on('prompt.submit', () => ({ drop: 'blocked by a settings hook' }))
+    const id = await pin($, 'Which cache?')
+    const sent = await $.prompt.submit({ text: 'Réponse à « Which cache? » : Redis', wait: false, origin: { kind: 'composer' } })
+    expect(sent).toMatchObject({ drop: 'blocked by a settings hook' })
+    expect((await call($, UNPIN, { id })).deny).toBeUndefined()
+  })
+})

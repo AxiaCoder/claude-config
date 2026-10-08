@@ -175,7 +175,7 @@ export const register: Register = on => {
     await $.tool.register({
       name: 'pin_question',
       description:
-        'Pins a question that awaits the user\'s answer above the prompt, so it stays visible while you keep working. Use it for any question that awaits the user\'s answer; pinning never blocks your work. `question`: one line, at most 100 characters. `context`: optional Markdown the user can open for details. `options`: 2 to 4 choices, one line and at most 30 characters each, for a multiple-choice question; leave it out for an open question. The user\'s answer arrives as `Réponse à « <question> » : …` and unpins the question by itself. At most one pinned at once. Returns the question\'s id.',
+        'Pins a question that awaits the user\'s answer above the prompt, so it stays visible while you keep working. Use it for any question that awaits the user\'s answer; pinning never blocks your work. `question`: one line, at most 100 characters. `context`: optional Markdown the user can open for details. `options`: 2 to 4 choices, one line and at most 30 characters each, for a multiple-choice question; leave it out for an open question. An answer given through the bar arrives as `Réponse à « <question> » : …` and unpins the question by itself. At most one pinned at once. Returns the question\'s id.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -196,7 +196,7 @@ export const register: Register = on => {
     await $.tool.register({
       name: 'unpin_question',
       description:
-        'Removes a pinned question by its id. Call it once the user\'s answer settles the question; if the answer misses the question, leave it pinned.',
+        'Removes a pinned question by its id. Call it when an answer typed directly (not through the bar) settles the question; an answer through the bar has already unpinned it; an answer that misses the question leaves it pinned.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -220,7 +220,13 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: PIN_TOOL }, async ($, e) => {
-    const input = e as unknown as { question?: unknown; context?: unknown; options?: unknown }
+    const raw = e as unknown as { question?: unknown; context?: unknown; options?: unknown }
+    const trim = (value: unknown): unknown => (typeof value === 'string' ? value.trim() : value)
+    const input = {
+      question: trim(raw.question),
+      context: raw.context,
+      options: Array.isArray(raw.options) ? raw.options.map(trim) : raw.options,
+    }
     const refusal = refusePin(input.question, (await read($, questions)).length) ?? refuseOptions(input.options)
     if (refusal !== undefined) {
       return { deny: refusal }
@@ -267,12 +273,16 @@ export const register: Register = on => {
   }).catch(() => ({ deny: 'unpin_question: the question could not be unpinned.' }))
 
   on('prompt.submit', async ($, e, next) => {
+    const sent = await next(e)
+    if (sent.drop !== undefined) {
+      return sent
+    }
     const answered = (await read($, questions)).find(one => e.text.startsWith(answerTag(one.question)))
     if (answered !== undefined) {
       await removeQuestion($, answered.id)
     }
 
-    return next(e)
+    return sent
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
