@@ -151,9 +151,25 @@ def add_unique(target_list, items):
 
 # {{REPO}} : les dossiers de `~/.claude` sont des liens vers ce dépôt ; sans
 # cette autorisation, une session ouverte ailleurs ne peut pas les suivre.
+def mod_dirs():
+    """Return the absolute paths of the <REPO>/mods/* folders holding a .claude-plugin/plugin.json, sorted."""
+    mods = repo / "mods"
+    if not mods.is_dir():
+        return []
+    return sorted(str(path) for path in mods.iterdir()
+                  if (path / ".claude-plugin" / "plugin.json").is_file())
+
+
+MODS = os.pathsep.join(mod_dirs())
+
+
 def render(text):
-    """Replace the {{CLAUDE_HOME}} and {{REPO}} markers in a layer's raw JSON text, JSON-escaped."""
-    for marker, value in (("{{CLAUDE_HOME}}", home), ("{{REPO}}", repo)):
+    """Replace the {{CLAUDE_HOME}}, {{REPO}} and {{MODS}} markers in a layer's raw JSON text, JSON-escaped.
+
+    {{MODS}} becomes the mod folders joined by the platform's path-list separator, "" when there is none;
+    CLAUDE_CODE_PLUGIN_DIRS is then dropped from env once the layers are merged.
+    """
+    for marker, value in (("{{CLAUDE_HOME}}", home), ("{{REPO}}", repo), ("{{MODS}}", MODS)):
         text = text.replace(marker, json.dumps(str(value))[1:-1])
     return text
 
@@ -249,6 +265,8 @@ for layer in layers:
     merged.update(data)
     if env:
         merged["env"] = env
+if not MODS and isinstance(merged.get("env"), dict):
+    merged["env"].pop("CLAUDE_CODE_PLUGIN_DIRS", None)
 rendered = []
 if hooks is not None:
     for event, blocks in hooks.items():

@@ -22,6 +22,12 @@ const MIN_OPTIONS = 2
 const MAX_OPTIONS = 4
 const MAX_OPTION_LENGTH = 30
 
+const RULE_SECTION = {
+  id: 'open-question:rule',
+  text: "While the open-question mod is loaded, a question still awaiting the user's answer when a subagent report comes in is pinned with `pin_question` instead of being asked again. Ask questions in your message first; never pin a question as you ask it. One pinned at a time: if two questions await when the report comes in, pin the first and ask the second again in full. An answer through the bar arrives as `Réponse à « … » :` and unpins by itself; call `unpin_question` only when an answer typed directly settles the question.",
+  scope: 'session',
+} as const
+
 const questions = atom({ plugin: 'open-question', key: 'questions' } as const, [])
 const nextId = atom({ plugin: 'open-question', key: 'nextId' } as const, 1)
 const shownId = atom({ plugin: 'open-question', key: 'shownId' } as const, null)
@@ -208,6 +214,12 @@ export const register: Register = on => {
     })
 
     return next(e)
+  })
+
+  on('prompt.compose', async ($, e, next) => {
+    const { sections } = await next(e)
+
+    return { sections: [...sections, RULE_SECTION] }
   })
 
   on('session.end', async ($, e, next) => {

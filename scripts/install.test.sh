@@ -413,5 +413,43 @@ verdict /opt/tiers/notifier.sh "$(commandes etranger-manuel Notification)" "hook
 installer etranger-manuel; verdict 0 "$?" "étranger manuel : 3e passe sans erreur"
 verdict /opt/tiers/notifier.sh "$(commandes etranger-manuel Notification)" "hooks : étranger posé à la main, gardé à la 3e passe"
 
+# Monte $1 avec {{MODS}} dans le socle et un mod sous mods/ par argument suivant.
+socle_mods() {
+	m="$1"
+	shift
+	monter "$m"
+	cat >"$tmp/$m/repo/settings.base.json" <<'EOF'
+{"env": {"A": "base", "CLAUDE_CODE_PLUGIN_DIRS": "{{MODS}}"}}
+EOF
+	for mod in "$@"; do
+		mkdir -p "$tmp/$m/repo/mods/$mod/.claude-plugin"
+		printf '{"name": "%s"}\n' "$mod" >"$tmp/$m/repo/mods/$mod/.claude-plugin/plugin.json"
+	done
+}
+
+# Aucun mod : la variable est retirée du rendu, y compris celle d'une passe précédente.
+socle_mods zero-mod
+mkdir -p "$tmp/zero-mod/repo/mods"
+printf '{"env": {"CLAUDE_CODE_PLUGIN_DIRS": "/ancien/mod"}}\n' >"$tmp/zero-mod/home/.claude/settings.json"
+installer zero-mod; verdict 0 "$?" "0 mod : install sans erreur"
+verdict "(absent)" "$(lire zero-mod env.CLAUDE_CODE_PLUGIN_DIRS)" "0 mod : CLAUDE_CODE_PLUGIN_DIRS retirée"
+verdict base "$(lire zero-mod env.A)" "0 mod : le reste de env intact"
+
+# Un mod : son chemin absolu.
+socle_mods un-mod alpha
+installer un-mod; verdict 0 "$?" "1 mod : install sans erreur"
+verdict "$tmp/un-mod/repo/mods/alpha" "$(lire un-mod env.CLAUDE_CODE_PLUGIN_DIRS)" "1 mod : son chemin absolu"
+
+# Deux mods, créés dans le désordre : triés, joints par « : ».
+socle_mods deux-mods zeta alpha
+installer deux-mods; verdict 0 "$?" "2 mods : install sans erreur"
+verdict "$tmp/deux-mods/repo/mods/alpha:$tmp/deux-mods/repo/mods/zeta" "$(lire deux-mods env.CLAUDE_CODE_PLUGIN_DIRS)" "2 mods : triés, séparés par :"
+
+# Un dossier sous mods/ sans .claude-plugin/plugin.json : ignoré.
+socle_mods sans-manifeste alpha
+mkdir -p "$tmp/sans-manifeste/repo/mods/brouillon/hooks"
+installer sans-manifeste; verdict 0 "$?" "sans manifeste : install sans erreur"
+verdict "$tmp/sans-manifeste/repo/mods/alpha" "$(lire sans-manifeste env.CLAUDE_CODE_PLUGIN_DIRS)" "sans manifeste : dossier ignoré"
+
 echo "$nb cas, $([ "$echec" -eq 0 ] && echo 'tous passent' || echo 'ECHEC')"
 exit "$echec"

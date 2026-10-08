@@ -302,7 +302,7 @@ Ne jamais committer : `.claude.json` (il contient les jetons MCP en clair),
 | `commands/` | Commandes globales : `/pr`, `/pr-review`, `/start-ticket`, `/new-ticket` |
 | `skills/` | Skills globaux |
 | `hooks/` | Hooks Claude Code et statusline |
-| `mods/` | Mods Claude Code, chargés par `CLAUDE_CODE_PLUGIN_DIRS` : `open-question` |
+| `mods/` | Mods Claude Code : chaque sous-dossier qui a un `.claude-plugin/plugin.json` est chargé par l'installation, et porte sa propre règle. Retirer un mod = supprimer son dossier, puis relancer l'installation |
 | `git-hooks/` | Hooks git globaux : garde de push et relais |
 | `scripts/` | Outils de maintenance et tests de l'installation |
 | `exemple-perso/` | Un dossier perso d'exemple |

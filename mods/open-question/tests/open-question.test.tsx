@@ -61,7 +61,7 @@ const standInForPanes = (on: On) => {
  * @param input the tool's arguments
  * @returns what the call resolved to
  */
-const call = ($: Engine, tool: `mcp__${string}__${string}`, input: Record<string, unknown>) =>
+const call = ($: Engine, tool: typeof PIN | typeof UNPIN, input: Record<string, unknown>) =>
   $.tool.call({ tool, ...input }) as Promise<{ deny?: string; result?: unknown }>
 
 /**
@@ -560,5 +560,35 @@ describe('review pass 3', () => {
     const sent = await $.prompt.submit({ text: 'Réponse à « Which cache? » : Redis', wait: false, origin: { kind: 'composer' } })
     expect(sent).toMatchObject({ drop: 'blocked by a settings hook' })
     expect((await call($, UNPIN, { id })).deny).toBeUndefined()
+  })
+})
+
+describe('prompt', () => {
+  test('adds the rule last, as a session section, over what next(e) answered', async ($, on) => {
+    const input = {
+      model: 'claude-opus-5-5',
+      promptModel: 'claude-opus-5-5',
+      surfaces: ['terminal'],
+      tools: [],
+      outputStyle: null,
+      traits: [],
+    } as const
+    const engineSections = [
+      { id: 'intro', text: 'intro', scope: 'shared' },
+      { id: 'env', text: 'env', scope: 'session' },
+    ] as const
+    const received: string[] = []
+    on('prompt.compose', ($, e) => {
+      received.push(e.promptModel)
+
+      return { sections: engineSections }
+    })
+
+    const { sections } = await $.prompt.compose(input)
+
+    expect(received).toEqual([input.promptModel])
+    expect(sections.slice(0, -1)).toEqual([...engineSections])
+    expect(sections[sections.length - 1]).toMatchObject({ id: 'open-question:rule', scope: 'session' })
+    expect(sections[sections.length - 1]?.text).toContain('never pin a question as you ask it')
   })
 })
