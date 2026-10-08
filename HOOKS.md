@@ -90,6 +90,26 @@ ferait sinon vérifier que `python3`, qui existe toujours. Et il lit `settings.l
 
 ✅ **Aucune ligne `MANQUANT` = les hooks sont installés.**
 
+⚠️ **Installé ne veut pas dire qu'il fait ce qu'il doit.** Ça se vérifie en lançant le hook **tel
+que l'hôte le lance** : la commande exacte de sa déclaration dans `settings.json` — `guardrail.py`
+appelé directement sur macOS, précédé de `{{PYTHON}}` sous Windows —, avec sur stdin la charge
+JSON réelle de l'événement, chemins réels compris (`agent_transcript_path` pour
+`collecteur-agents.py`). Ce qui tranche dépend du hook :
+
+- **un hook de garde** (`guardrail.py`, `garde-push.py`) : son **code de sortie** — `2` refuse,
+  `0` laisse passer — et le motif qu'il donne (JSON `decision`/`reason` sur stdout pour
+  `guardrail.py`, message sur stderr pour `garde-push.py`) ;
+- **un hook collecteur** (`collecteur-agents.py`) : il sort toujours `0`, son code ne dit rien. Ce
+  qui tranche est ce qu'il a produit — sa ligne `… — envoye` ou `… — en attente`, et
+  `~/.claude/telemetrie-agents/en-attente.jsonl` quand l'envoi a échoué.
+
+⚠️ **`guardrail.py` garde un état** (`~/.claude/hook-state/`) et refuse au 4ᵉ appel identique. Le
+tester avec `HOME` sur un dossier jetable (`USERPROFILE` sous Windows) et la charge lue depuis un
+fichier : sinon les essais donnent un faux refus, s'écrivent dans l'état de la session en cours, et
+une charge de refus passée en ligne est bloquée par le `guardrail.py` installé avant d'atteindre
+celui qu'on teste. Même piège pour `garde-push.py` : une charge qui cite un de ses motifs, passée en
+ligne, est refusée par le `garde-push.py` installé — la lire depuis un fichier.
+
 ---
 
 ## Ce dont chaque brique a besoin

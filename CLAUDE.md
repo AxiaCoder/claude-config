@@ -84,6 +84,11 @@ dépôt ?** Trois signes, dont aucun ne s'annonce seul :
 `git worktree add --no-track -b <branche> <dossier> origin/<base>`.
 ⛔ Jamais `switch`, `stash` ni `checkout` dans l'arbre de l'autre : il est à elle.
 
+⛔ **Sous Windows aussi, le worktree est permis — mais jamais de jonction ni de lien vers
+`node_modules`** ou tout autre dossier du dépôt principal : sa suppression suit la jonction et
+efface la cible. Les dépendances s'y installent depuis le lockfile. Vaut pour tout worktree, celui
+de `tester` compris.
+
 ⚠️ **Après le merge, le worktree se retire avec sa branche locale** — `git worktree remove`, puis
 `git branch -D` une fois la PR `MERGED` selon `gh pr view` : après un squash, `-d` refuse la branche
 comme non fusionnée. Sinon il traîne : six trouvés le 29/09, dont aucun n'avait plus d'usage.
@@ -98,6 +103,23 @@ Avant `gh pr merge` ou tout merge :
 3. Seulement ensuite, exécuter
 
 La règle tient même sur « finalise » ou « termine » : merger n'est pas implicite.
+
+## Outillage
+
+⛔ **Un contenu multi-ligne (guillemets, antislashs) ne passe jamais non protégé en ligne de
+commande.** Avec Write : l'écrire dans un fichier, puis `git commit -F`, `--body-file`,
+`--input <fichier>`. Sans Write : un heredoc **protégé**, délimiteur entre apostrophes (`<<'EOF'`),
+dont le shell ne transforme aucun caractère. Interdits : le heredoc non protégé (`<<EOF`) et la
+chaîne entre guillemets doubles, qui font interpréter `$`, les backticks et les antislashs. Un texte
+qui cite un motif gardé par `garde-push.py` ou `guardrail.py` est refusé même en heredoc protégé : sans Write, le
+rendre au parent, qui l'écrit avec Write.
+
+⇒ **Le fichier écrit se contrôle avant de servir** : hors octet nul, aucun caractère de contrôle
+autre que le saut de ligne, la tabulation et le retour chariot. Rien ne doit sortir de :
+
+```bash
+LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
+```
 
 ## Délégation aux sous-agents
 
