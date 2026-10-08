@@ -175,7 +175,7 @@ export const register: Register = on => {
     await $.tool.register({
       name: 'pin_question',
       description:
-        'Pins a question that awaits the user\'s answer above the prompt, so it stays visible while you keep working. Use it for any question that awaits the user\'s answer; pinning never blocks your work. `question`: one line, at most 100 characters. `context`: optional Markdown the user can open for details. `options`: 2 to 4 choices, one line and at most 30 characters each, for a multiple-choice question; leave it out for an open question. An answer given through the bar arrives as `Réponse à « <question> » : …` and unpins the question by itself. At most one pinned at once. Returns the question\'s id.',
+        'Pins a question that awaits the user\'s answer above the prompt, so it stays visible while you keep working. Ask the question in your message first; pin it only when a subagent report has come in while it still awaits the answer, since that is what pushes it off screen. Pinning never blocks your work. `question`: one line, at most 100 characters. `context`: optional Markdown the user can open for details. `options`: 2 to 4 choices, one line and at most 30 characters each, for a multiple-choice question; leave it out for an open question. An answer given through the bar arrives as `Réponse à « <question> » : …` and unpins the question by itself. At most one pinned at once. Returns the question\'s id.',
       inputSchema: {
         type: 'object',
         properties: {
