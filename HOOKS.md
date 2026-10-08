@@ -57,7 +57,8 @@ for source in ("settings.json", "settings.local.json"):
 print("verification terminee")
 ```
 
-**Sur Windows :**
+**Sur Windows** — le script ci-dessous, écrit dans un fichier `.ps1` avec Write, puis
+`pwsh -File <fichier>` (`powershell -File` en 5.1) :
 
 ```powershell
 foreach ($source in @("settings.json", "settings.local.json")) {
@@ -100,6 +101,12 @@ JSON réelle de l'événement, chemins réels compris (`agent_transcript_path` p
 - **un hook collecteur** (`collecteur-agents.py`) : il sort toujours `0`, son code ne dit rien. Ce
   qui tranche est ce qu'il a produit — sa ligne `… — envoye` ou `… — en attente`, et
   `~/.claude/telemetrie-agents/en-attente.jsonl` quand l'envoi a échoué.
+
+⚠️ **`guardrail.py` garde un état** (`~/.claude/hook-state/`) et refuse au 4ᵉ appel identique. Le
+tester avec `HOME` sur un dossier jetable (`USERPROFILE` sous Windows) et la charge lue depuis un
+fichier : sinon les essais donnent un faux refus, s'écrivent dans l'état de la session en cours, et
+une charge de refus passée en ligne est bloquée par le `guardrail.py` installé avant d'atteindre
+celui qu'on teste.
 
 ---
 

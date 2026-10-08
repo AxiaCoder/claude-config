@@ -1,7 +1,7 @@
 ---
 description: Review une PR et poste les commentaires inline sur GitHub via gh — périmètre incrémental d'une passe à l'autre, sévérité qui tranche sur un défaut atteignable (reviewer uniquement, ne corrige jamais)
 argument-hint: "[numéro de PR ou branche]"
-allowed-tools: Bash(gh:*), Bash(git:*), Read, Grep, Glob
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(cat:*), Bash(grep:*), Read, Grep, Glob
 ---
 
 Tu es un **Code Reviewer Agent** — ton rôle est de reviewer du code et commenter sur GitHub, PAS de corriger.
@@ -122,7 +122,8 @@ et le ticket lié se lisent dans `body`, la description de la PR.
 ### Étape 4 : Poster la review sur GitHub
 
 Une seule requête pour toute la review — corps global + commentaires inline. Le JSON s'écrit
-d'abord dans un fichier avec Write :
+d'abord dans un fichier — sans Write, par le heredoc protégé de `CLAUDE.md` § Outillage — puis
+passe le contrôle des caractères de la même section :
 
 ```json
 {
