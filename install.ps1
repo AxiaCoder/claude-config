@@ -220,8 +220,7 @@ function Get-ModDirs {
 $Mods = (Get-ModDirs) -join [IO.Path]::PathSeparator
 function Expand-Markers($Text) {
   <# Replaces the {{CLAUDE_HOME}}, {{PYTHON}}, {{MODS}} and {{REPO}} markers in a layer's raw JSON text, backslashes escaped.
-     {{MODS}} becomes the mod folders joined by the platform's path-list separator, '' when there is none;
-     CLAUDE_CODE_PLUGIN_DIRS is dropped from env when its merged value is ''. #>
+     {{MODS}} becomes the mod folders joined by the platform's path-list separator, '' when there is none. #>
   $Text = $Text.Replace('{{CLAUDE_HOME}}', $ClaudeHome.Replace('\', '\\'))
   $Text = $Text.Replace('{{PYTHON}}', $Python.Replace('\', '\\'))
   $Text = $Text.Replace('{{MODS}}', $Mods.Replace('\', '\\'))
@@ -331,6 +330,7 @@ foreach ($layer in $layers) {
       }
     }
 }
+# Un {{MODS}} rendu vide, aucun mod : la variable est retiree plutot que posee vide.
 if ($merged['env'] -is [System.Management.Automation.PSCustomObject] -and
     $merged['env'].PSObject.Properties['CLAUDE_CODE_PLUGIN_DIRS'] -and
     $merged['env'].CLAUDE_CODE_PLUGIN_DIRS -ceq '') {

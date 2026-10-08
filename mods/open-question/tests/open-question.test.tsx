@@ -563,32 +563,63 @@ describe('review pass 3', () => {
   })
 })
 
+const ENGINE_SECTIONS = [
+  { id: 'intro', text: 'intro', scope: 'shared' },
+  { id: 'env', text: 'env', scope: 'session' },
+] as const
+
+/**
+ * Builds the input of a prompt composed for a request offering `tools`.
+ *
+ * @param tools the names of the tools the request offers
+ * @returns a complete `prompt.compose` input
+ */
+const composeInput = (tools: readonly string[]) => ({
+  model: 'claude-opus-5-5',
+  promptModel: 'claude-opus-5-5',
+  surfaces: ['terminal'] as const,
+  tools,
+  outputStyle: null,
+  traits: [],
+})
+
+/**
+ * Stands for the engine beneath the plugin at `prompt.compose`: answers
+ * ENGINE_SECTIONS and records the tools of each input it receives.
+ *
+ * @param on the test's registrar
+ * @returns the tool lists received, in order
+ */
+const standInForCompose = (on: On) => {
+  const received: (readonly string[])[] = []
+  on('prompt.compose', ($, e) => {
+    received.push(e.tools)
+
+    return { sections: ENGINE_SECTIONS }
+  })
+
+  return received
+}
+
 describe('prompt', () => {
-  test('adds the rule last, as a session section, over what next(e) answered', async ($, on) => {
-    const input = {
-      model: 'claude-opus-5-5',
-      promptModel: 'claude-opus-5-5',
-      surfaces: ['terminal'],
-      tools: [],
-      outputStyle: null,
-      traits: [],
-    } as const
-    const engineSections = [
-      { id: 'intro', text: 'intro', scope: 'shared' },
-      { id: 'env', text: 'env', scope: 'session' },
-    ] as const
-    const received: string[] = []
-    on('prompt.compose', ($, e) => {
-      received.push(e.promptModel)
+  test('adds the rule last, as a session section, when the request offers pin_question', async ($, on) => {
+    const received = standInForCompose(on)
+    const tools = ['Read', PIN, UNPIN]
 
-      return { sections: engineSections }
-    })
+    const { sections } = await $.prompt.compose(composeInput(tools))
 
-    const { sections } = await $.prompt.compose(input)
-
-    expect(received).toEqual([input.promptModel])
-    expect(sections.slice(0, -1)).toEqual([...engineSections])
+    expect(received).toEqual([tools])
+    expect(sections.slice(0, -1)).toEqual([...ENGINE_SECTIONS])
     expect(sections[sections.length - 1]).toMatchObject({ id: 'open-question:rule', scope: 'session' })
     expect(sections[sections.length - 1]?.text).toContain('never pin a question as you ask it')
+  })
+
+  test('leaves the sections as next(e) answered when the request lacks pin_question', async ($, on) => {
+    const received = standInForCompose(on)
+
+    const { sections } = await $.prompt.compose(composeInput(['Read']))
+
+    expect(received).toEqual([['Read']])
+    expect(sections).toEqual([...ENGINE_SECTIONS])
   })
 })

@@ -149,8 +149,6 @@ def add_unique(target_list, items):
             target_list.append(item)
 
 
-# {{REPO}} : les dossiers de `~/.claude` sont des liens vers ce dépôt ; sans
-# cette autorisation, une session ouverte ailleurs ne peut pas les suivre.
 def mod_dirs():
     """Return the absolute paths of the <REPO>/mods/* folders holding a .claude-plugin/plugin.json, sorted."""
     mods = repo / "mods"
@@ -163,11 +161,12 @@ def mod_dirs():
 MODS = os.pathsep.join(mod_dirs())
 
 
+# {{REPO}} : les dossiers de `~/.claude` sont des liens vers ce dépôt ; sans
+# cette autorisation, une session ouverte ailleurs ne peut pas les suivre.
 def render(text):
     """Replace the {{CLAUDE_HOME}}, {{REPO}} and {{MODS}} markers in a layer's raw JSON text, JSON-escaped.
 
-    {{MODS}} becomes the mod folders joined by the platform's path-list separator, "" when there is none;
-    CLAUDE_CODE_PLUGIN_DIRS is dropped from env when its merged value is "".
+    {{MODS}} becomes the mod folders joined by the platform's path-list separator, "" when there is none.
     """
     for marker, value in (("{{CLAUDE_HOME}}", home), ("{{REPO}}", repo), ("{{MODS}}", MODS)):
         text = text.replace(marker, json.dumps(str(value))[1:-1])
@@ -265,6 +264,7 @@ for layer in layers:
     merged.update(data)
     if env:
         merged["env"] = env
+# Un {{MODS}} rendu vide, aucun mod : la variable est retirée plutôt que posée vide.
 if isinstance(merged.get("env"), dict) and merged["env"].get("CLAUDE_CODE_PLUGIN_DIRS") == "":
     del merged["env"]["CLAUDE_CODE_PLUGIN_DIRS"]
 rendered = []

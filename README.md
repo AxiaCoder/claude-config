@@ -156,6 +156,7 @@ L'état d'avant la passe est copié en `settings.json.prev`.
 | `{{CLAUDE_HOME}}` | le chemin de `~/.claude` |
 | `{{REPO}}` | le chemin de ce dépôt, ouvert à Claude Code par `permissions.additionalDirectories` |
 | `{{PYTHON}}` | sous Windows : l'interpréteur trouvé par `py -3`, sinon `python` |
+| `{{MODS}}` | chaque `mods/*/` qui porte un `.claude-plugin/plugin.json`, triés, joints par `;` (Windows) ou `:` (macOS). Sans mod, la clé qui le porte est retirée de `env` |
 | `{{PERSO_CLAUDE_MD}}` | le `CLAUDE.md` du dossier perso, ou rien |
 | `{{PERSO}}` | dans le `CLAUDE.md` ou le `CLAUDE.complet.md` perso : le chemin du dossier perso |
 

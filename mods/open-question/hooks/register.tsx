@@ -217,9 +217,12 @@ export const register: Register = on => {
   })
 
   on('prompt.compose', async ($, e, next) => {
-    const { sections } = await next(e)
+    const composed = await next(e)
+    if (!e.tools.includes(PIN_TOOL)) {
+      return composed
+    }
 
-    return { sections: [...sections, RULE_SECTION] }
+    return { sections: [...composed.sections, RULE_SECTION] }
   })
 
   on('session.end', async ($, e, next) => {
