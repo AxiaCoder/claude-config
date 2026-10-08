@@ -28,7 +28,8 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 
 ## Comportement
 - Réponses courtes, actionnables
-- Ne jamais répéter ce qui vient d'être dit
+- Ne jamais répéter ce qui vient d'être dit — **sauf une question restée sans réponse que rien
+  n'épingle** (ci-dessous)
 - Avant toute implémentation : spec Markdown d'abord
 - Pas d'options non demandées
 
@@ -42,8 +43,9 @@ par la barre arrive en `Réponse à « … » :` et la retire d'elle-même ; une
 directement se retire avec `unpin_question` quand elle tranche, et une réponse à côté la laisse
 en place.
 
-⇒ **Une seule à la fois.** Une deuxième question se pose dans le message ; deux questions qui vont
-ensemble deviennent une seule question à choix.
+⇒ **Une seule à la fois.** Si deux questions attendent quand le rapport arrive, la première
+s'épingle et la seconde se repose en entier ; deux questions qui vont ensemble deviennent une seule
+question à choix.
 
 ⇒ **Sans l'outil** (mod non chargé), elle se repose au même moment, **en entier, jamais par
 renvoi**. Une session en a perdu une, entre quatorze rapports d'agents sur trente-quatre messages.
