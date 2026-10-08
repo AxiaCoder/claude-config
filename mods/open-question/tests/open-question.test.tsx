@@ -432,3 +432,95 @@ describe('answers', () => {
     expect((await call($, UNPIN, { id })).deny).toBeUndefined()
   })
 })
+
+describe('answer edge cases', () => {
+  test('refuses options that are not an array of non-empty strings', async ($, on) => {
+    standInForPanes(on)
+    expect((await call($, PIN, { question: 'Pick?', options: 'a, b' })).deny).toMatch(/2 to 4 choices/)
+    expect((await call($, PIN, { question: 'Pick?', options: ['a', 42] })).deny).toMatch(/non-empty string/)
+    expect((await call($, PIN, { question: 'Pick?', options: ['a', '  '] })).deny).toMatch(/non-empty string/)
+    expect((await call($, PIN, { question: 'Pick?', options: [] })).deny).toMatch(/2 to 4 choices/)
+  })
+
+  test('a question holding » and : still relabels and unpins on its own tag', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on, 'see logs')
+    const question = 'Garder « old » : oui ou non?'
+    const id = (await call($, PIN, { question, options: ['oui', 'non'] })).result as string
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+
+    await ui.press({ key: `option:${id}:0` })
+    await ui.press({ key: `option:${id}:1` })
+    expect(box.text).toBe(`Réponse à « ${question} » : non see logs`)
+    await ui.unmount()
+
+    await $.prompt.submit({ text: box.text, wait: false, origin: { kind: 'composer' } })
+    expect((await call($, UNPIN, { id })).deny).toMatch(/no pinned question/)
+  })
+
+  test('a question holding quotes fills and unpins verbatim', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on)
+    const question = 'Rename "users" to \'accounts\'?'
+    const id = await pin($, question)
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: `answer:${id}` })
+    expect(box.text).toBe(`Réponse à « ${question} » : `)
+    await ui.unmount()
+
+    await $.prompt.submit({ text: `${box.text}yes`, wait: false, origin: { kind: 'composer' } })
+    expect((await call($, UNPIN, { id })).deny).toMatch(/no pinned question/)
+  })
+
+  test('a tag whose trailing space the composer trimmed still relabels and unpins', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on, 'Réponse à « Which cache? » :')
+    const id = (await call($, PIN, { question: 'Which cache?', options: ['Redis', 'Memory'] })).result as string
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: `option:${id}:1` })
+    expect(box.text).toBe('Réponse à « Which cache? » : Memory')
+    await ui.unmount()
+
+    await $.prompt.submit({ text: 'Réponse à « Which cache? » :', wait: false, origin: { kind: 'composer' } })
+    expect((await call($, UNPIN, { id })).deny).toMatch(/no pinned question/)
+  })
+
+  test('[répondre] after an option drops the option, keeps the draft', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on, 'because it is fast')
+    const id = (await call($, PIN, { question: 'Which cache?', options: ['Redis', 'Memory'] })).result as string
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: `option:${id}:0` })
+    await ui.press({ key: `answer:${id}` })
+    expect(box.text).toBe('Réponse à « Which cache? » : because it is fast')
+    await ui.unmount()
+  })
+
+  test('an option that another option starts with is swapped whole', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on, 'for HA')
+    const id = (await call($, PIN, { question: 'Which cache?', options: ['Redis', 'Redis Cluster', 'Memory'] }))
+      .result as string
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await ui.press({ key: `option:${id}:1` })
+    expect(box.text).toBe('Réponse à « Which cache? » : Redis Cluster for HA')
+    await ui.press({ key: `option:${id}:2` })
+    expect(box.text).toBe('Réponse à « Which cache? » : Memory for HA')
+    await ui.unmount()
+  })
+
+  test('a draft tagged for a question since unpinned is relabelled, not stacked', async ($, on) => {
+    standInForPanes(on)
+    const box = standInForPrompt(on)
+    const old = (await call($, PIN, { question: 'Which cache?', options: ['Redis', 'Memory'] })).result as string
+    const band = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await band.press({ key: `option:${old}:0` })
+    box.text += ' because it is fast'
+    await band.press({ key: `remove:${old}` })
+
+    const next = (await call($, PIN, { question: 'Which queue?', options: ['Kafka', 'SQS'] })).result as string
+    await band.press({ key: `option:${next}:0` })
+    expect(box.text).not.toContain('Which cache?')
+    await band.unmount()
+  })
+})

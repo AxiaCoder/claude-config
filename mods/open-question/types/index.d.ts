@@ -10,12 +10,16 @@ export type OpenQuestion = {
   options?: string[]
 }
 
+/** A question pinned earlier in the session, kept to recognise its answer tag in a draft. */
+export type AskedQuestion = Pick<OpenQuestion, 'question' | 'options'>
+
 declare module 'claude-code' {
   interface PluginState {
     'open-question': {
       questions: OpenQuestion[]
       nextId: number
       shownId: string | null
+      asked: AskedQuestion[]
     }
   }
 }

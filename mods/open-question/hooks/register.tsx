@@ -1,13 +1,14 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { OpenQuestion } from '../types'
+import type { AskedQuestion, OpenQuestion } from '../types'
 
 const PANE = 'open-question'
 const PIN_TOOL = 'mcp__open-question__pin_question'
 const UNPIN_TOOL = 'mcp__open-question__unpin_question'
 const MAX_QUESTION_LENGTH = 100
 const MAX_OPEN_QUESTIONS = 1
+const MAX_HISTORY = 100
 const ELLIPSIS = '…'
 const PREFIX = '❓ '
 const PREFIX_CELLS = 3
@@ -24,6 +25,7 @@ const MAX_OPTION_LENGTH = 30
 const questions = atom({ plugin: 'open-question', key: 'questions' } as const, [])
 const nextId = atom({ plugin: 'open-question', key: 'nextId' } as const, 1)
 const shownId = atom({ plugin: 'open-question', key: 'shownId' } as const, null)
+const asked = atom({ plugin: 'open-question', key: 'asked' } as const, [])
 
 /**
  * Cells the terminal takes to draw a Button labelled `label`: `[ label ]`.
@@ -106,25 +108,30 @@ const refuseOptions = (options: unknown): string | undefined => {
 const answerTag = (question: string): string => `Réponse à « ${question} » :`
 
 /**
- * Removes from a draft the answer opening of a pinned question, and the option
- * it carried, so a second press relabels the draft instead of stacking.
+ * Removes from a draft the answer opening of any question pinned this session,
+ * and the option it carried, so a press relabels the draft instead of stacking.
+ *
+ * The longest matching tag wins, then the longest matching option.
  *
  * @param draft the prompt box's text
- * @param list the pinned questions
+ * @param history every question pinned this session
  * @returns what the person typed beside the answer opening
  */
-const stripAnswer = (draft: string, list: readonly OpenQuestion[]): string => {
-  for (const one of list) {
-    const tag = answerTag(one.question)
-    if (draft.startsWith(tag)) {
-      const rest = draft.slice(tag.length).trimStart()
-      const option = (one.options ?? []).find(choice => rest === choice || rest.startsWith(`${choice} `))
-
-      return option === undefined ? rest : rest.slice(option.length).trimStart()
-    }
+const stripAnswer = (draft: string, history: readonly AskedQuestion[]): string => {
+  const matching = history.filter(one => draft.startsWith(answerTag(one.question)))
+  if (matching.length === 0) {
+    return draft
   }
 
-  return draft
+  const question = matching.reduce((longest, one) => (one.question.length > longest.length ? one.question : longest), '')
+  const rest = draft.slice(answerTag(question).length).trimStart()
+  const option = matching
+    .filter(one => one.question === question)
+    .flatMap(one => one.options ?? [])
+    .filter(choice => rest === choice || rest.startsWith(`${choice} `))
+    .reduce((longest, choice) => (choice.length > longest.length ? choice : longest), '')
+
+  return rest.slice(option.length).trimStart()
 }
 
 /**
@@ -135,7 +142,7 @@ const stripAnswer = (draft: string, list: readonly OpenQuestion[]): string => {
  * @param option the option pressed; undefined for a free answer
  */
 const fillAnswer = async ($: EngineInterface, one: OpenQuestion, option?: string): Promise<void> => {
-  const draft = stripAnswer((await $.prompt.read()).text, await read($, questions))
+  const draft = stripAnswer((await $.prompt.read()).text, await read($, asked))
   const head = option === undefined ? `${answerTag(one.question)} ` : `${answerTag(one.question)} ${option}`
   const separator = option === undefined || draft === '' ? '' : ' '
   await $.prompt.fill({ text: head + separator + draft, mode: 'replace' })
@@ -206,6 +213,7 @@ export const register: Register = on => {
   on('session.end', async ($, e, next) => {
     await update($, questions, () => [])
     await update($, shownId, () => null)
+    await update($, asked, () => [])
     await $.ui.close({ id: PANE })
 
     return next(e)
@@ -243,6 +251,8 @@ export const register: Register = on => {
     if (isFull) {
       return { deny: refusePin(pinned.question, MAX_OPEN_QUESTIONS) ?? 'pin_question: refused.' }
     }
+    const record: AskedQuestion = pinned.options ? { question: pinned.question, options: pinned.options } : { question: pinned.question }
+    await update($, asked, history => [...history, record].slice(-MAX_HISTORY))
 
     return { result: id }
   }).catch(() => ({ deny: 'pin_question: the question could not be pinned.' }))
