@@ -229,3 +229,82 @@ describe('band', () => {
     }
   })
 })
+
+describe('input checks', () => {
+  test('refuses an empty question', async ($, on) => {
+    standInForPanes(on)
+    expect((await call($, PIN, { question: '   ' })).deny).toMatch(/non-empty string/)
+    expect((await call($, PIN, {})).deny).toMatch(/non-empty string/)
+  })
+
+  test('refuses a context that is not a string', async ($, on) => {
+    standInForPanes(on)
+    expect((await call($, PIN, { question: 'Why?', context: 42 })).deny).toMatch(/`context` must be a string/)
+  })
+
+  test('refuses an unpin without a string id', async ($, on) => {
+    standInForPanes(on)
+    expect((await call($, UNPIN, { id: 1 })).deny).toMatch(/no pinned question/)
+  })
+
+  test('drops a blank context, so no details button is drawn', async ($, on) => {
+    standInForPanes(on)
+    const id = await pin($, 'Blank context?', '   ')
+    const ui = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await ui.find({ key: `details:${id}` })).toBeUndefined()
+    await ui.unmount()
+  })
+})
+
+describe('pane', () => {
+  test('shows a placeholder when no question is selected', async ($, on) => {
+    standInForPanes(on)
+    await pin($, 'Unrelated?', 'Some context.')
+    const pane = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'Pane', requestId: 'open-question', props: PANE_PROPS })
+    expect(await pane.find({ type: 'Markdown' })).toBeUndefined()
+    expect(await pane.find({ type: 'Text', text: 'No question to show.' })).toBeDefined()
+    await pane.unmount()
+  })
+})
+
+describe('session end', () => {
+  const standInForSessionEnd = (on: On) => on('session.end', (_, e) => ({ sessionId: e.sessionId }))
+  const end = ($: Engine, reason: 'clear' | 'prompt_input_exit') =>
+    $.session.end({ reason, sessionId: 'test-session', resume: { id: 'test-session' } })
+
+  test('/clear empties the band and closes the pane', async ($, on) => {
+    const panes = standInForPanes(on)
+    standInForSessionEnd(on)
+    const id = await pin($, 'Survives a clear?', '## Context')
+    const band = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    await band.press({ key: `details:${id}` })
+    await band.unmount()
+
+    await end($, 'clear')
+
+    expect(panes.closed).toContain('open-question')
+    const after = await $.ui.mount({ plugin: 'open-question', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+    expect(await after.find({ key: 'frame' })).toBeUndefined()
+    await after.unmount()
+    expect((await call($, UNPIN, { id })).deny).toMatch(/no pinned question/)
+  })
+
+  test('/clear frees the three slots', async ($, on) => {
+    standInForPanes(on)
+    standInForSessionEnd(on)
+    await pin($, 'One?')
+    await pin($, 'Two?')
+    await pin($, 'Three?')
+    await end($, 'clear')
+    expect((await call($, PIN, { question: 'Four?' })).deny).toBeUndefined()
+  })
+
+  test('another end reason keeps the questions', async ($, on) => {
+    const panes = standInForPanes(on)
+    standInForSessionEnd(on)
+    const id = await pin($, 'Still there?')
+    await end($, 'prompt_input_exit')
+    expect(panes.closed).not.toContain('open-question')
+    expect((await call($, UNPIN, { id })).deny).toBeUndefined()
+  })
+})
