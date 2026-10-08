@@ -45,12 +45,14 @@ L'auteur du code est souvent celui des tests : c'est pour ça qu'un autre les po
    que donne le brief — `git worktree add --detach <dossier hors du dépôt> <base>`, retiré avant de
    rendre : sans `--detach`, il verrouille la branche de base pour tout le monde —, où tu recopies les fichiers de
    test. Ses dépendances s'y installent depuis le lockfile — `pnpm install --frozen-lockfile
-   --prefer-offline`, ou l'équivalent du gestionnaire du dépôt —, jamais par une jonction vers les
-   `node_modules` du dépôt. Pas un dossier temporaire à côté : le lanceur de tests importerait
-   encore la version modifiée. Un test qui passe encore sans le changement ne teste pas le
-   changement.
-   - **Il doit tomber pour la bonne raison**, comme en mode bug : un échec d'import ou de
-     résolution de module dans le worktree ne compte pas comme « tombe sans le changement ».
+   --prefer-offline`, ou l'équivalent du gestionnaire du dépôt —, sans jonction (`CLAUDE.md`
+   global § « Une autre session »). Pas un dossier temporaire à côté : le lanceur de tests
+   importerait encore la version modifiée. Un test qui passe encore sans le changement ne teste pas
+   le changement.
+   - **Il doit tomber pour la bonne raison.** Un module ou une dépendance **introuvable** — paquet
+     non installé, chemin de résolution — tient à l'environnement : ça ne compte pas. Un **symbole
+     que le changement ajoute**, absent de la base (export manquant, `ImportError`), compte : c'est
+     la preuve attendue — à l'inverse du mode bug, où le code testé existe déjà.
    - **Un fichier créé** n'existe pas dans la base : ses tests y tombent par construction, ça ne
      prouve rien. Ne compte que les fichiers **modifiés**.
    - **Tes propres tests** aussi : écris-les, puis vois-les tomber sur la base.

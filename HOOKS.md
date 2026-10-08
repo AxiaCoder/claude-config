@@ -107,7 +107,8 @@ JSON réelle de l'événement, chemins réels compris (`agent_transcript_path` p
 tester avec `HOME` sur un dossier jetable (`USERPROFILE` sous Windows) et la charge lue depuis un
 fichier : sinon les essais donnent un faux refus, s'écrivent dans l'état de la session en cours, et
 une charge de refus passée en ligne est bloquée par le `guardrail.py` installé avant d'atteindre
-celui qu'on teste.
+celui qu'on teste. Même piège pour `garde-push.py` : une charge qui cite un de ses motifs, passée en
+ligne, est refusée par le `garde-push.py` installé — la lire depuis un fichier.
 
 ---
 

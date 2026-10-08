@@ -110,17 +110,16 @@ La règle tient même sur « finalise » ou « termine » : merger n'est pas imp
 commande.** Avec Write : l'écrire dans un fichier, puis `git commit -F`, `--body-file`,
 `--input <fichier>`. Sans Write : un heredoc **protégé**, délimiteur entre apostrophes (`<<'EOF'`),
 dont le shell ne transforme aucun caractère. Interdits : le heredoc non protégé (`<<EOF`) et la
-chaîne entre guillemets doubles, qui font interpréter `$`, les backticks et les antislashs.
+chaîne entre guillemets doubles, qui font interpréter `$`, les backticks et les antislashs. Un texte
+qui cite un motif gardé par `garde-push.py` est refusé même en heredoc protégé : sans Write, le
+rendre au parent, qui l'écrit avec Write.
 
 ⇒ **Le fichier écrit se contrôle avant de servir** : hors octet nul, aucun caractère de contrôle
-autre que le saut de ligne, la tabulation et — sous Windows — le retour chariot. Rien ne doit
-sortir de :
+autre que le saut de ligne, la tabulation et le retour chariot. Rien ne doit sortir de :
 
 ```bash
 LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
 ```
-
-(Vérifiée avec le `grep` BSD, GNU et ugrep ; `grep -P` n'existe pas partout.)
 
 ## Délégation aux sous-agents
 
