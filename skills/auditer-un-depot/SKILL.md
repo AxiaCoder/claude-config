@@ -41,7 +41,8 @@ trancher** — la fréquence d'édition dit le coût mieux que la nature du déf
 
 ⚠️ **Avant la première mesure, ce qui est en cours.** `gh pr list --state open` et les branches
 distantes : `main` n'est pas tout le travail en cours. Une PR qui touche la zone mesurée → la lire
-par `git diff main...<branche>`, ou dans un worktree à part — ⛔ jamais par un `checkout` dans un
+par `git fetch` puis `git diff origin/main...origin/<branche>` (une branche qui n'existe que sur le
+remote fait échouer `main...<branche>`), ou dans un worktree à part — ⛔ jamais par un `checkout` dans un
 arbre peut-être partagé — ou dire que le chiffre ne vaut que pour `main`.
 
 ## Où la dette se loge

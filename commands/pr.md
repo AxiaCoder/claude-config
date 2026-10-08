@@ -53,8 +53,9 @@ ce que son `CLAUDE.md` nomme.
 Dans cet ordre, le premier qui répond tranche :
 
 1. **Le `CLAUDE.md` du dépôt** fixe la langue des pull requests → celle-là.
-2. **Les sujets des derniers commits** (`git log --format=%s -8 origin/<base>`) → leur langue
-   majoritaire.
+2. **Les sujets des derniers commits écrits par un humain** (`git log --format=%s -8 origin/<base>`,
+   sans les `Bump…` ni `Merge pull request…`) → leur langue majoritaire ; à égalité, celle du plus
+   récent.
 3. **Dépôt sans historique** → anglais.
 
 ⚠️ Qu'un dépôt soit public ne tranche rien : un dépôt public peut écrire en français. Passer un
