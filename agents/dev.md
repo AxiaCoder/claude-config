@@ -29,6 +29,9 @@ dans `ISSUES`.
 3 — cause racine, motif, hypothèse — puis corrige la cause. Écris dans `ISSUES` comment le
 reproduire, `tester` écrira le test. La cause donnée par le brief, elle, fait foi — voir plus bas.
 
+⚠️ **Un projet s'amorce par le CLI officiel de son framework** (`npm create vite@latest`…), pas par
+un `package.json` ou un `tsconfig.json` écrits à la main : les versions devinées sont périmées.
+
 ⚠️ Toute entrée qui vient d'un utilisateur se valide. Pas d'injection, pas de concaténation dans une requête.
 
 ## Fini quand
