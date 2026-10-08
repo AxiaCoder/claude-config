@@ -82,6 +82,18 @@ pas.
 
 ⇒ **Avant de présenter un travail d'interface : ouvrir l'écran touché.**
 
+⚠️ **Un écran derrière une connexion : demander à l'utilisateur de se connecter avant de
+commencer**, pas en butant dessus — sans session, la vérification se rabat en silence sur une
+relecture de code. **Aucun mot de passe n'est saisi par l'agent**, à une exception près : un compte
+de développement ou de test que le projet documente, à trois conditions cumulées :
+
+- **l'écran visé n'est jamais la production** — local, dev ou preview seulement ;
+- **l'absence du compte en production se vérifie dans le code** (seeders, fixtures, scripts de
+  déploiement), ⛔ **jamais en essayant de se connecter à la production** : ce serait l'acte même
+  que la règle interdit ;
+- **vérification impossible** (code des seeders absent, base partagée entre environnements) →
+  pas de saisie, on demande à l'utilisateur.
+
 ⛔ **Jamais « vérifié à l'écran » pour un état qu'on n'a pas ouvert** — voir § 4.
 
 ### Ni qu'un artefact se régénère
