@@ -33,9 +33,14 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 - Pas d'options non demandées
 
 ⚠️ **Une question qui attend la réponse de l'utilisateur s'épingle** avec `pin_question` (mod
-`open-question`) : une ligne courte, et le contexte — options, recommandation — dans `context`. Elle
-reste au-dessus du prompt quoi qu'il s'intercale. Elle se retire avec `unpin_question` quand sa
-réponse la tranche ; une réponse à côté la laisse en place.
+`open-question`) : une ligne courte, les choix dans `options` quand c'en est une à choix, le
+détail dans `context`. Elle reste au-dessus du prompt quoi qu'il s'intercale. Une réponse donnée
+par la barre arrive en `Réponse à « … » :` et la retire d'elle-même ; une réponse tapée
+directement se retire avec `unpin_question` quand elle tranche, et une réponse à côté la laisse
+en place.
+
+⇒ **Une seule à la fois.** Une deuxième question se pose dans le message ; deux questions qui vont
+ensemble deviennent une seule question à choix.
 
 ⇒ **Sans l'outil** (mod non chargé), elle se repose **en entier, jamais par renvoi**, dès qu'un
 rapport de sous-agent s'est intercalé : c'est ce qui la fait disparaître de l'écran. Une session en

@@ -95,13 +95,13 @@ describe('pin_question', () => {
     expect(answer.deny).toMatch(/one line/)
   })
 
-  test('refuses a fourth open question', async ($, on) => {
+  test('refuses a second open question', async ($, on) => {
     standInForPanes(on)
     await pin($, 'One?')
-    await pin($, 'Two?')
-    await pin($, 'Three?')
-    const answer = await call($, PIN, { question: 'Four?' })
-    expect(answer.deny).toMatch(/unpin one before pinning another/)
+    const answer = await call($, PIN, { question: 'Two?' })
+    expect(answer.deny).toBe(
+      'pin_question: A question is already pinned: ask this one in your message, or unpin the open one first.',
+    )
   })
 })
 
@@ -143,17 +143,20 @@ describe('band', () => {
     }
   })
 
-  test('draws one line per question, details only with a context', async ($, on) => {
+  test('draws the question, details only with a context', async ($, on) => {
     standInForPanes(on)
-    const bare = await pin($, 'Rename the table?')
-    const rich = await pin($, 'Which cache?', '## Options\n\n- Redis\n- in memory')
     for (const surface of SURFACES) {
+      const bare = await pin($, 'Rename the table?')
       const ui = await $.ui.mount({ plugin: 'open-question', surface, component: 'AbovePrompt', props: BAND_PROPS })
       expect((await ui.find({ type: 'Text', text: /Rename the table/ }))?.text).toContain('❓ Rename the table?')
       expect(await ui.find({ key: `details:${bare}` })).toBeUndefined()
       expect(await ui.find({ key: `remove:${bare}` })).toBeDefined()
+      await ui.press({ key: `remove:${bare}` })
+
+      const rich = await pin($, 'Which cache?', '## Options\n\n- Redis\n- in memory')
       expect(await ui.find({ key: `details:${rich}` })).toBeDefined()
       expect(await ui.find({ key: `remove:${rich}` })).toBeDefined()
+      await ui.press({ key: `remove:${rich}` })
       await ui.unmount()
     }
   })
@@ -292,13 +295,140 @@ describe('session end', () => {
     })
   }
 
-  test('an ended session frees the three slots', async ($, on) => {
+  test('an ended session frees the slot', async ($, on) => {
     standInForPanes(on)
     standInForSessionEnd(on)
     await pin($, 'One?')
-    await pin($, 'Two?')
-    await pin($, 'Three?')
     await end($, 'resume')
-    expect((await call($, PIN, { question: 'Four?' })).deny).toBeUndefined()
+    expect((await call($, PIN, { question: 'Two?' })).deny).toBeUndefined()
+  })
+})
+
+/**
+ * Stands for the prompt box beneath the plugin: a draft that reads and fills
+ * as the engine's does.
+ *
+ * @param on the test's registrar
+ * @param draft what the person has typed already
+ * @returns the box, whose `text` follows every fill
+ */
+const standInForPrompt = (on: On, draft = '') => {
+  const box = { text: draft }
+  on('prompt.read', () => ({ value: { text: box.text, cursor: box.text.length } }))
+  on('prompt.fill', ($, e) => {
+    box.text = e.mode === 'replace' ? e.text : box.text + e.text
+
+    return { isFilled: true }
+  })
+  on('prompt.submit', ($, e) => ({ text: e.text }))
+
+  return box
+}
+
+describe('options', () => {
+  test('refuses one option, five, one over 30 characters, one on two lines', async ($, on) => {
+    standInForPanes(on)
+    const refusals = [
+      ['Only one'],
+      ['a', 'b', 'c', 'd', 'e'],
+      ['short', 'c'.repeat(31)],
+      ['first\nline', 'other'],
+    ]
+    for (const options of refusals) {
+      expect((await call($, PIN, { question: 'Pick?', options })).deny).toMatch(/Rephrase/)
+    }
+    const two = await call($, PIN, { question: 'Two?', options: ['a', 'c'.repeat(30)] })
+    expect(two.deny).toBeUndefined()
+    await call($, UNPIN, { id: two.result })
+    expect((await call($, PIN, { question: 'Four?', options: ['a', 'b', 'c', 'd'] })).deny).toBeUndefined()
+  })
+
+  test('draws only [répondre] for an open question', async ($, on) => {
+    standInForPanes(on)
+    const open = await pin($, 'Why so?')
+    for (const surface of SURFACES) {
+      const ui = await $.ui.mount({ plugin: 'open-question', surface, component: 'AbovePrompt', props: BAND_PROPS })
+      expect(await ui.find({ key: `answer:${open}` })).toBeDefined()
+      expect(await ui.find({ key: `option:${open}:0` })).toBeUndefined()
+      await ui.unmount()
+    }
+  })
+
+  test('draws one button per option, then [répondre]', async ($, on) => {
+    standInForPanes(on)
+    const choice = (await call($, PIN, { question: 'Which cache?', options: ['Redis', 'Memory'] })).result as string
+    for (const surface of SURFACES) {
+      const ui = await $.ui.mount({ plugin: 'open-question', surface, component: 'AbovePrompt', props: BAND_PROPS })
+      expect((await ui.find({ key: `option:${choice}:0` }))?.text).toBe('Redis')
+      expect((await ui.find({ key: `option:${choice}:1` }))?.text).toBe('Memory')
+      expect(await ui.find({ key: `answer:${choice}` })).toBeDefined()
+      expect((await ui.find({ key: `answers:${choice}` }))?.props.flexWrap).toBe('wrap')
+      await ui.unmount()
+    }
+  })
+})
+
+describe('answers', () => {
+  for (const surface of SURFACES) {
+    test(`an option fills the answer, the draft kept after it (${surface})`, async ($, on) => {
+      standInForPanes(on)
+      const box = standInForPrompt(on)
+      const id = (await call($, PIN, { question: 'Which cache?', options: ['Redis', 'Memory'] })).result as string
+      const ui = await $.ui.mount({ plugin: 'open-question', surface, component: 'AbovePrompt', props: BAND_PROPS })
+
+      await ui.press({ key: `option:${id}:0` })
+      expect(box.text).toBe('Réponse à « Which cache? » : Redis')
+
+      box.text = 'because it is fast'
+      await ui.press({ key: `option:${id}:0` })
+      expect(box.text).toBe('Réponse à « Which cache? » : Redis because it is fast')
+
+      await ui.press({ key: `option:${id}:1` })
+      expect(box.text).toBe('Réponse à « Which cache? » : Memory because it is fast')
+      await ui.unmount()
+    })
+
+    test(`[répondre] opens a free answer, the draft kept after it (${surface})`, async ($, on) => {
+      standInForPanes(on)
+      const box = standInForPrompt(on)
+      const id = await pin($, 'Why so?')
+      const ui = await $.ui.mount({ plugin: 'open-question', surface, component: 'AbovePrompt', props: BAND_PROPS })
+
+      await ui.press({ key: `answer:${id}` })
+      expect(box.text).toBe('Réponse à « Why so? » : ')
+
+      box.text = 'no idea yet'
+      await ui.press({ key: `answer:${id}` })
+      expect(box.text).toBe('Réponse à « Why so? » : no idea yet')
+
+      await ui.press({ key: `answer:${id}` })
+      expect(box.text).toBe('Réponse à « Why so? » : no idea yet')
+      await ui.unmount()
+    })
+  }
+
+  test('a tagged submit unpins its question, the prompt unchanged', async ($, on) => {
+    standInForPanes(on)
+    standInForPrompt(on)
+    const answered = await pin($, 'Which cache?')
+    const sent = await $.prompt.submit({ text: 'Réponse à « Which cache? » : Redis', wait: false, origin: { kind: 'composer' } })
+    expect(sent).toMatchObject({ text: 'Réponse à « Which cache? » : Redis' })
+    expect((await call($, UNPIN, { id: answered })).deny).toMatch(/no pinned question/)
+  })
+
+  test('an untagged submit keeps the question', async ($, on) => {
+    standInForPanes(on)
+    standInForPrompt(on)
+    const id = await pin($, 'Which cache?')
+    await $.prompt.submit({ text: 'Redis, I think', wait: false, origin: { kind: 'composer' } })
+    expect((await call($, UNPIN, { id })).deny).toBeUndefined()
+  })
+
+  test('a submit tagged with an unknown question unpins nothing', async ($, on) => {
+    standInForPanes(on)
+    standInForPrompt(on)
+    const id = await pin($, 'Which cache?')
+    await $.prompt.submit({ text: 'Réponse à « Which queue? » : Kafka', wait: false, origin: { kind: 'composer' } })
+    expect((await call($, UNPIN, { id })).deny).toBeUndefined()
   })
 })
