@@ -39,11 +39,12 @@ Les deux à la fois, et ce n'est pas contradictoire :
 est un 🟡 ; la même dans le fichier le plus édité du dépôt est un 🟠. **Regarde `git log` avant de
 trancher** — la fréquence d'édition dit le coût mieux que la nature du défaut.
 
-## Où la dette se loge
+⚠️ **Avant la première mesure, ce qui est en cours.** `gh pr list --state open` et les branches
+distantes : `main` n'est pas tout le travail en cours. Une PR qui touche la zone mesurée → la lire
+par `git diff main...<branche>`, ou dans un worktree à part — ⛔ jamais par un `checkout` dans un
+arbre peut-être partagé — ou dire que le chiffre ne vaut que pour `main`.
 
-**Ce qui est en cours, avant la première mesure.** `gh pr list --state open` et les branches
-distantes : `main` n'est pas tout le travail en cours. Une PR qui touche la zone mesurée → mesurer
-sur sa branche, ou dire que le chiffre ne vaut que pour `main`.
+## Où la dette se loge
 
 **Ce que le dépôt dit de lui-même, d'abord.** `CLAUDE.md`, ses conventions, ses décisions écrites.
 ⛔ Un écart à une convention du dépôt compte ; un écart à une convention que tu apportes, non.

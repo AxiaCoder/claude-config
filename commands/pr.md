@@ -50,9 +50,15 @@ ce que son `CLAUDE.md` nomme.
 
 ## La langue suit le dépôt
 
-`git log --format=%s -8` tranche. Un dépôt qui vise la publication, ou dont le `CLAUDE.md` fixe
-l'anglais, prend un titre et un corps en anglais, comme son code et ses commits. Sans signal :
-anglais.
+Dans cet ordre, le premier qui répond tranche :
+
+1. **Le `CLAUDE.md` du dépôt** fixe la langue des pull requests → celle-là.
+2. **Les sujets des derniers commits** (`git log --format=%s -8 origin/<base>`) → leur langue
+   majoritaire.
+3. **Dépôt sans historique** → anglais.
+
+⚠️ Qu'un dépôt soit public ne tranche rien : un dépôt public peut écrire en français. Passer un
+dépôt à l'anglais est une décision, et elle s'écrit dans son `CLAUDE.md`.
 
 ## Le titre : un type que la machine lit, un constat que l'humain lit
 
