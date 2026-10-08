@@ -44,7 +44,8 @@ L'auteur du code est souvent celui des tests : c'est pour ça qu'un autre les po
 3. **Tombent-ils sans le changement ?** Rejoue les tests dans **un worktree jetable** de la base
    que donne le brief — `git worktree add --detach <dossier hors du dépôt> <base>`, retiré avant de
    rendre : sans `--detach`, il verrouille la branche de base pour tout le monde —, où tu recopies les fichiers de
-   test. Pas un dossier temporaire à côté : le lanceur de tests importerait encore la version
+   test. Sous Windows, aucune jonction vers les `node_modules` du dépôt — `CLAUDE.md` global,
+   § Une autre session sur le même dépôt. Pas un dossier temporaire à côté : le lanceur de tests importerait encore la version
    modifiée. Un test qui passe encore sans le changement ne teste pas le changement.
    - **Un fichier créé** n'existe pas dans la base : ses tests y tombent par construction, ça ne
      prouve rien. Ne compte que les fichiers **modifiés**.

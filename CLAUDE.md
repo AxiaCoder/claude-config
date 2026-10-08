@@ -84,6 +84,10 @@ dépôt ?** Trois signes, dont aucun ne s'annonce seul :
 `git worktree add --no-track -b <branche> <dossier> origin/<base>`.
 ⛔ Jamais `switch`, `stash` ni `checkout` dans l'arbre de l'autre : il est à elle.
 
+⛔ **Sous Windows, jamais de jonction ni de lien d'un worktree vers `node_modules`** ou tout autre
+dossier du dépôt principal : on réinstalle les dépendances dans le worktree. Sa suppression suit la
+jonction et efface la cible. Vaut pour tout worktree, celui de `tester` compris.
+
 ⚠️ **Après le merge, le worktree se retire avec sa branche locale** — `git worktree remove`, puis
 `git branch -D` une fois la PR `MERGED` selon `gh pr view` : après un squash, `-d` refuse la branche
 comme non fusionnée. Sinon il traîne : six trouvés le 29/09, dont aucun n'avait plus d'usage.
@@ -98,6 +102,15 @@ Avant `gh pr merge` ou tout merge :
 3. Seulement ensuite, exécuter
 
 La règle tient même sur « finalise » ou « termine » : merger n'est pas implicite.
+
+## Outillage
+
+⛔ **Un contenu multi-ligne, avec guillemets ou antislashs, ne passe jamais en ligne de commande**
+— ni heredoc ni here-string. Écrire d'abord un fichier avec Write, puis l'utiliser
+(`git commit -F`, `--body-file`, script). Vérifier ensuite qu'aucun caractère < 0x20 n'est apparu.
+
+⚠️ **Un projet s'amorce par le CLI officiel de son framework** (`npm create vite@latest`…), pas par
+un `package.json` ou un `tsconfig.json` écrits à la main : les versions devinées sont périmées.
 
 ## Délégation aux sous-agents
 

@@ -90,6 +90,11 @@ ferait sinon vérifier que `python3`, qui existe toujours. Et il lit `settings.l
 
 ✅ **Aucune ligne `MANQUANT` = les hooks sont installés.**
 
+⚠️ **Installé ne veut pas dire qu'il fait ce qu'il doit.** Ça se vérifie en appelant **l'enveloppe**
+telle que l'hôte la lance — avec la charge JSON qu'il envoie sur stdin, `transcript_path` réel
+compris —, jamais le script nu : l'enveloppe peut poser l'environnement que le script lit. Puis
+lire **la trace** qu'il produit ; c'est elle qui tranche, pas la sortie de l'appel.
+
 ---
 
 ## Ce dont chaque brique a besoin
