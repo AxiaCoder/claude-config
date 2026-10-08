@@ -167,7 +167,7 @@ def render(text):
     """Replace the {{CLAUDE_HOME}}, {{REPO}} and {{MODS}} markers in a layer's raw JSON text, JSON-escaped.
 
     {{MODS}} becomes the mod folders joined by the platform's path-list separator, "" when there is none;
-    CLAUDE_CODE_PLUGIN_DIRS is then dropped from env once the layers are merged.
+    CLAUDE_CODE_PLUGIN_DIRS is dropped from env when its merged value is "".
     """
     for marker, value in (("{{CLAUDE_HOME}}", home), ("{{REPO}}", repo), ("{{MODS}}", MODS)):
         text = text.replace(marker, json.dumps(str(value))[1:-1])
@@ -265,8 +265,8 @@ for layer in layers:
     merged.update(data)
     if env:
         merged["env"] = env
-if not MODS and isinstance(merged.get("env"), dict):
-    merged["env"].pop("CLAUDE_CODE_PLUGIN_DIRS", None)
+if isinstance(merged.get("env"), dict) and merged["env"].get("CLAUDE_CODE_PLUGIN_DIRS") == "":
+    del merged["env"]["CLAUDE_CODE_PLUGIN_DIRS"]
 rendered = []
 if hooks is not None:
     for event, blocks in hooks.items():

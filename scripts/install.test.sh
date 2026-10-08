@@ -427,6 +427,11 @@ EOF
 	done
 }
 
+# Affiche les chemins en arguments tels que python3 les écrit, joints par le séparateur de liste de chemins de la plateforme.
+natifs() {
+	python3 -c 'import os, pathlib, sys; print(os.pathsep.join(str(pathlib.Path(p)) for p in sys.argv[1:]))' "$@"
+}
+
 # Aucun mod : la variable est retirée du rendu, y compris celle d'une passe précédente.
 socle_mods zero-mod
 mkdir -p "$tmp/zero-mod/repo/mods"
@@ -438,18 +443,31 @@ verdict base "$(lire zero-mod env.A)" "0 mod : le reste de env intact"
 # Un mod : son chemin absolu.
 socle_mods un-mod alpha
 installer un-mod; verdict 0 "$?" "1 mod : install sans erreur"
-verdict "$tmp/un-mod/repo/mods/alpha" "$(lire un-mod env.CLAUDE_CODE_PLUGIN_DIRS)" "1 mod : son chemin absolu"
+verdict "$(natifs "$tmp/un-mod/repo/mods/alpha")" "$(lire un-mod env.CLAUDE_CODE_PLUGIN_DIRS)" "1 mod : son chemin absolu"
 
-# Deux mods, créés dans le désordre : triés, joints par « : ».
+# Deux mods, créés dans le désordre : triés, joints par le séparateur de la plateforme.
 socle_mods deux-mods zeta alpha
 installer deux-mods; verdict 0 "$?" "2 mods : install sans erreur"
-verdict "$tmp/deux-mods/repo/mods/alpha:$tmp/deux-mods/repo/mods/zeta" "$(lire deux-mods env.CLAUDE_CODE_PLUGIN_DIRS)" "2 mods : triés, séparés par :"
+verdict "$(natifs "$tmp/deux-mods/repo/mods/alpha" "$tmp/deux-mods/repo/mods/zeta")" "$(lire deux-mods env.CLAUDE_CODE_PLUGIN_DIRS)" "2 mods : triés, joints par le séparateur"
 
 # Un dossier sous mods/ sans .claude-plugin/plugin.json : ignoré.
 socle_mods sans-manifeste alpha
 mkdir -p "$tmp/sans-manifeste/repo/mods/brouillon/hooks"
 installer sans-manifeste; verdict 0 "$?" "sans manifeste : install sans erreur"
-verdict "$tmp/sans-manifeste/repo/mods/alpha" "$(lire sans-manifeste env.CLAUDE_CODE_PLUGIN_DIRS)" "sans manifeste : dossier ignoré"
+verdict "$(natifs "$tmp/sans-manifeste/repo/mods/alpha")" "$(lire sans-manifeste env.CLAUDE_CODE_PLUGIN_DIRS)" "sans manifeste : dossier ignoré"
+
+# Un dépôt dont le chemin porte une espace : le chemin du mod reste entier.
+socle_mods "avec espace" alpha
+installer "avec espace"; verdict 0 "$?" "chemin à espace : install sans erreur"
+verdict "$(natifs "$tmp/avec espace/repo/mods/alpha")" "$(lire "avec espace" env.CLAUDE_CODE_PLUGIN_DIRS)" "chemin à espace : chemin du mod entier"
+
+# Aucun mod, mais le perso déclare ses propres dossiers de plugins : sa valeur est gardée.
+socle_mods zero-mod-perso
+mkdir -p "$tmp/zero-mod-perso/repo/mods"
+printf '{"env": {"CLAUDE_CODE_PLUGIN_DIRS": "/perso/mod"}}
+' >"$tmp/zero-mod-perso/perso/settings.json"
+installer zero-mod-perso --perso "$tmp/zero-mod-perso/perso"; verdict 0 "$?" "0 mod + perso : install sans erreur"
+verdict /perso/mod "$(lire zero-mod-perso env.CLAUDE_CODE_PLUGIN_DIRS)" "0 mod + perso : la valeur du perso gardée"
 
 echo "$nb cas, $([ "$echec" -eq 0 ] && echo 'tous passent' || echo 'ECHEC')"
 exit "$echec"
