@@ -1,0 +1,7 @@
+{
+  "name": "open-question",
+  "version": "0.1.0",
+  "author": { "name": "AxiaCoder" },
+  "description": "Pins the questions awaiting the user's answer above the prompt, their context in a pane, without blocking the session",
+  "types": "./types/index.d.ts"
+}

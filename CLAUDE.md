@@ -28,17 +28,18 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 
 ## Comportement
 - Réponses courtes, actionnables
-- Ne jamais répéter ce qui vient d'être dit — **sauf une question restée sans réponse**
+- Ne jamais répéter ce qui vient d'être dit
 - Avant toute implémentation : spec Markdown d'abord
 - Pas d'options non demandées
 
-⚠️ **Une question sans réponse se repose en entier, jamais par renvoi.** Un « ma question reste
-ouverte » est un accusé de réception, pas une question : l'utilisateur ne peut pas y répondre sans
-remonter le fil.
+⚠️ **Une question qui attend la réponse de l'utilisateur s'épingle** avec `pin_question` (mod
+`open-question`) : une ligne courte, et le contexte — options, recommandation — dans `context`. Elle
+reste au-dessus du prompt quoi qu'il s'intercale. Elle se retire avec `unpin_question` quand sa
+réponse la tranche ; une réponse à côté la laisse en place.
 
-⇒ Elle se repose **dès qu'un rapport de sous-agent s'est intercalé** depuis qu'elle a été posée —
-c'est ce qui la fait disparaître de l'écran. Une session en a perdu une comme ça, entre quatorze
-rapports d'agents sur trente-quatre messages.
+⇒ **Sans l'outil** (mod non chargé), elle se repose **en entier, jamais par renvoi**, dès qu'un
+rapport de sous-agent s'est intercalé : c'est ce qui la fait disparaître de l'écran. Une session en
+a perdu une comme ça, entre quatorze rapports d'agents sur trente-quatre messages.
 
 ⛔ **Mais elle ne bloque pas.** Le travail continue pendant qu'elle attend ; c'est la question qui
 doit rester visible, pas la session qui doit s'arrêter.

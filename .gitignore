@@ -15,6 +15,7 @@
 !/commands/
 !/skills/
 !/hooks/
+!/mods/
 !/git-hooks/
 !/scripts/
 !/exemple-perso/
@@ -27,6 +28,10 @@
 # Le cache que le harness synchronise sous ~/.claude/skills, et qui atterrit ici
 # par le lien symbolique vers skills/.
 /skills/synced/
+
+# Les déclarations de types que Claude Code écrit à côté d'un mod quand il le charge.
+/mods/*/.claude-plugin/types/
+/mods/*/tsconfig.json
 
 # Bytecode Python des hooks et des scripts
 __pycache__/

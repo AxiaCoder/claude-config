@@ -4,6 +4,7 @@
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
     "OTEL_LOGS_EXPORTER": "none",
-    "OTEL_LOG_TOOL_DETAILS": "1"
+    "OTEL_LOG_TOOL_DETAILS": "1",
+    "CLAUDE_CODE_PLUGIN_DIRS": "{{REPO}}/mods/open-question"
   }
 }
