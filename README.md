@@ -302,6 +302,7 @@ Ne jamais committer : `.claude.json` (il contient les jetons MCP en clair),
 | `commands/` | Commandes globales : `/pr`, `/pr-review`, `/start-ticket`, `/new-ticket` |
 | `skills/` | Skills globaux |
 | `hooks/` | Hooks Claude Code et statusline |
+| `mods/` | Mods Claude Code, chargés par `CLAUDE_CODE_PLUGIN_DIRS` : `open-question` |
 | `git-hooks/` | Hooks git globaux : garde de push et relais |
 | `scripts/` | Outils de maintenance et tests de l'installation |
 | `exemple-perso/` | Un dossier perso d'exemple |
