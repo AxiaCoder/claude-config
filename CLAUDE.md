@@ -32,9 +32,12 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 - Avant toute implémentation : spec Markdown d'abord
 - Pas d'options non demandées
 
-⚠️ **Une question qui attend la réponse de l'utilisateur s'épingle** avec `pin_question` (mod
-`open-question`) : une ligne courte, les choix dans `options` quand c'en est une à choix, le
-détail dans `context`. Elle reste au-dessus du prompt quoi qu'il s'intercale. Une réponse donnée
+⚠️ **Une question se pose dans le message, et s'épingle seulement quand un rapport de sous-agent
+s'intercale avant la réponse** : c'est ce qui la fait sortir de l'écran. L'épingler en la posant
+la montre deux fois pour rien.
+
+⇒ L'épinglage passe par `pin_question` (mod `open-question`) : une ligne courte, les choix dans
+`options` quand c'en est une à choix, le détail dans `context`. Une réponse donnée
 par la barre arrive en `Réponse à « … » :` et la retire d'elle-même ; une réponse tapée
 directement se retire avec `unpin_question` quand elle tranche, et une réponse à côté la laisse
 en place.
@@ -42,9 +45,8 @@ en place.
 ⇒ **Une seule à la fois.** Une deuxième question se pose dans le message ; deux questions qui vont
 ensemble deviennent une seule question à choix.
 
-⇒ **Sans l'outil** (mod non chargé), elle se repose **en entier, jamais par renvoi**, dès qu'un
-rapport de sous-agent s'est intercalé : c'est ce qui la fait disparaître de l'écran. Une session en
-a perdu une comme ça, entre quatorze rapports d'agents sur trente-quatre messages.
+⇒ **Sans l'outil** (mod non chargé), elle se repose au même moment, **en entier, jamais par
+renvoi**. Une session en a perdu une, entre quatorze rapports d'agents sur trente-quatre messages.
 
 ⛔ **Mais elle ne bloque pas.** Le travail continue pendant qu'elle attend ; c'est la question qui
 doit rester visible, pas la session qui doit s'arrêter.
