@@ -107,10 +107,17 @@ La règle tient même sur « finalise » ou « termine » : merger n'est pas imp
 
 ⛔ **Un contenu multi-ligne, avec guillemets ou antislashs, ne passe jamais en ligne de commande**
 — ni heredoc ni here-string. Écrire d'abord un fichier avec Write, puis l'utiliser
-(`git commit -F`, `--body-file`, script). Vérifier ensuite qu'aucun caractère < 0x20 n'est apparu.
+(`git commit -F`, `--body-file`, `--input <fichier>`, `python3 <fichier>`). Dans un fichier de
+script, un heredoc est permis ; c'est sur la ligne de commande qu'il est interdit.
 
-⚠️ **Un projet s'amorce par le CLI officiel de son framework** (`npm create vite@latest`…), pas par
-un `package.json` ou un `tsconfig.json` écrits à la main : les versions devinées sont périmées.
+⇒ **Le fichier écrit se contrôle avant de servir** : aucun caractère de contrôle autre que le saut
+de ligne, la tabulation et — sous Windows — le retour chariot. Rien ne doit sortir de :
+
+```bash
+LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037]')" <fichier>
+```
+
+(BSD et GNU : `grep -P` n'existe pas sur le `grep` de macOS.)
 
 ## Délégation aux sous-agents
 

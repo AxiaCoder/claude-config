@@ -29,10 +29,9 @@ le signale : la réponse aboutit, le hook coûte un démarrage d'interpréteur p
 configuration rendue retarde sur le dépôt jusqu'au prochain `install.sh` : un fichier renommé côté
 dépôt laisse une déclaration morte côté poste, et le dépôt a l'air propre.
 
-**Sur Unix :**
+**Sur Unix** — le script ci-dessous, écrit dans un fichier avec Write, puis `python3 <fichier>` :
 
-```bash
-python3 - <<'EOF'
+```python
 import json, os, pathlib, shutil
 
 def cibles_de(commande):
@@ -56,7 +55,6 @@ for source in ("settings.json", "settings.local.json"):
                     if not (os.path.exists(cible) or shutil.which(cible)):
                         print(f"MANQUANT  {source:22} {evenement:15} {cible}")
 print("verification terminee")
-EOF
 ```
 
 **Sur Windows :**
@@ -90,10 +88,18 @@ ferait sinon vérifier que `python3`, qui existe toujours. Et il lit `settings.l
 
 ✅ **Aucune ligne `MANQUANT` = les hooks sont installés.**
 
-⚠️ **Installé ne veut pas dire qu'il fait ce qu'il doit.** Ça se vérifie en appelant **l'enveloppe**
-telle que l'hôte la lance — avec la charge JSON qu'il envoie sur stdin, `transcript_path` réel
-compris —, jamais le script nu : l'enveloppe peut poser l'environnement que le script lit. Puis
-lire **la trace** qu'il produit ; c'est elle qui tranche, pas la sortie de l'appel.
+⚠️ **Installé ne veut pas dire qu'il fait ce qu'il doit.** Ça se vérifie en lançant le hook **tel
+que l'hôte le lance** : la commande exacte de sa déclaration dans `settings.json` — `guardrail.py`
+appelé directement sur macOS, précédé de `{{PYTHON}}` sous Windows —, avec sur stdin la charge
+JSON réelle de l'événement, chemins réels compris (`agent_transcript_path` pour
+`collecteur-agents.py`). Ce qui tranche dépend du hook :
+
+- **un hook de garde** (`guardrail.py`, `garde-push.py`) : son **code de sortie** — `2` refuse,
+  `0` laisse passer — et le motif qu'il donne (JSON `decision`/`reason` sur stdout pour
+  `guardrail.py`, message sur stderr pour `garde-push.py`) ;
+- **un hook collecteur** (`collecteur-agents.py`) : il sort toujours `0`, son code ne dit rien. Ce
+  qui tranche est ce qu'il a produit — sa ligne `… — envoye` ou `… — en attente`, et
+  `~/.claude/telemetrie-agents/en-attente.jsonl` quand l'envoi a échoué.
 
 ---
 

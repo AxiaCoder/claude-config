@@ -121,10 +121,10 @@ et le ticket lié se lisent dans `body`, la description de la PR.
 
 ### Étape 4 : Poster la review sur GitHub
 
-Une seule requête pour toute la review — corps global + commentaires inline :
+Une seule requête pour toute la review — corps global + commentaires inline. Le JSON s'écrit
+d'abord dans un fichier avec Write :
 
-```bash
-gh api repos/<OWNER>/<REPO>/pulls/<PR>/reviews --method POST --input - <<'JSON'
+```json
 {
   "commit_id": "<headRefOid>",
   "event": "<REQUEST_CHANGES | COMMENT | APPROVE>",
@@ -145,7 +145,12 @@ gh api repos/<OWNER>/<REPO>/pulls/<PR>/reviews --method POST --input - <<'JSON'
     }
   ]
 }
-JSON
+```
+
+Puis :
+
+```bash
+gh api repos/<OWNER>/<REPO>/pulls/<PR>/reviews --method POST --input <fichier>
 ```
 
 **Champs qui font échouer l'appel (422) — vérifie-les avant d'envoyer :**
