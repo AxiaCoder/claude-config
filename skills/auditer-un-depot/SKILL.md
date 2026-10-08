@@ -41,6 +41,10 @@ trancher** — la fréquence d'édition dit le coût mieux que la nature du déf
 
 ## Où la dette se loge
 
+**Ce qui est en cours, avant la première mesure.** `gh pr list --state open` et les branches
+distantes : `main` n'est pas tout le travail en cours. Une PR qui touche la zone mesurée → mesurer
+sur sa branche, ou dire que le chiffre ne vaut que pour `main`.
+
 **Ce que le dépôt dit de lui-même, d'abord.** `CLAUDE.md`, ses conventions, ses décisions écrites.
 ⛔ Un écart à une convention du dépôt compte ; un écart à une convention que tu apportes, non.
 

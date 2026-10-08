@@ -321,6 +321,11 @@ C'est le point le plus important. Une review a déjà affirmé deux fois qu'un l
 été édité à la main ; il a suffi de lancer l'installation des dépendances pour voir que
 l'outil réécrit ces lignes tout seul. Deux cycles de correction déclenchés pour rien.
 
+⚠️ **Un défaut ne s'impute à la PR qu'après l'avoir reproduit sur la base.** Ce qu'on vient de
+changer est le suspect le plus disponible, et tout ce qu'un environnement de relecture révèle paraît
+nouveau. Présent sur la base → il n'est pas à la PR, il part en ticket ; base non testable → 🟡,
+en le disant.
+
 Tes commandes shell se limitent à `gh` et `git` : une commande de preuve hors de cette liste, ou qui
 écrirait dans l'arbre de travail (installation de dépendances, build qui génère des fichiers),
 **ne se lance pas**. La remarque va alors en 🟡, avec la commande à lancer pour trancher.

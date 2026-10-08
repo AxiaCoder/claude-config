@@ -82,6 +82,11 @@ pas.
 
 ⇒ **Avant de présenter un travail d'interface : ouvrir l'écran touché.**
 
+⚠️ **Un écran derrière une connexion : demander à l'utilisateur de se connecter avant de
+commencer**, pas en butant dessus — sans session, la vérification se rabat en silence sur une
+relecture de code. Je ne saisis jamais de mot de passe moi-même, **sauf un compte de développement
+ou de test que le projet documente**, et après avoir vérifié qu'il n'existe pas en production.
+
 ⛔ **Jamais « vérifié à l'écran » pour un état qu'on n'a pas ouvert** — voir § 4.
 
 ### Ni qu'un artefact se régénère

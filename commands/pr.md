@@ -48,6 +48,12 @@ se devine pas : ⛔ ne lance pas un `build` qu'aucun workflow ne lance, et ne sa
 vérification qu'il lance. Le sous-agent `ci` fait exactement ça. Sur un dépôt sans workflow, lance
 ce que son `CLAUDE.md` nomme.
 
+## La langue suit le dépôt
+
+`git log --format=%s -8` tranche. Un dépôt qui vise la publication, ou dont le `CLAUDE.md` fixe
+l'anglais, prend un titre et un corps en anglais, comme son code et ses commits. Sans signal :
+anglais.
+
 ## Le titre : un type que la machine lit, un constat que l'humain lit
 
 ```
