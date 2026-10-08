@@ -156,6 +156,7 @@ L'état d'avant la passe est copié en `settings.json.prev`.
 | `{{CLAUDE_HOME}}` | le chemin de `~/.claude` |
 | `{{REPO}}` | le chemin de ce dépôt, ouvert à Claude Code par `permissions.additionalDirectories` |
 | `{{PYTHON}}` | sous Windows : l'interpréteur trouvé par `py -3`, sinon `python` |
+| `{{MODS}}` | chaque `mods/*/` qui porte un `.claude-plugin/plugin.json`, triés, joints par `;` (Windows) ou `:` (macOS). Sans mod, la clé qui le porte est retirée de `env` |
 | `{{PERSO_CLAUDE_MD}}` | le `CLAUDE.md` du dossier perso, ou rien |
 | `{{PERSO}}` | dans le `CLAUDE.md` ou le `CLAUDE.complet.md` perso : le chemin du dossier perso |
 
@@ -302,7 +303,7 @@ Ne jamais committer : `.claude.json` (il contient les jetons MCP en clair),
 | `commands/` | Commandes globales : `/pr`, `/pr-review`, `/start-ticket`, `/new-ticket` |
 | `skills/` | Skills globaux |
 | `hooks/` | Hooks Claude Code et statusline |
-| `mods/` | Mods Claude Code, chargés par `CLAUDE_CODE_PLUGIN_DIRS` : `open-question` |
+| `mods/` | Mods Claude Code : chaque sous-dossier qui a un `.claude-plugin/plugin.json` est chargé par l'installation, et porte sa propre règle. Retirer un mod = supprimer son dossier, puis relancer l'installation |
 | `git-hooks/` | Hooks git globaux : garde de push et relais |
 | `scripts/` | Outils de maintenance et tests de l'installation |
 | `exemple-perso/` | Un dossier perso d'exemple |

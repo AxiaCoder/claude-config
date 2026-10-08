@@ -207,10 +207,23 @@ function Add-Unique($List, $Items) {
     if (-not $present) { [void]$List.Add($item) }
   }
 }
+function Get-ModDirs {
+  <# Returns the full paths of the <Repo>\mods\* folders holding a .claude-plugin\plugin.json, sorted ordinally. #>
+  $modsRoot = Join-Path $Repo 'mods'
+  if (-not (Test-Path $modsRoot -PathType Container)) { return , @() }
+  $dirs = @(Get-ChildItem $modsRoot -Directory |
+    Where-Object { Test-Path (Join-Path $_.FullName '.claude-plugin\plugin.json') -PathType Leaf } |
+    ForEach-Object { $_.FullName })
+  [Array]::Sort($dirs, [StringComparer]::Ordinal)
+  return , $dirs
+}
+$Mods = (Get-ModDirs) -join [IO.Path]::PathSeparator
 function Expand-Markers($Text) {
-  <# Replaces the {{CLAUDE_HOME}}, {{PYTHON}} and {{REPO}} markers in a layer's raw JSON text, backslashes escaped. #>
+  <# Replaces the {{CLAUDE_HOME}}, {{PYTHON}}, {{MODS}} and {{REPO}} markers in a layer's raw JSON text, backslashes escaped.
+     {{MODS}} becomes the mod folders joined by the platform's path-list separator, '' when there is none. #>
   $Text = $Text.Replace('{{CLAUDE_HOME}}', $ClaudeHome.Replace('\', '\\'))
   $Text = $Text.Replace('{{PYTHON}}', $Python.Replace('\', '\\'))
+  $Text = $Text.Replace('{{MODS}}', $Mods.Replace('\', '\\'))
   # {{REPO}} : les dossiers de ~/.claude sont des jonctions vers ce depot ; sans
   # cette autorisation, une session ouverte ailleurs ne peut pas les suivre.
   return $Text.Replace('{{REPO}}', $Repo.Replace('\', '\\'))
@@ -316,6 +329,12 @@ foreach ($layer in $layers) {
         $merged[$_.Name] = $_.Value
       }
     }
+}
+# Un {{MODS}} rendu vide, aucun mod : la variable est retiree plutot que posee vide.
+if ($merged['env'] -is [System.Management.Automation.PSCustomObject] -and
+    $merged['env'].PSObject.Properties['CLAUDE_CODE_PLUGIN_DIRS'] -and
+    $merged['env'].CLAUDE_CODE_PLUGIN_DIRS -ceq '') {
+  $merged['env'].PSObject.Properties.Remove('CLAUDE_CODE_PLUGIN_DIRS')
 }
 $rendered = New-Object System.Collections.Generic.List[object]
 if ($null -ne $hooks) {
