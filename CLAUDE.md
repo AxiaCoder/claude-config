@@ -111,7 +111,7 @@ commande.** Avec Write : l'écrire dans un fichier, puis `git commit -F`, `--bod
 `--input <fichier>`. Sans Write : un heredoc **protégé**, délimiteur entre apostrophes (`<<'EOF'`),
 dont le shell ne transforme aucun caractère. Interdits : le heredoc non protégé (`<<EOF`) et la
 chaîne entre guillemets doubles, qui font interpréter `$`, les backticks et les antislashs. Un texte
-qui cite un motif gardé par `garde-push.py` est refusé même en heredoc protégé : sans Write, le
+qui cite un motif gardé par `garde-push.py` ou `guardrail.py` est refusé même en heredoc protégé : sans Write, le
 rendre au parent, qui l'écrit avec Write.
 
 ⇒ **Le fichier écrit se contrôle avant de servir** : hors octet nul, aucun caractère de contrôle
