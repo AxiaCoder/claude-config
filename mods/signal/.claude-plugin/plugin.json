@@ -1,0 +1,7 @@
+{
+  "name": "signal",
+  "version": "0.1.0",
+  "author": { "name": "AxiaCoder" },
+  "description": "Pins a one-line note above the prompt until the user's next prompt, for what deserves their eye without calling for an answer",
+  "types": "./types/index.d.ts"
+}
