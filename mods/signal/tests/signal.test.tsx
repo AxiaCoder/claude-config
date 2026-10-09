@@ -78,6 +78,26 @@ describe('note', () => {
     expect((await call($, { text: ` ${'a'.repeat(100)} ` })).deny).toBeUndefined()
   })
 
+  test('refuses a note holding a lone carriage return', async ($, on) => {
+    standInForBand(on)
+    expect((await call($, { text: 'First line\rSecond line' })).deny).toMatch(/one line/)
+  })
+
+  test('accepts exactly 100 characters and names the length past it', async ($, on) => {
+    standInForBand(on)
+    expect((await call($, { text: 'a'.repeat(100) })).deny).toBeUndefined()
+    expect((await call($, { text: 'a'.repeat(101) })).deny).toMatch(/101 characters, the limit is 100/)
+  })
+
+  test('a refused note leaves the current one shown', async ($, on) => {
+    standInForBand(on)
+    await call($, { text: 'Kept' })
+    await call($, { text: '' })
+    await call($, { text: 'Two\nlines' })
+    await call($, { text: 'a'.repeat(101) })
+    expect(await shownNote($)).toBe('💡 Kept')
+  })
+
   test('a second note replaces the first', async ($, on) => {
     standInForBand(on)
     await call($, { text: 'First' })
@@ -142,6 +162,18 @@ describe('prompt submit', () => {
     const sent = await $.prompt.submit({ text: 'next', wait: false, origin: { kind: 'composer' } })
     expect(sent).toMatchObject({ drop: 'blocked by a settings hook' })
     expect(await shownNote($)).toBe('💡 Still here')
+  })
+
+  test('a prompt sent after a dropped one clears the note', async ($, on) => {
+    standInForBand(on)
+    let blocked = true
+    on('prompt.submit', ($, e) => (blocked ? { drop: 'blocked by a settings hook' } : { text: e.text }))
+    await call($, { text: 'Survives the drop only' })
+    await $.prompt.submit({ text: 'first', wait: false, origin: { kind: 'composer' } })
+    expect(await shownNote($)).toBe('💡 Survives the drop only')
+    blocked = false
+    await $.prompt.submit({ text: 'second', wait: false, origin: { kind: 'composer' } })
+    expect(await shownNote($)).toBeUndefined()
   })
 })
 
