@@ -101,13 +101,17 @@ export const register: Register = on => {
       return next(e)
     }
 
-    const { Text } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
+    const below = await next(e)
 
     return (
-      <Text key="note" wrap="truncate-end">
-        {PREFIX}
-        {shown}
-      </Text>
+      <Box key="signal-band" flexDirection="column">
+        <Text key="note" wrap="truncate-end">
+          {PREFIX}
+          {shown}
+        </Text>
+        {below}
+      </Box>
     )
   })
 }

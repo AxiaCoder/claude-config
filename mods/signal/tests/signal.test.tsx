@@ -131,6 +131,21 @@ describe('band', () => {
     }
   })
 
+  test('keeps what the rest of the chain draws beside the note', async ($, on) => {
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Text } = $.ui.resolve(e)
+
+      return <Text>Pinned question</Text>
+    })
+    await call($, { text: 'Worth a look' })
+    for (const surface of SURFACES) {
+      const ui = await $.ui.mount({ plugin: 'signal', surface, component: 'AbovePrompt', props: BAND_PROPS })
+      expect((await ui.find({ type: 'Text', text: /💡/ }))?.text).toBe('💡 Worth a look')
+      expect(await ui.find({ type: 'Text', text: 'Pinned question' })).toBeDefined()
+      await ui.unmount()
+    }
+  })
+
   test('steps aside for a survey', async ($, on) => {
     standInForBand(on)
     await call($, { text: 'Hidden by a survey' })
