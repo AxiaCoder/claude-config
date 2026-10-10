@@ -150,23 +150,61 @@ def check_recursive_delete(command: str) -> str | None:
     return None
 
 
+def _count_exemptions(text: object) -> int:
+    """Count the secret exemption markers in `text`; anything but a string counts 0."""
+    return len(_SECRET_EXEMPTION.findall(text)) if isinstance(text, str) else 0
+
+
 def _adds_exemption(old: object, new: object) -> bool:
-    """Say whether `new` carries the secret exemption marker while `old` did not."""
-    if not isinstance(new, str) or not _SECRET_EXEMPTION.search(new):
-        return False
-    return not (isinstance(old, str) and _SECRET_EXEMPTION.search(old))
+    """Say whether `new` carries more secret exemption markers than `old`."""
+    return _count_exemptions(new) > _count_exemptions(old)
+
+
+def _read_text(path: object) -> str | None:
+    """Return the UTF-8 content of the file at `path`, or None when it cannot be read."""
+    if not isinstance(path, str) or not path:
+        return None
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def _notebook_cell_source(tool_input: dict) -> str | None:
+    """Return the source of the cell a NotebookEdit replaces, or None when unknown.
+
+    An insert replaces nothing, so it yields None, as does an unreadable notebook or a
+    missing cell id.
+    """
+    if tool_input.get("edit_mode") == "insert":
+        return None
+    raw = _read_text(tool_input.get("notebook_path"))
+    cell_id = tool_input.get("cell_id")
+    if raw is None or not cell_id:
+        return None
+    try:
+        cells = json.loads(raw).get("cells", [])
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    for cell in cells if isinstance(cells, list) else []:
+        if isinstance(cell, dict) and cell.get("id") == cell_id:
+            source = cell.get("source", "")
+            return "".join(source) if isinstance(source, list) else source
+    return None
 
 
 def check_secret_exemption(tool_name: str, tool_input: dict) -> str | None:
-    """Return the refusal reason when a Write, Edit, MultiEdit or NotebookEdit adds the exemption marker.
+    """Return the refusal reason when a Write, Edit, MultiEdit or NotebookEdit adds an exemption marker.
 
-    An edit whose `old_string` already held the marker passes: it only keeps an exemption
-    the user wrote. Any other tool, or a malformed input, passes.
+    Markers are counted: the call passes when the new text holds no more of them than what
+    it replaces -- `old_string` for an edit, the file on disk for a Write, the replaced cell
+    for a NotebookEdit (0 when absent or unreadable). Any other tool, or a malformed input,
+    passes.
     """
     if not isinstance(tool_input, dict):
         return None
     if tool_name == "Write":
-        pairs = [(None, tool_input.get("content"))]
+        pairs = [(_read_text(tool_input.get("file_path")), tool_input.get("content"))]
     elif tool_name == "Edit":
         pairs = [(tool_input.get("old_string"), tool_input.get("new_string"))]
     elif tool_name == "MultiEdit":
@@ -177,7 +215,7 @@ def check_secret_exemption(tool_name: str, tool_input: dict) -> str | None:
             if isinstance(edit, dict)
         ]
     elif tool_name == "NotebookEdit":
-        pairs = [(None, tool_input.get("new_source"))]
+        pairs = [(_notebook_cell_source(tool_input), tool_input.get("new_source"))]
     else:
         return None
     if any(_adds_exemption(old, new) for old, new in pairs):

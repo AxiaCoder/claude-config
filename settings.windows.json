@@ -39,7 +39,7 @@
         ]
       },
       {
-        "matcher": "Edit",
+        "matcher": "Edit|MultiEdit|NotebookEdit",
         "hooks": [
           {
             "type": "command",

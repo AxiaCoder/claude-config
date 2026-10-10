@@ -138,7 +138,8 @@ def main() -> int:
     if nom == EXEMPTION:
         print(
             "garde-push : commande refusée, "
-            "l'exemption gitleaks:allow est réservée à l'utilisateur (faux positif confirmé par lui).",
+            "l'exemption gitleaks:allow est réservée à l'utilisateur (faux positif confirmé par lui). "
+            'Pour chercher les exemptions existantes : rg "leaks:allow".',
             file=sys.stderr,
         )
         return 2

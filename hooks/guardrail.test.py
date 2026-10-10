@@ -195,7 +195,44 @@ CAS_EXEMPTION: tuple[tuple[str, str, dict], ...] = (
     ("PASSE", "Edit", {"file_path": "a.py", "old_string": SECRET + GA, "new_string": "x = 1\n" + SECRET + GA}),
     ("PASSE", "Edit", {"file_path": "a.py", "old_string": "x = 1", "new_string": "x = 2"}),
     ("PASSE", "Read", {"file_path": "a.py"}),
+    ("REFUS", "Edit", {"file_path": "a.py", "old_string": f"A = 1 # {GA}\nB = 2",
+                       "new_string": f"A = 1 # {GA}\nB = \"ghp_x\" # {GA}"}),
+    ("PASSE", "Edit", {"file_path": "a.py", "old_string": f"A = 1 # {GA}\nB = 2",
+                       "new_string": f"A = 1 # {GA}\nB = 3"}),
+    ("REFUS", "MultiEdit", {"file_path": "a.py", "edits": [
+        {"old_string": f"A = 1 # {GA}", "new_string": f"A = 1 # {GA}\nB = 2 # {BA}"},
+    ]}),
 )
+
+
+def verifier_exemption_sur_disque() -> list[str]:
+    """Juge un Write et un NotebookEdit contre le fichier existant, et rend les défauts.
+
+    Attendu : conserver le nombre de marqueurs du fichier passe, en ajouter un est refusé.
+    """
+    defauts: list[str] = []
+    with tempfile.TemporaryDirectory() as dossier:
+        fichier = pathlib.Path(dossier) / "a.py"
+        fichier.write_text(f"A = 1 # {GA}\n", encoding="utf-8")
+        carnet = pathlib.Path(dossier) / "a.ipynb"
+        carnet.write_text(json.dumps({"cells": [
+            {"id": "c1", "cell_type": "code", "source": [f"A = 1 # {GA}\n"]},
+        ]}), encoding="utf-8")
+        cas = (
+            ("PASSE", "Write", {"file_path": str(fichier), "content": f"A = 1 # {GA}\nB = 2\n"}),
+            ("REFUS", "Write", {"file_path": str(fichier), "content": f"A = 1 # {GA}\nB = 2 # {GA}\n"}),
+            ("PASSE", "NotebookEdit", {"notebook_path": str(carnet), "cell_id": "c1",
+                                       "new_source": f"A = 1 # {GA}\nB = 2"}),
+            ("REFUS", "NotebookEdit", {"notebook_path": str(carnet), "cell_id": "c1",
+                                       "new_source": f"A = 1 # {GA}\nB = 2 # {GA}"}),
+            ("REFUS", "NotebookEdit", {"notebook_path": str(carnet), "cell_id": "c1",
+                                       "edit_mode": "insert", "new_source": f"A = 1 # {GA}"}),
+        )
+        for attendu, outil, entree in cas:
+            obtenu = "REFUS" if _guardrail.check_secret_exemption(outil, entree) else "PASSE"
+            if obtenu != attendu:
+                defauts.append(f"{outil} {entree} : attendu {attendu}, obtenu {obtenu}")
+    return defauts
 
 
 def verifier_exemption() -> list[str]:
@@ -255,7 +292,7 @@ def main() -> int:
     for defaut in defauts_utf8:
         print(f"  {defaut}")
 
-    defauts_exemption = verifier_exemption()
+    defauts_exemption = verifier_exemption() + verifier_exemption_sur_disque()
     print(f"{'  ok ' if not defauts_exemption else 'ECHEC'} exemption gitleaks : refusée quand l'écriture l'ajoute")
     for defaut in defauts_exemption:
         print(f"  {defaut}")
