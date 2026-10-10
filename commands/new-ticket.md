@@ -43,7 +43,8 @@ pas ; « un PUT sur le prix d'un produit invalide son entrée de cache dans les 
 le refait produit un diff de 400 lignes. Une ligne « ne pas toucher au reste du module » coûte une
 seconde.
 
-⚠️ **Un ticket se prend, se termine et se vérifie seul**, une fois ses dépendances closes.
+⚠️ **Un ticket se prend, se termine et se vérifie seul**, une fois ses dépendances closes — une
+sous-tâche aussi.
 
 | | Exemple | Verdict |
 |---|---|---|
