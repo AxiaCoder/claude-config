@@ -271,9 +271,11 @@ part au `pre-push`, vers tout remote. Il refuse si un secret s'y trouve, en list
   `rebase --continue` après un conflit ou un arrêt `edit`, `cherry-pick`, `commit-tree`,
   `commit --no-verify`. Le `pre-push` les rattrape avant qu'ils quittent la machine. Commits
   examinés par ref poussée : depuis ce que le remote a déjà ; nouvelle branche, depuis la
-  merge-base avec la branche par défaut du remote, à défaut ceux qu'aucun remote n'a. Un secret
-  ajouté puis retiré est trouvé : il faut réécrire l'historique, un commit correctif ne suffit
-  pas.
+  merge-base avec la branche par défaut du remote, à défaut ceux que ce remote n'a pas — tout
+  l'historique vers une URL sans nom de remote. Un merge est examiné sur ce que sa résolution
+  ajoute (git ≥ 2.36 ; en deçà, les merges ne sont pas examinés et une ligne le signale). Un
+  secret ajouté puis retiré est trouvé : il faut réécrire l'historique, un commit correctif ne
+  suffit pas.
 
 - **Aucun appel réseau** : la validation des secrets auprès des API est coupée
   (`--validation=false`).

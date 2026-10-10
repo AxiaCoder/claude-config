@@ -188,14 +188,21 @@ commit_sans_garde() {
 	git -C "$1" commit -q "$SANS_HOOK" -m "$2"
 }
 
-# Pousse depuis le dépôt $1 les refs $3… ; $2 attendu, libellé en dernier argument via $LIBELLE.
-# stderr dans $tmp/err.
+# Pousse depuis le dépôt $1 les refs $3… vers $DISTANT (origin par défaut) ; $2 attendu,
+# libellé via $LIBELLE. stderr dans $tmp/err.
 pousse() {
 	d_=$1 attendu_=$2
 	shift 2
-	if git -C "$d_" "$POUSSER" -q origin "$@" >/dev/null 2>"$tmp/err"; then o=PASSE; else o=BLOQUE; fi
+	if git -C "$d_" "$POUSSER" -q "${DISTANT:-origin}" "$@" >/dev/null 2>"$tmp/err"; then o=PASSE; else o=BLOQUE; fi
 	verdict "$attendu_" "$o" "$LIBELLE"
 }
+
+# Vrai si le git du PATH a --diff-merges=remerge (≥ 2.36).
+git_remerge() {
+	v=$(git version | sed -n 's/^git version \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')
+	[ "${v% *}" -gt 2 ] || { [ "${v% *}" -eq 2 ] && [ "${v#* }" -ge 36 ]; }
+}
+if git_remerge; then fusions="--diff-merges=remerge "; else fusions=; fi
 
 poser
 p="$tmp/p"
@@ -214,7 +221,7 @@ LIBELLE="secret ajouté puis retiré dans 2 commits → bloqué" pousse "$p" BLO
 stderr_contient "a.txt:1" "  stderr : fichier:ligne"
 stderr_contient "historique" "  stderr : réécrire l'historique"
 stderr_contient "$CONTOURNEMENT=1" "  stderr : contournement"
-argument "--log-opts=$(git -C "$p" rev-parse main)..$(git -C "$p" rev-parse fuite)" PRESENT "commande : plage base..local, nouvelle branche"
+argument "--log-opts=$fusions$(git -C "$p" rev-parse main)..$(git -C "$p" rev-parse fuite)" PRESENT "commande : plage base..local, nouvelle branche"
 
 LIBELLE="plusieurs refs, secret dans la 2e → bloqué" pousse "$p" BLOQUE propre fuite
 git -C "$p" switch -q -c propre2 main
@@ -224,7 +231,7 @@ LIBELLE="plusieurs refs propres → passe" pousse "$p" PASSE propre propre2
 git -C "$p" switch -q propre
 commit_sans_garde "$p" "y FAUX-SECRET"
 LIBELLE="branche connue du remote, secret dans la suite → bloqué" pousse "$p" BLOQUE propre
-argument "--log-opts=$(git -C "$p" rev-parse origin/propre)..$(git -C "$p" rev-parse propre)" PRESENT "commande : plage distant..local"
+argument "--log-opts=$fusions$(git -C "$p" rev-parse origin/propre)..$(git -C "$p" rev-parse propre)" PRESENT "commande : plage distant..local"
 
 export "$CONTOURNEMENT=1"
 LIBELLE="secret, contournement → passe" pousse "$p" PASSE fuite
@@ -238,7 +245,22 @@ git -C "$p" remote remove origin
 git -C "$p" remote add origin "$p.git"
 commit_sans_garde "$p" "z FAUX-SECRET"
 LIBELLE="sans branche par défaut connue, secret → bloqué" pousse "$p" BLOQUE orpheline
-argument "--log-opts=$(git -C "$p" rev-parse orpheline) --not --remotes" PRESENT "commande : plage --not --remotes"
+argument "--log-opts=$fusions$(git -C "$p" rev-parse orpheline) --not --remotes=origin" PRESENT "commande : plage --not --remotes=<remote visé>"
+
+DISTANT="$p.git"
+LIBELLE="push vers une URL sans nom de remote, secret → bloqué" pousse "$p" BLOQUE orpheline
+unset DISTANT
+argument "--log-opts=$fusions$(git -C "$p" rev-parse orpheline)" PRESENT "commande : URL sans nom → historique entier"
+
+mkdir "$tmp/vieux-git"
+printf '#!/bin/sh\n[ "$1" = version ] && { echo "git version 2.35.1"; exit 0; }\nexec "%s" "$@"\n' "$(command -v git)" >"$tmp/vieux-git/git"
+chmod +x "$tmp/vieux-git/git"
+sha_orpheline=$(git -C "$p" rev-parse orpheline)
+if (cd "$p" && printf 'refs/heads/orpheline %s refs/heads/orpheline %s\n' "$sha_orpheline" 0000000000000000000000000000000000000000 |
+	PATH="$tmp/vieux-git:$PATH" sh "$ici/_garde-secrets" --push origin >/dev/null 2>"$tmp/err"); then o=PASSE; else o=BLOQUE; fi
+verdict BLOQUE "$o" "git < 2.36 simulé, secret → bloqué"
+stderr_contient "merges non examinés (git < 2.36)" "  stderr : merges non examinés signalés"
+argument "--log-opts=$(git -C "$p" rev-parse orpheline) --not --remotes=origin" PRESENT "commande : pas de --diff-merges sous git < 2.36"
 
 git -C "$p" reset -q --hard HEAD~1
 commit_sans_garde "$p" "x PLANTE"
@@ -354,6 +376,47 @@ if [ -x "$reel" ]; then
 	git -C "$q" switch -q -c propre-reel main
 	commit_sans_garde "$q" "rien à signaler"
 	LIBELLE="push propre → passe" pousse "$q" PASSE propre-reel
+
+	m="$tmp/m"
+	depot_et_remote "$m"
+	git -C "$m" switch -q -c travail
+	jeton_neuf
+	commit_sans_garde "$m" "token = \"$jeton\""
+	commit_sans_garde "$m" "retiré"
+	env "$CONTOURNEMENT=1" git -C "$m" "$POUSSER" -q origin travail 2>/dev/null
+	git init -q --bare "$m-public.git"
+	git -C "$m" remote add public "$m-public.git"
+	DISTANT=public
+	LIBELLE="historique à jeton déjà sur origin, push vers un nouveau remote → bloqué" pousse "$m" BLOQUE travail
+	unset DISTANT
+
+	git -C "$m" switch -q -c malin main
+	printf 'b\n' >"$m/b.txt"
+	git -C "$m" add b.txt
+	git -C "$m" commit -q "$SANS_HOOK" -m b
+	git -C "$m" switch -q -c autre main
+	printf 'c\n' >"$m/c.txt"
+	git -C "$m" add c.txt
+	git -C "$m" commit -q "$SANS_HOOK" -m c
+	git -C "$m" switch -q malin
+	git -C "$m" merge -q --no-commit autre >/dev/null 2>&1
+	jeton_neuf
+	printf 'token = "%s"\n' "$jeton" >"$m/d.txt"
+	git -C "$m" add d.txt
+	git -C "$m" commit -q "$SANS_HOOK" -m fusion
+	LIBELLE="jeton introduit dans la résolution d'un merge → bloqué" pousse "$m" BLOQUE malin
+
+	git -C "$m" switch -q main
+	jeton_neuf
+	commit_sans_garde "$m" "token = \"$jeton\""
+	env "$CONTOURNEMENT=1" git -C "$m" "$POUSSER" -q origin main 2>/dev/null
+	git -C "$m" fetch -q origin
+	git -C "$m" switch -q -c fusion-propre main~1
+	printf 'e\n' >"$m/e.txt"
+	git -C "$m" add e.txt
+	git -C "$m" commit -q "$SANS_HOOK" -m e
+	git -C "$m" merge -q --no-edit main >/dev/null 2>&1
+	LIBELLE="merge propre de main déjà poussé, porteur d'un ancien jeton → passe" pousse "$m" PASSE fusion-propre
 
 	git -C "$q" switch -q -c volume main
 	sha_base=$(git -C "$q" rev-parse HEAD)
