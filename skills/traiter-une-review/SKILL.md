@@ -246,7 +246,7 @@ et le reprend lui-même, alors qu'il est corrigé. Un fil **refusé** ou **en at
 reste ouvert — c'est à l'utilisateur de trancher.
 
 ```bash
-T=$(gh api graphql -f query='query{repository(owner:"<OWNER>",name:"<REPO>"){pullRequest(number:<PR>){reviewThreads(first:50){nodes{id comments(first:1){nodes{databaseId}}}}}}}' \
+T=$(gh api graphql --paginate -f query='query($endCursor:String){repository(owner:"<OWNER>",name:"<REPO>"){pullRequest(number:<PR>){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id comments(first:1){nodes{databaseId}}}}}}}' \
   --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].databaseId==<COMMENT_ID>) | .id')
 gh api graphql -f query="mutation{resolveReviewThread(input:{threadId:\"$T\"}){thread{isResolved}}}"
 ```
