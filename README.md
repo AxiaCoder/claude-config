@@ -178,7 +178,7 @@ Un marqueur qui survit au rendu arrête l'installation avant d'écrire le fichie
 
 | Hook | Quand | Ce qu'il fait |
 |---|---|---|
-| `guardrail` | avant `Bash`, `Edit`, `Write` — et `PowerShell` sous Windows | coupe les boucles (même appel répété) et les commandes destructrices passées par `Bash` — pas encore par l'outil PowerShell |
+| `guardrail` | avant `Bash`, `Edit`, `MultiEdit`, `NotebookEdit`, `Write` — et `PowerShell` sous Windows | coupe les boucles (même appel répété) et les commandes destructrices passées par `Bash` — pas encore par l'outil PowerShell ; refuse qu'un agent ajoute une exemption de secret |
 | `garde-push` | avant `Bash` — et `PowerShell` sous Windows | refuse une commande qui citerait de quoi désarmer le `pre-push` |
 | `session-git-context` | au démarrage | affiche la branche, le dernier commit et l'état de l'arbre |
 | `post-write-lint` | après `Write`, `Edit` | lance `pnpm lint` — sur un projet AdonisJS seulement |
