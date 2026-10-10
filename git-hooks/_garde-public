@@ -5,11 +5,14 @@
 #
 # Marqueurs : fichier désigné par GARDE_PUBLIC_MARQUEURS, hors de tout dépôt public.
 # Un motif par ligne, expression régulière étendue (grep -E), casse ignorée ;
-# lignes vides et lignes commençant par « # » ignorées.
+# lignes vides et lignes commençant par « # » ignorées. Vers un dépôt public, un motif
+# invalide bloque le push.
 #
-# Contenu examiné, pour chaque ref poussée : les lignes ajoutées du diff entre ce que le
-# remote a déjà et ce qui part (nouvelle branche : depuis la merge-base avec la branche
-# par défaut du remote), et les messages des commits qui partent.
+# Contenu examiné, pour chaque ref poussée : les lignes ajoutées et les noms des fichiers
+# ajoutés ou renommés du diff entre ce que le remote a déjà et ce qui part (nouvelle
+# branche : depuis la merge-base avec la branche par défaut du remote), le message,
+# l'auteur et le committer des commits qui partent, le message et le tagger d'un tag
+# annoté. Les binaires ne sont pas examinés.
 #
 # Visibilité : `gh repo view <owner/repo> --json visibility`, gardée 24 h dans
 # ${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public/.
@@ -67,6 +70,36 @@ if ! vis=$(visibilite "$depot"); then
 fi
 [ "$vis" = "PUBLIC" ] || exit 0
 
+# Affiche, un par ligne et en retrait, les motifs du fichier de marqueurs que grep -E refuse.
+motifs_invalides() {
+	tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
+		case "$motif" in '' | '#'*) continue ;; esac
+		printf 'x\n' | grep -i -E -e "$motif" >/dev/null 2>&1
+		[ $? -eq 2 ] && printf '    %s\n' "$motif"
+	done
+}
+
+invalides=$(motifs_invalides)
+if [ -n "$invalides" ]; then
+	if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+		echo "pre-push : motif invalide dans $marqueurs, garde données personnelles non appliqué (ALLOW_PUSH_PERSONAL=1)." >&2
+		exit 0
+	fi
+	{
+		echo
+		echo "  ⛔  Push refusé : $depot est public et $marqueurs contient un motif invalide (grep -E) :"
+		echo
+		printf '%s\n' "$invalides"
+		echo
+		echo "  Corriger le motif, puis repousser."
+		echo
+		echo "  Contournement ponctuel :"
+		echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+		echo
+	} >&2
+	exit 1
+fi
+
 tmp=$(mktemp -d) || exit 0
 trap 'rm -rf "$tmp"' EXIT
 : >"$tmp/lieux"
@@ -82,18 +115,55 @@ branche_defaut() {
 
 # Ajoute aux fichiers lieux/contenus les lignes ajoutées entre $1 (arbre ou commit) et $2.
 ajoute_diff() {
-	git diff -U0 --no-color --no-ext-diff --no-renames "$1" "$2" -- 2>/dev/null | awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+	git -c core.quotePath=false diff -U0 --no-color --no-ext-diff --no-renames "$1" "$2" -- 2>/dev/null | awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+		function sans_guillemets(s,   r, c, i) {
+			if (substr(s, 1, 1) != "\"") return s
+			s = substr(s, 2, length(s) - 2)
+			for (i = 1; i <= length(s); i++) {
+				c = substr(s, i, 1)
+				if (c == "\\") {
+					i++
+					c = substr(s, i, 1)
+					if (c != "\"" && c != "\\") c = "\\" c
+				}
+				r = r c
+			}
+			return r
+		}
 		/^diff --git / { entete = 1; next }
-		entete && /^\+\+\+ / { f = substr($0, 5); sub(/^b\//, "", f); next }
+		entete && /^\+\+\+ / { f = sans_guillemets(substr($0, 5)); sub(/^b\//, "", f); next }
 		/^@@ / { entete = 0; split($3, a, ","); n = substr(a[1], 2) + 0; next }
 		!entete && /^\+/ { print f ":" n >> lieux; print substr($0, 2) >> contenus; n++ }
 	'
 }
 
-# Ajoute aux fichiers lieux/contenus les lignes du message de chaque commit de la plage $@.
+# Ajoute aux fichiers lieux/contenus le nom de chaque fichier ajouté ou renommé entre $1
+# (arbre ou commit) et $2.
+ajoute_noms() {
+	git -c core.quotePath=false diff --name-only -z --no-renames --diff-filter=A "$1" "$2" -- 2>/dev/null |
+		tr '\0' '\n' | while IFS= read -r nom; do
+		printf 'nom de fichier\n' >>"$tmp/lieux"
+		printf '%s\n' "$nom" >>"$tmp/contenus"
+	done
+}
+
+# Ajoute aux fichiers lieux/contenus le tagger et les lignes du message du tag annoté $1,
+# nommé $2.
+ajoute_tag() {
+	git cat-file tag "$1" 2>/dev/null | awk -v nom="tag $2" -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+		corps { print nom >> lieux; print >> contenus; next }
+		/^$/ { corps = 1; next }
+		/^tagger / { sub(/^tagger /, ""); sub(/ [0-9]+ [-+][0-9]+$/, ""); print nom " (tagger)" >> lieux; print >> contenus }
+	'
+}
+
+# Ajoute aux fichiers lieux/contenus l'auteur, le committer et les lignes du message de
+# chaque commit de la plage $@.
 ajoute_messages() {
 	git rev-list "$@" 2>/dev/null | while read -r commit; do
 		court=$(git rev-parse --short "$commit")
+		printf 'commit %s (auteur)\ncommit %s (committer)\n' "$court" "$court" >>"$tmp/lieux"
+		git log -1 --format='%an <%ae>%n%cn <%ce>' "$commit" >>"$tmp/contenus"
 		git log -1 --format=%B "$commit" | while IFS= read -r ligne || [ -n "$ligne" ]; do
 			printf 'commit %s\n' "$court" >>"$tmp/lieux"
 			printf '%s\n' "$ligne" >>"$tmp/contenus"
@@ -101,8 +171,13 @@ ajoute_messages() {
 	done
 }
 
-while read -r _ref_locale sha_local _ref_distante sha_distant; do
+while read -r _ref_locale sha_local ref_distante sha_distant; do
 	[ -n "$sha_local" ] && [ "$sha_local" != "$Z" ] || continue
+	objet=$sha_local
+	while [ "$(git cat-file -t "$objet" 2>/dev/null)" = tag ]; do
+		ajoute_tag "$objet" "${ref_distante#refs/tags/}"
+		objet=$(git cat-file tag "$objet" | sed -n '1s/^object //p')
+	done
 	base=
 	if [ "$sha_distant" != "$Z" ] && git cat-file -e "$sha_distant^{commit}" 2>/dev/null; then
 		base=$(git merge-base "$sha_distant" "$sha_local" 2>/dev/null)
@@ -111,9 +186,11 @@ while read -r _ref_locale sha_local _ref_distante sha_distant; do
 	fi
 	if [ -n "$base" ]; then
 		ajoute_diff "$base" "$sha_local"
+		ajoute_noms "$base" "$sha_local"
 		ajoute_messages "$base..$sha_local"
 	else
 		ajoute_diff "$ARBRE_VIDE" "$sha_local"
+		ajoute_noms "$ARBRE_VIDE" "$sha_local"
 		ajoute_messages "$sha_local"
 	fi
 done
@@ -125,6 +202,7 @@ tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
 		BEGIN { while ((getline l < lieux) > 0) lieu[++i] = l }
 		{
 			p = index($0, ":"); n = substr($0, 1, p - 1); texte = substr($0, p + 1)
+			sub(/\r$/, "", texte)
 			gsub(/^[ \t]+/, "", texte)
 			if (length(texte) > 80) texte = substr(texte, 1, 77) "..."
 			printf "    %s · %s · %s\n", motif, lieu[n], texte

@@ -218,6 +218,62 @@ essai BLOQUE "$PUBLIC" "branche sans ancêtre commun"
 stderr_contient "commit $(git rev-parse --short HEAD)" "  stderr : commit de la branche orpheline"
 stderr_contient "orphelin.txt:1" "  stderr : fichier de la branche orpheline"
 
+echo "— noms de fichiers, tags, identités, motifs —"
+git checkout -q -B f9 "$M"
+: >Mot-Secret.txt
+git add Mot-Secret.txt
+git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "marqueur dans le nom d'un fichier ajouté vide"
+stderr_contient "nom de fichier" "  stderr : lieu nom de fichier"
+
+git checkout -q -B f10 f4~1
+git mv propre.txt serveur-3.txt
+git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "marqueur dans le nom d'un fichier renommé"
+
+git checkout -q -B f11 f4~1
+printf 'serveur-4\n' >"café.txt"
+git add "café.txt"
+git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "fichier au nom accentué"
+stderr_contient "· café.txt:1 ·" "  stderr : chemin sans guillemets ni échappement"
+
+git tag -a t-message -m "version Mot-Secret" f4~1
+essai_brut BLOQUE "$PUBLIC" "marqueur dans le message d'un tag annoté" \
+	"refs/tags/t-message $(git rev-parse t-message) refs/tags/t-message $Z"
+stderr_contient "tag t-message" "  stderr : lieu tag"
+
+git checkout -q -B f12 f4~1
+printf 'x\n' >auteur.txt
+git add auteur.txt
+GIT_AUTHOR_NAME="Mot-Secret" git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "marqueur dans le nom de l'auteur"
+stderr_contient "auteur" "  stderr : lieu auteur"
+
+git checkout -q -B f13 f4~1
+printf 'x\n' >committer.txt
+git add committer.txt
+GIT_COMMITTER_EMAIL="serveur-1@example.invalid" git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "marqueur dans l'e-mail du committer"
+stderr_contient "committer" "  stderr : lieu committer"
+
+git checkout -q f6
+essai BLOQUE "$PUBLIC" "contenu en CRLF"
+if grep -q "$(printf '\r')" "$tmp/err"; then o=PRESENT; else o=ABSENT; fi
+verdict ABSENT "$o" "  stderr : extrait sans \\r final"
+
+printf 'Mot-Secret\n(\n' >"$tmp/marqueurs-invalides"
+GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs-invalides"
+git checkout -q -B f14 f4~1
+essai BLOQUE "$PUBLIC" "motif invalide, contenu propre"
+stderr_contient "invalide" "  stderr : motif invalide signalé"
+ALLOW_PUSH_PERSONAL=1
+export ALLOW_PUSH_PERSONAL
+essai PASSE "$PUBLIC" "motif invalide, ALLOW_PUSH_PERSONAL=1"
+unset ALLOW_PUSH_PERSONAL
+GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs"
+git checkout -q f8
+
 echo "— relais —"
 crochet="$(git rev-parse --git-common-dir)/hooks/pre-push"
 printf '#!/bin/sh\ntouch "%s"\n' "$tmp/relais-lance" >"$crochet"
