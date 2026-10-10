@@ -1,0 +1,326 @@
+#!/bin/sh
+# Garde « données personnelles » du pre-push, lancé par git-hooks/pre-push.
+# Sort en 1 si un marqueur est trouvé dans ce qui part vers un dépôt GitHub public,
+# ou si la visibilité du dépôt GitHub visé ne peut pas être établie ; en 0 sinon.
+#
+# Marqueurs : fichier désigné par GARDE_PUBLIC_MARQUEURS, hors de tout dépôt public.
+# Un motif par ligne, expression régulière étendue (grep -E), casse ignorée ;
+# lignes vides et lignes commençant par « # » ignorées. Vers un dépôt public, un motif
+# invalide bloque le push.
+#
+# Contenu examiné, pour chaque ref poussée et pour chaque commit qui part (depuis la
+# merge-base avec ce que le remote a déjà ; nouvelle branche : avec la branche par défaut
+# du remote) : les lignes ajoutées, binaires compris, sans textconv ni attribut diff ; les
+# noms des fichiers ajoutés ou renommés ; le message, l'auteur et le committer. Pour un
+# tag annoté : son message et son tagger. Comparaison octet par octet (LC_ALL=C) : la
+# casse n'est ignorée que pour les lettres ASCII.
+#
+# Remote GitHub : hôte github.com ou ssh.github.com, ou alias SSH que `ssh -G` résout vers l'un des deux.
+#
+# Visibilité : l'API GitHub sans authentification (200 : public ; 404 : privé ou
+# inexistant), `gh repo view` en repli pour toute autre réponse. Seul « public » est gardé,
+# 24 h, dans ${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public/ ; un dépôt privé
+# est re-vérifié à chaque push.
+#
+# Laisse passer, avec une ligne sur stderr : remote non GitHub (sans ligne), variable
+# absente ou fichier illisible.
+# Bloque quand la visibilité reste inconnue (API et gh en échec), et vers un dépôt public
+# quand l'analyse elle-même échoue (git, awk ou grep).
+#
+# Contournement ponctuel :
+#   ALLOW_PUSH_PERSONAL=1 git push …
+#
+# Arguments : $1 nom du remote, $2 URL. Entrée : celle du pre-push.
+
+LC_ALL=C
+export LC_ALL
+
+remote_nom=$1
+remote_url=$2
+Z=0000000000000000000000000000000000000000
+
+# Affiche « hôte chemin » d'après l'URL $1 (forme schéma://[user@]hôte[:port]/chemin ou
+# [user@]hôte:chemin), puis « ssh » ou « autre » selon que l'hôte peut être un alias SSH ;
+# sortie 1 pour un chemin local.
+hote_et_chemin() {
+	case "$1" in
+	ssh://* | git+ssh://* | ssh+git://*)
+		reste=${1#*://}
+		printf '%s %s ssh\n' "${reste%%/*}" "${reste#*/}"
+		;;
+	*://*)
+		reste=${1#*://}
+		printf '%s %s autre\n' "${reste%%/*}" "${reste#*/}"
+		;;
+	/* | ./* | ../*) return 1 ;;
+	*:*)
+		avant=${1%%:*}
+		case "$avant" in */*) return 1 ;; esac
+		printf '%s %s ssh\n' "$avant" "${1#*:}"
+		;;
+	*) return 1 ;;
+	esac
+}
+
+ligne=$(hote_et_chemin "$remote_url") || exit 0
+genre=${ligne##* }
+chemin=${ligne#* }
+chemin=${chemin% *}
+hote=${ligne%% *}
+hote=${hote##*@}
+hote=$(printf '%s' "${hote%%:*}" | tr 'A-Z' 'a-z')
+case "$hote" in
+github.com | ssh.github.com) ;;
+*)
+	[ "$genre" = ssh ] || exit 0
+	case "$hote" in -*) exit 0 ;; esac
+	reel=$(ssh -G "$hote" 2>/dev/null | awk '$1 == "hostname" { print tolower($2); exit }')
+	case "$reel" in github.com | ssh.github.com) ;; *) exit 0 ;; esac
+	;;
+esac
+depot=$(printf '%s\n' "$chemin" | sed -e 's#^/*##' -e 's#/*$##' -e 's#\.git$##')
+
+marqueurs=${GARDE_PUBLIC_MARQUEURS:-}
+if [ -z "$marqueurs" ] || [ ! -r "$marqueurs" ]; then
+	echo "pre-push : garde données personnelles inactif, GARDE_PUBLIC_MARQUEURS ne désigne aucun fichier lisible." >&2
+	exit 0
+fi
+
+# Affiche la visibilité (PUBLIC, PRIVATE, INTERNAL) du dépôt « owner/repo » $1 : depuis
+# le cache « public » de moins de 24 h, sinon par l'API GitHub anonyme, sinon par gh.
+# Rien et sortie 1 si ni l'API ni gh ne répondent.
+visibilite() {
+	dossier_cache="${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public"
+	fichier_cache="$dossier_cache/$(printf '%s' "$1" | tr '/' '_')"
+	if [ -n "$(find "$fichier_cache" -mmin -1440 2>/dev/null)" ] && [ "$(cat "$fichier_cache" 2>/dev/null)" = PUBLIC ]; then
+		echo PUBLIC
+		return 0
+	fi
+	code=$(curl -sS -L --max-time 10 -o /dev/null -w '%{http_code}' "https://api.github.com/repos/$1" 2>/dev/null)
+	case "$code" in
+	200) vue=PUBLIC ;;
+	404) vue=PRIVATE ;;
+	*)
+		command -v gh >/dev/null 2>&1 || return 1
+		vue=$(gh repo view "$1" --json visibility --jq .visibility 2>/dev/null) || return 1
+		[ -n "$vue" ] || return 1
+		;;
+	esac
+	if [ "$vue" = PUBLIC ]; then
+		mkdir -p "$dossier_cache" 2>/dev/null && echo PUBLIC >"$fichier_cache" 2>/dev/null
+	else
+		rm -f "$fichier_cache" 2>/dev/null
+	fi
+	printf '%s\n' "$vue"
+}
+
+if ! vis=$(visibilite "$depot"); then
+	if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+		echo "pre-push : visibilité de $depot inconnue, garde données personnelles non appliqué (ALLOW_PUSH_PERSONAL=1)." >&2
+		exit 0
+	fi
+	{
+		echo
+		echo "  ⛔  Push refusé : visibilité de $depot inconnue (api.github.com et gh en échec)."
+		echo "      Le garde données personnelles ne peut pas savoir si le dépôt est public."
+		echo
+		echo "  Contournement ponctuel :"
+		echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+		echo
+	} >&2
+	exit 1
+fi
+[ "$vis" = "PUBLIC" ] || exit 0
+
+# Affiche, un par ligne et en retrait, les motifs du fichier de marqueurs que grep -E refuse.
+motifs_invalides() {
+	tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
+		case "$motif" in '' | '#'*) continue ;; esac
+		printf 'x\n' | grep -i -E -e "$motif" >/dev/null 2>&1
+		[ $? -eq 2 ] && printf '    %s\n' "$motif"
+	done
+}
+
+invalides=$(motifs_invalides)
+if [ -n "$invalides" ]; then
+	if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+		echo "pre-push : motif invalide dans $marqueurs, garde données personnelles non appliqué (ALLOW_PUSH_PERSONAL=1)." >&2
+		exit 0
+	fi
+	{
+		echo
+		echo "  ⛔  Push refusé : $depot est public et $marqueurs contient un motif invalide (grep -E) :"
+		echo
+		printf '%s\n' "$invalides"
+		echo
+		echo "  Corriger le motif, puis repousser."
+		echo
+		echo "  Contournement ponctuel :"
+		echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+		echo
+	} >&2
+	exit 1
+fi
+
+# Refuse le push faute d'avoir pu analyser ce qui part, sauf ALLOW_PUSH_PERSONAL=1.
+# $1 : l'étape en échec.
+refus_analyse() {
+	if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+		echo "pre-push : analyse impossible ($1), garde données personnelles non appliqué (ALLOW_PUSH_PERSONAL=1)." >&2
+		exit 0
+	fi
+	{
+		echo
+		echo "  ⛔  Push refusé : $depot est public et ce qui part n'a pas pu être analysé ($1)."
+		echo
+		echo "  Contournement ponctuel :"
+		echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+		echo
+	} >&2
+	exit 1
+}
+
+tmp=$(mktemp -d) || refus_analyse "mktemp"
+trap 'rm -rf "$tmp"' EXIT
+: >"$tmp/lieux"
+: >"$tmp/contenus"
+
+# Affiche le sha de la branche par défaut du remote suivie localement, rien sinon.
+branche_defaut() {
+	for ref in "refs/remotes/$remote_nom/HEAD" "refs/remotes/$remote_nom/main" "refs/remotes/$remote_nom/master"; do
+		git rev-parse -q --verify "$ref^{commit}" 2>/dev/null && return 0
+	done
+	return 1
+}
+
+# Ajoute aux fichiers lieux/contenus, pour chaque commit de la plage $@ : l'auteur, le
+# committer, les lignes du message, le nom de chaque fichier ajouté et chaque ligne
+# ajoutée (pour une fusion, celles qui ne viennent d'aucun parent). Sortie non nulle si
+# git ou awk échoue.
+ajoute_commits() {
+	git -c core.quotePath=false log --no-color --no-ext-diff --no-textconv --text --no-renames \
+		--root -p --cc -U0 --raw --format='%x01%h%n%an <%ae>%n%cn <%ce>%n%B%n%x02' "$@" \
+		>"$tmp/brut" 2>/dev/null || return 1
+	tr '\000' ' ' <"$tmp/brut" >"$tmp/log" || return 1
+	awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+		function sans_guillemets(s,   r, c, i) {
+			if (substr(s, 1, 1) != "\"") return s
+			s = substr(s, 2, length(s) - 2)
+			for (i = 1; i <= length(s); i++) {
+				c = substr(s, i, 1)
+				if (c == "\\") {
+					i++
+					c = substr(s, i, 1)
+					if (c != "\"" && c != "\\") c = "\\" c
+				}
+				r = r c
+			}
+			return r
+		}
+		function emet(lieu, contenu) { print lieu >> lieux; print contenu >> contenus }
+		/^\001/ { court = substr($0, 2); etat = "auteur"; entete = 0; np = 0; next }
+		etat == "auteur" { emet("commit " court " (auteur)", $0); etat = "committer"; next }
+		etat == "committer" { emet("commit " court " (committer)", $0); etat = "message"; next }
+		etat == "message" {
+			if ($0 == "\002") etat = "diff"
+			else if ($0 != "") emet("commit " court, $0)
+			next
+		}
+		etat != "diff" { next }
+		/^:[0-7]/ {
+			t = index($0, "\t")
+			split(substr($0, 1, t - 1), m, " ")
+			if (m[5] == "A") emet("commit " court " · nom de fichier", sans_guillemets(substr($0, t + 1)))
+			next
+		}
+		/^diff --(git|cc|combined) / { entete = 1; np = 0; next }
+		entete && /^\+\+\+ / { f = sans_guillemets(substr($0, 5)); sub(/^b\//, "", f); next }
+		/^@@+ / {
+			entete = 0
+			match($0, /^@+/)
+			np = RLENGTH - 1
+			for (i = 2; i <= NF; i++) if (substr($i, 1, 1) == "+") { split($i, a, ","); n = substr(a[1], 2) + 0; break }
+			next
+		}
+		entete || np == 0 { next }
+		{
+			p = substr($0, 1, np)
+			if (p !~ /^[-+ ]+$/ || index(p, "-")) next
+			if (p ~ /^\++$/) emet("commit " court " · " f ":" n, substr($0, np + 1))
+			n++
+		}
+	' "$tmp/log"
+}
+
+# Ajoute aux fichiers lieux/contenus le tagger et les lignes du message du tag annoté $1,
+# nommé $2. Sortie non nulle si git ou awk échoue.
+ajoute_tag() {
+	git cat-file tag "$1" >"$tmp/tag-brut" 2>/dev/null || return 1
+	tr '\000' ' ' <"$tmp/tag-brut" >"$tmp/tag" || return 1
+	awk -v nom="tag $2" -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+		corps { print nom >> lieux; print >> contenus; next }
+		/^$/ { corps = 1; next }
+		/^tagger / { sub(/^tagger /, ""); sub(/ [0-9]+ [-+][0-9]+$/, ""); print nom " (tagger)" >> lieux; print >> contenus }
+	' "$tmp/tag"
+}
+
+while read -r _ref_locale sha_local ref_distante sha_distant; do
+	[ -n "$sha_local" ] && [ "$sha_local" != "$Z" ] || continue
+	objet=$sha_local
+	while [ "$(git cat-file -t "$objet" 2>/dev/null)" = tag ]; do
+		ajoute_tag "$objet" "${ref_distante#refs/tags/}" || refus_analyse "tag ${ref_distante#refs/tags/}"
+		objet=$(git cat-file tag "$objet" | sed -n '1s/^object //p')
+	done
+	base=
+	if [ "$sha_distant" != "$Z" ] && git cat-file -e "$sha_distant^{commit}" 2>/dev/null; then
+		base=$(git merge-base "$sha_distant" "$sha_local" 2>/dev/null)
+	elif defaut=$(branche_defaut); then
+		base=$(git merge-base "$defaut" "$sha_local" 2>/dev/null)
+	fi
+	if [ -n "$base" ]; then
+		ajoute_commits "$base..$sha_local" || refus_analyse "historique de $ref_distante"
+	else
+		ajoute_commits "$sha_local" || refus_analyse "historique de $ref_distante"
+	fi
+done
+
+: >"$tmp/trouves"
+tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
+	case "$motif" in '' | '#'*) continue ;; esac
+	grep -a -n -i -E -e "$motif" "$tmp/contenus" >"$tmp/occurrences" 2>/dev/null
+	[ $? -le 1 ] || { : >"$tmp/echec-grep"; continue; }
+	awk -v motif="$motif" -v lieux="$tmp/lieux" '
+		BEGIN { while ((getline l < lieux) > 0) lieu[++i] = l }
+		{
+			p = index($0, ":"); n = substr($0, 1, p - 1); texte = substr($0, p + 1)
+			sub(/\r$/, "", texte)
+			gsub(/^[ \t]+/, "", texte)
+			if (length(texte) > 80) texte = substr(texte, 1, 77) "..."
+			printf "    %s · %s · %s\n", motif, lieu[n], texte
+		}
+	' "$tmp/occurrences" >>"$tmp/trouves" || : >"$tmp/echec-grep"
+done
+
+[ -e "$tmp/echec-grep" ] && refus_analyse "recherche des marqueurs"
+[ -s "$tmp/trouves" ] || exit 0
+
+if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+	echo "pre-push : marqueurs personnels vers $depot (public) autorisés par ALLOW_PUSH_PERSONAL=1." >&2
+	exit 0
+fi
+
+{
+	echo
+	echo "  ⛔  Push refusé : $depot est public et ce qui part contient des marqueurs personnels."
+	echo "      (marqueur · fichier:ligne ou commit · extrait)"
+	echo
+	cat "$tmp/trouves"
+	echo
+	echo "  Chaque commit qui part est examiné : un commit correctif ne suffit pas."
+	echo "  Retirer ces données de l'historique (git commit --amend, git rebase -i), puis repousser."
+	echo
+	echo "  Contournement ponctuel :"
+	echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+	echo
+} >&2
+exit 1

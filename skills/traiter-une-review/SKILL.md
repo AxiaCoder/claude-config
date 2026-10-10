@@ -259,7 +259,7 @@ chiffre, un libellé ou un tableau y figure.
 | Piège | Ce qu'il faut faire |
 |---|---|
 | zsh ne découpe pas les variables non quotées, et n'interprète pas `\n` entre guillemets | passer par un fichier, jamais par des arguments construits |
-| une commande dont le texte cite `ALLOW_PUSH_MAIN`, `garde.pushMain`, `core.hooksPath`, ou `--no-verify` à côté du mot `push` — **corps de PR ou de commentaire passé en argument ou par heredoc compris** — est refusée par `garde-push` | écrire le fichier avec l'outil d'écriture, puis `--body-file` (`gh pr create`, `gh pr comment`) ou `-F body=@` (`gh api`) |
+| une commande dont le texte cite `ALLOW_PUSH_MAIN`, `ALLOW_PUSH_PERSONAL`, `GARDE_PUBLIC_MARQUEURS`, `garde.pushMain`, `core.hooksPath`, ou `--no-verify` à côté du mot `push` — **corps de PR ou de commentaire passé en argument ou par heredoc compris** — est refusée par `garde-push` | écrire le fichier avec l'outil d'écriture, puis `--body-file` (`gh pr create`, `gh pr comment`) ou `-F body=@` (`gh api`) |
 | un script d'édition qui échoue à mi-parcours écrit la moitié | `assert` sur chaque ancre, et relire le fichier après |
 | une ancre qui tombe entre un bloc de doc et son symbole laisse le bloc orphelin — ni le lint, ni le typecheck, ni le `grep` ne le signalent | après l'insertion, relire ce qui précède l'ancre |
 | éditer un hook actif : une erreur de syntaxe le casse pour la session, et il bloque les commandes suivantes | éditer une copie, `bash -n`, puis la mettre en place |

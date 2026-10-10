@@ -11,6 +11,10 @@
 # Désactivation pour un dépôt :
 #   git config --local garde.pushMain off
 #
+# Garde données personnelles (git-hooks/_garde-public) : vers un dépôt GitHub public,
+# refuse ce qui contient un marqueur du fichier GARDE_PUBLIC_MARQUEURS.
+# Contournement ponctuel : ALLOW_PUSH_PERSONAL=1 git push …
+#
 # Quand le push est autorisé, le hook propre au dépôt (<git-common-dir>/hooks/pre-push),
 # s'il existe et est exécutable, est lancé avec les mêmes arguments et la même entrée ;
 # son code de sortie devient celui de ce hook.
@@ -70,6 +74,8 @@ MSG
 		;;
 	esac
 fi
+
+printf '%s\n' "$entree" | sh "$(dirname "$0")/_garde-public" "$remote_nom" "$remote_url" || exit 1
 
 dossier_commun=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
 suivant="$dossier_commun/hooks/pre-push"
