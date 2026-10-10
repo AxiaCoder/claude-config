@@ -176,6 +176,94 @@ def verifier_entree_utf8() -> list[str]:
     return defauts
 
 
+# Assemblées par morceaux : le garde actif de la session lit aussi ce que l'agent écrit.
+GA = "gitleaks" + ":allow"
+BA = "betterleaks" + ":allow"
+SECRET = 'token = "abc"  # '
+
+CAS_EXEMPTION: tuple[tuple[str, str, dict], ...] = (
+    ("REFUS", "Write", {"file_path": "a.py", "content": SECRET + GA}),
+    ("REFUS", "Write", {"file_path": "a.py", "content": SECRET + GA.upper()}),
+    ("REFUS", "Write", {"file_path": "a.py", "content": SECRET + BA}),
+    ("REFUS", "Edit", {"file_path": "a.py", "old_string": 'token = "abc"', "new_string": SECRET + GA}),
+    ("REFUS", "MultiEdit", {"file_path": "a.py", "edits": [
+        {"old_string": "x = 1", "new_string": "x = 2"},
+        {"old_string": 'token = "abc"', "new_string": SECRET + GA},
+    ]}),
+    ("REFUS", "NotebookEdit", {"notebook_path": "a.ipynb", "new_source": SECRET + GA}),
+    ("PASSE", "Write", {"file_path": "a.py", "content": 'token = "abc"'}),
+    ("PASSE", "Edit", {"file_path": "a.py", "old_string": SECRET + GA, "new_string": "x = 1\n" + SECRET + GA}),
+    ("PASSE", "Edit", {"file_path": "a.py", "old_string": "x = 1", "new_string": "x = 2"}),
+    ("PASSE", "Read", {"file_path": "a.py"}),
+    ("REFUS", "Edit", {"file_path": "a.py", "old_string": f"A = 1 # {GA}\nB = 2",
+                       "new_string": f"A = 1 # {GA}\nB = \"ghp_x\" # {GA}"}),
+    ("PASSE", "Edit", {"file_path": "a.py", "old_string": f"A = 1 # {GA}\nB = 2",
+                       "new_string": f"A = 1 # {GA}\nB = 3"}),
+    ("REFUS", "MultiEdit", {"file_path": "a.py", "edits": [
+        {"old_string": f"A = 1 # {GA}", "new_string": f"A = 1 # {GA}\nB = 2 # {BA}"},
+    ]}),
+)
+
+
+def verifier_exemption_sur_disque() -> list[str]:
+    """Juge un Write et un NotebookEdit contre le fichier existant, et rend les défauts.
+
+    Attendu : conserver le nombre de marqueurs du fichier passe, en ajouter un est refusé.
+    """
+    defauts: list[str] = []
+    with tempfile.TemporaryDirectory() as dossier:
+        fichier = pathlib.Path(dossier) / "a.py"
+        fichier.write_text(f"A = 1 # {GA}\n", encoding="utf-8")
+        carnet = pathlib.Path(dossier) / "a.ipynb"
+        carnet.write_text(json.dumps({"cells": [
+            {"id": "c1", "cell_type": "code", "source": [f"A = 1 # {GA}\n"]},
+        ]}), encoding="utf-8")
+        cas = (
+            ("PASSE", "Write", {"file_path": str(fichier), "content": f"A = 1 # {GA}\nB = 2\n"}),
+            ("REFUS", "Write", {"file_path": str(fichier), "content": f"A = 1 # {GA}\nB = 2 # {GA}\n"}),
+            ("PASSE", "NotebookEdit", {"notebook_path": str(carnet), "cell_id": "c1",
+                                       "new_source": f"A = 1 # {GA}\nB = 2"}),
+            ("REFUS", "NotebookEdit", {"notebook_path": str(carnet), "cell_id": "c1",
+                                       "new_source": f"A = 1 # {GA}\nB = 2 # {GA}"}),
+            ("REFUS", "NotebookEdit", {"notebook_path": str(carnet), "cell_id": "c1",
+                                       "edit_mode": "insert", "new_source": f"A = 1 # {GA}"}),
+        )
+        for attendu, outil, entree in cas:
+            obtenu = "REFUS" if _guardrail.check_secret_exemption(outil, entree) else "PASSE"
+            if obtenu != attendu:
+                defauts.append(f"{outil} {entree} : attendu {attendu}, obtenu {obtenu}")
+    return defauts
+
+
+def verifier_exemption() -> list[str]:
+    """Juge `check_secret_exemption` sur la table, puis un Write exempté par le hook entier, et rend les défauts.
+
+    Attendu : toute écriture qui ajoute l'exemption est refusée, une édition qui la conserve
+    passe, et le hook entier sort en 2 avec le message sur stderr.
+    """
+    defauts: list[str] = []
+    for attendu, outil, entree in CAS_EXEMPTION:
+        obtenu = "REFUS" if _guardrail.check_secret_exemption(outil, entree) else "PASSE"
+        if obtenu != attendu:
+            defauts.append(f"{outil} {entree} : attendu {attendu}, obtenu {obtenu}")
+    charge = json.dumps({
+        "session_id": "essai-exemption",
+        "tool_name": "Write",
+        "tool_input": {"file_path": "a.py", "content": SECRET + GA},
+    })
+    with tempfile.TemporaryDirectory() as home:
+        env = {**os.environ, "HOME": home, "USERPROFILE": home}
+        resultat = subprocess.run(
+            [sys.executable, str(_ICI / "guardrail.py")],
+            input=charge.encode("utf-8"), capture_output=True, env=env, timeout=30,
+        )
+    if resultat.returncode != 2:
+        defauts.append(f"hook entier : code {resultat.returncode}, attendu 2")
+    if "réservée à l'utilisateur" not in resultat.stderr.decode("utf-8", "replace"):
+        defauts.append("hook entier : le motif de refus manque sur stderr")
+    return defauts
+
+
 def main() -> int:
     """Joue tous les cas et rend 1 si l'un d'eux ne correspond pas à son attendu."""
     sys.stdout.reconfigure(encoding="utf-8")
@@ -203,7 +291,12 @@ def main() -> int:
     print(f"{'  ok ' if not defauts_utf8 else 'ECHEC'} entrée UTF-8 : un appel portant ⚠️ ne fait pas tomber le hook en cp1252")
     for defaut in defauts_utf8:
         print(f"  {defaut}")
-    return 1 if echecs or defauts_boucle or defauts_windows or defauts_utf8 else 0
+
+    defauts_exemption = verifier_exemption() + verifier_exemption_sur_disque()
+    print(f"{'  ok ' if not defauts_exemption else 'ECHEC'} exemption gitleaks : refusée quand l'écriture l'ajoute")
+    for defaut in defauts_exemption:
+        print(f"  {defaut}")
+    return 1 if echecs or defauts_boucle or defauts_windows or defauts_utf8 or defauts_exemption else 0
 
 
 if __name__ == "__main__":

@@ -39,6 +39,9 @@ d'optimisation pour IDE assistés par IA. Il en a tiré son inspiration, et une 
 
 ## Démarrer
 
+**Tout ce qui vient d'ailleurs** — installé par claude-config ou supposé présent, version,
+source, empreinte, comment le retirer : [`DEPENDANCES.md`](./DEPENDANCES.md).
+
 **Prérequis** : Claude Code, lancé au moins une fois (l'installation s'arrête si `~/.claude`
 n'existe pas) ; `git` ; Python 3 (bibliothèque standard seulement). Sous Windows, en plus :
 PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks git.
@@ -66,7 +69,14 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
    bash install.sh                                # macOS / Linux
    bash install.sh --perso ~/notes/claude-perso   # avec un dossier perso
    bash install.sh --dry-run                      # voir ce qui se passerait
+   bash install.sh --sans-externes                # sans rien télécharger (garde secrets désactivé)
    ```
+
+   L'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
+   `git-hooks/betterleaks.version`, dans `~/.claude/bin/` — le garde secrets du `pre-commit`
+   et du `pre-push` s'en sert. Un sha256 qui diffère ou un réseau absent : betterleaks n'est pas posé, le reste
+   de l'installation continue, et la fin le signale. `--sans-externes` (`-SansExternes`) s'en
+   passe et est mémorisé ; `--avec-externes` (`-AvecExternes`) le défait.
 
    ```powershell
    .\install.ps1                                  # Windows
@@ -168,7 +178,7 @@ Un marqueur qui survit au rendu arrête l'installation avant d'écrire le fichie
 
 | Hook | Quand | Ce qu'il fait |
 |---|---|---|
-| `guardrail` | avant `Bash`, `Edit`, `Write` — et `PowerShell` sous Windows | coupe les boucles (même appel répété) et les commandes destructrices passées par `Bash` — pas encore par l'outil PowerShell |
+| `guardrail` | avant `Bash`, `Edit`, `MultiEdit`, `NotebookEdit`, `Write` — et `PowerShell` sous Windows | coupe les boucles (même appel répété) et les commandes destructrices passées par `Bash` — pas encore par l'outil PowerShell ; refuse qu'un agent ajoute une exemption de secret |
 | `garde-push` | avant `Bash` — et `PowerShell` sous Windows | refuse une commande qui citerait de quoi désarmer le `pre-push` |
 | `session-git-context` | au démarrage | affiche la branche, le dernier commit et l'état de l'arbre |
 | `post-write-lint` | après `Write`, `Edit` | lance `pnpm lint` — sur un projet AdonisJS seulement |
@@ -191,8 +201,9 @@ même entrée. Un `pre-commit` ou un `commit-msg` local continue donc de tourner
 
 | Hook | Ce qu'il fait |
 |---|---|
-| `pre-push` | refuse un push vers `main` ou `master` d'un remote GitHub, ou porteur d'un marqueur personnel vers un dépôt GitHub public, puis relaie |
-| `applypatch-msg`, `pre-applypatch`, `post-applypatch`, `pre-commit`, `pre-merge-commit`, `prepare-commit-msg`, `commit-msg`, `post-commit`, `pre-rebase`, `post-checkout`, `post-merge`, `post-rewrite`, `pre-auto-gc`, `sendemail-validate` | relaient seulement (`git-hooks/_relais`) |
+| `pre-push` | refuse un push vers `main` ou `master` d'un remote GitHub, porteur d'un marqueur personnel vers un dépôt GitHub public, ou dont un commit porte un secret (garde secrets), puis relaie |
+| `pre-commit` | refuse un commit dont l'indexé porte un secret (garde secrets), puis relaie |
+| `applypatch-msg`, `pre-applypatch`, `post-applypatch`, `pre-merge-commit`, `prepare-commit-msg`, `commit-msg`, `post-commit`, `pre-rebase`, `post-checkout`, `post-merge`, `post-rewrite`, `pre-auto-gc`, `sendemail-validate` | relaient seulement (`git-hooks/_relais`) |
 
 Ne sont **pas** relayés : `reference-transaction` et `post-index-change`, que git lance à
 chaque mise à jour de ref ou d'index — un relais coûte une quinzaine de millisecondes par
@@ -250,6 +261,40 @@ ALLOW_PUSH_PERSONAL=1 git push …             # une fois, en connaissance de ca
 Ce geste, comme vider ou retirer `GARDE_PUBLIC_MARQUEURS`, est réservé à l'utilisateur : le
 hook Claude `garde-push` refuse une commande d'agent qui cite l'une ou l'autre variable.
 
+**Le garde secrets** (`git-hooks/_garde-secrets`, lancé par `pre-commit` et par `pre-push`,
+avant le relais). Il passe à betterleaks (`~/.claude/bin/betterleaks`, version épinglée — voir
+[`DEPENDANCES.md`](./DEPENDANCES.md)) ce qui est indexé au `pre-commit`, et chaque commit qui
+part au `pre-push`, vers tout remote. Il refuse si un secret s'y trouve, en listant
+`fichier:ligne` et la règle — plus le commit au `pre-push` —, jamais le secret.
+
+- **Pourquoi aussi au `pre-push`** : git crée des commits sans passer par le `pre-commit` —
+  `rebase --continue` après un conflit ou un arrêt `edit`, `cherry-pick`, `commit-tree`,
+  `commit --no-verify`. Le `pre-push` les rattrape avant qu'ils quittent la machine. Commits
+  examinés par ref poussée : depuis ce que le remote a déjà ; nouvelle branche, depuis la
+  merge-base avec la branche par défaut du remote, à défaut ceux que ce remote n'a pas — tout
+  l'historique vers une URL sans nom de remote. Un merge est examiné sur ce que sa résolution
+  ajoute (git ≥ 2.36 ; en deçà, les merges ne sont pas examinés et une ligne le signale). Un
+  secret ajouté puis retiré est trouvé : il faut réécrire l'historique, un commit correctif ne
+  suffit pas.
+
+- **Aucun appel réseau** : la validation des secrets auprès des API est coupée
+  (`--validation=false`).
+- **Un faux positif s'exempte** par un commentaire `gitleaks:allow` sur la ligne. Ce
+  commentaire est réservé à l'utilisateur : `guardrail.py` et `garde-push.py` refusent qu'un
+  agent l'écrive.
+- **Il bloque** quand betterleaks est absent, avec le geste pour le reposer — relancer
+  l'installation — ou quand son analyse échoue.
+- **Il laisse passer** hors dépôt, sans rien d'indexé ni de commit à pousser, et — avec une
+  ligne sur stderr — quand l'installation a été faite avec `--sans-externes`.
+
+```bash
+ALLOW_COMMIT_SECRET=1 git commit …           # une fois, en connaissance de cause
+ALLOW_COMMIT_SECRET=1 git push …             # idem, au pre-push
+```
+
+Ce contournement est réservé à l'utilisateur : le hook Claude `garde-push` refuse une commande
+d'agent qui le cite.
+
 **Un dépôt peut reprendre la main.** `core.hooksPath` suit la hiérarchie normale de git : une
 valeur posée dans le dépôt (`git config --local core.hooksPath <dossier>`) remplace la
 globale, et ni le relais ni le garde de push n'y jouent plus. C'est ce que fait **Husky**
@@ -305,6 +350,7 @@ sh scripts/install.test.sh        # fusion des réglages, rendu de CLAUDE.md
 sh git-hooks/relais.test.sh       # relais des hooks git
 sh git-hooks/pre-push.test.sh     # garde de push
 sh git-hooks/garde-public.test.sh # garde données personnelles
+sh git-hooks/garde-secrets.test.sh # garde secrets ; essai réel avec ~/.claude/bin/betterleaks
 python3 hooks/guardrail.test.py
 python3 hooks/garde-push.test.py
 python3 scripts/verifier-les-ecrits.py .   # renvois morts et notes en double dans les .md
@@ -323,7 +369,9 @@ python3 scripts/verifier-les-ecrits.py .   # renvois morts et notes en double da
    ⚠️ Ne pas garder le `settings.json` rendu : ses hooks pointeraient vers `~/.claude/hooks/`,
    qui n'existe plus, et échoueraient à chaque appel d'outil. `settings.json.prev` n'aide pas —
    il ne garde que l'état d'avant la dernière passe.
-4. Supprimer `~/.claude/claude-config.perso`, `~/.claude/claude-config.hooks.json`,
+4. Supprimer `~/.claude/bin/betterleaks` (Windows : `betterleaks.exe`),
+   `~/.claude/claude-config.sans-externes`,
+   `~/.claude/claude-config.perso`, `~/.claude/claude-config.hooks.json`,
    `~/.claude/settings.json.prev`, puis les
    `~/.claude/config-backup-*` une fois leur contenu remis en place.
 
@@ -344,7 +392,7 @@ Ne jamais committer : `.claude.json` (il contient les jetons MCP en clair),
 | `skills/` | Skills globaux |
 | `hooks/` | Hooks Claude Code et statusline |
 | `mods/` | Mods Claude Code : chaque sous-dossier qui a un `.claude-plugin/plugin.json` est chargé par l'installation, et porte sa propre règle. Retirer un mod = supprimer son dossier, puis relancer l'installation |
-| `git-hooks/` | Hooks git globaux : garde de push et relais |
+| `git-hooks/` | Hooks git globaux : garde de push, garde secrets et relais ; version épinglée de betterleaks |
 | `scripts/` | Outils de maintenance et tests de l'installation |
 | `exemple-perso/` | Un dossier perso d'exemple |
 

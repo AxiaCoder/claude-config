@@ -20,7 +20,12 @@ APM = "ALLOW_" + "PUSH_" + "MAIN"
 GPM = "garde." + "pushMain"
 APP = "ALLOW_" + "PUSH_" + "PERSONAL"
 GPMQ = "GARDE_" + "PUBLIC_" + "MARQUEURS"
+ACS = "ALLOW_" + "COMMIT_" + "SECRET"
 PM = "push origin " + "ma" + "in"
+SE = "sans-" + "externes"
+SEP = "Sans" + "Externes"
+GA = "gitleaks" + ":allow"
+BA = "betterleaks" + ":allow"
 
 REFUS, PASSE = 2, 0
 
@@ -55,18 +60,49 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f"env -u {GPMQ} git push"),
     (REFUS, f"Remove-Item Env:{GPMQ}; git push"),
     (REFUS, f"{GPMQ.lower()}=x git push"),
+    (REFUS, f"{ACS}=1 git commit -m x"),
+    (REFUS, f"export {ACS}=1"),
+    (REFUS, f"$env:{ACS} = '1'; git commit -m x"),
+    (REFUS, f"{ACS.lower()}=1 git commit -m x"),
+    (REFUS, f"git commit {NV} -m x"),
+    (REFUS, f"git commit {NV} -m 'pushed fix'"),
+    (REFUS, f"git commit {NV[:-2]} -m x"),
+    (REFUS, "git commit -n -m x"),
+    (REFUS, "git commit -anm x"),
+    (REFUS, "git commit -nm x"),
+    (REFUS, "git -C repo commit -n -m x"),
+    (REFUS, "git add . && git commit -an -m 'wip'"),
+    (REFUS, f"git -c {HP}=/dev/null commit -m x"),
+    (REFUS, f"touch ~/.claude/claude-config.{SE} && git commit -m x"),
+    (REFUS, f"bash install.sh --{SE}"),
+    (REFUS, f".\\install.ps1 -{SEP}"),
+    (REFUS, f"New-Item $HOME/.claude/claude-config.{SE}"),
+    (REFUS, f"echo > ~/.claude/claude-config.{SE.upper()}"),
+    (REFUS, f"echo 'token = 1  # {GA}' >> config.py"),
+    (REFUS, f"sed -i '' 's/$/ # {GA}/' config.py"),
+    (REFUS, f"printf '%s\\n' '# {GA.upper()}' | tee -a config.py"),
+    (REFUS, f"cat >> config.py <<'EOF'\nx = 1  # {BA}\nEOF"),
+    (REFUS, f"git commit -m 'ajoute {GA}'"),
     # --- doivent passer ---
+    (PASSE, "echo gitleaks detect"),
     (PASSE, "git push"),
     (PASSE, f"git {PM}"),
     (PASSE, "git push -u origin feat/garde"),
-    (PASSE, f"git commit {NV} -m wip"),
     (PASSE, f"echo {NV}"),
-    (PASSE, f"git commit {NV} -m 'pushed fix'"),
+    (PASSE, "git log -n 5"),
+    (PASSE, "head -n 3 fichier"),
+    (PASSE, "git commit -m \"voir -n\""),
+    (PASSE, "git commit -m x && git log -n 1"),
+    (PASSE, "git commit -am wip"),
+    (PASSE, "git commit -mnote"),
+    (PASSE, "git log --grep commit -n 5"),
+    (PASSE, f"git commit -m 'voir {NV}'"),
     (PASSE, "git pushd"),
     (PASSE, "git push --no-verbose"),
     (PASSE, "git push --no-version-check"),
     (PASSE, "git config --global core.editor vim"),
     (PASSE, "ls hooks"),
+    (PASSE, "bash install.sh"),
     (PASSE, ""),
 )
 

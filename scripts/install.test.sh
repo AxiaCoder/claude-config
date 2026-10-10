@@ -469,5 +469,78 @@ printf '{"env": {"CLAUDE_CODE_PLUGIN_DIRS": "/perso/mod"}}
 installer zero-mod-perso --perso "$tmp/zero-mod-perso/perso"; verdict 0 "$?" "0 mod + perso : install sans erreur"
 verdict /perso/mod "$(lire zero-mod-perso env.CLAUDE_CODE_PLUGIN_DIRS)" "0 mod + perso : la valeur du perso gardée"
 
+# betterleaks : curl est un bouchon qui sert $tmp/asset.tar.gz, une archive dont le
+# « betterleaks » affiche 9.9.9 ; aucun appel réseau.
+mkdir -p "$tmp/asset" "$tmp/bin-curl"
+printf '#!/bin/sh\necho 9.9.9\n' >"$tmp/asset/betterleaks"
+chmod +x "$tmp/asset/betterleaks"
+tar -czf "$tmp/asset.tar.gz" -C "$tmp/asset" betterleaks
+sha_asset=$(shasum -a 256 "$tmp/asset.tar.gz" 2>/dev/null || sha256sum "$tmp/asset.tar.gz")
+sha_asset=${sha_asset%% *}
+cat >"$tmp/bin-curl/curl" <<EOF
+#!/bin/sh
+echo "\$*" >>"$tmp/curl-appels"
+while [ \$# -gt 0 ]; do
+	[ "\$1" = -o ] && { cp "$tmp/asset.tar.gz" "\$2"; exit 0; }
+	shift
+done
+exit 1
+EOF
+chmod +x "$tmp/bin-curl/curl"
+
+# Monte le socle $1 avec un git-hooks/betterleaks.version 9.9.9 au sha256 $2 pour toutes les plateformes.
+socle_betterleaks() {
+	monter "$1"
+	mkdir -p "$tmp/$1/repo/git-hooks"
+	printf 'version=9.9.9\n' >"$tmp/$1/repo/git-hooks/betterleaks.version"
+	for p in darwin_arm64 darwin_x64 linux_arm64 linux_x64; do
+		printf '%s=%s\n' "$p" "$2" >>"$tmp/$1/repo/git-hooks/betterleaks.version"
+	done
+}
+
+# Lance install.sh du montage $1 avec le bouchon curl en tête du PATH.
+installer_bouchon() {
+	m="$1"
+	shift
+	PATH="$tmp/bin-curl:$PATH" HOME="$tmp/$m/home" bash "$tmp/$m/repo/install.sh" "$@" >"$tmp/$m/sortie" 2>&1
+}
+
+# Affiche present ou absent selon que le fichier $1 existe.
+existe() { [ -e "$1" ] && echo present || echo absent; }
+
+socle_betterleaks bl-ok "$sha_asset"
+installer_bouchon bl-ok; verdict 0 "$?" "betterleaks : install sans erreur"
+verdict 9.9.9 "$("$tmp/bl-ok/home/.claude/bin/betterleaks" version 2>/dev/null)" "betterleaks : posé dans ~/.claude/bin"
+verdict present "$(grep -q 'releases/download/v9.9.9/betterleaks_9.9.9_' "$tmp/curl-appels" && echo present || echo absent)" "betterleaks : URL de l'asset épinglé"
+: >"$tmp/curl-appels"
+installer_bouchon bl-ok; verdict 0 "$?" "betterleaks en place : 2e passe sans erreur"
+verdict 0 "$(wc -l <"$tmp/curl-appels" | tr -d ' ')" "betterleaks en place : aucun téléchargement"
+
+socle_betterleaks bl-sha 0000000000000000000000000000000000000000000000000000000000000000
+installer_bouchon bl-sha; verdict 0 "$?" "sha256 faux : le reste de l'install passe"
+verdict absent "$(existe "$tmp/bl-sha/home/.claude/bin/betterleaks")" "sha256 faux : betterleaks non posé"
+verdict present "$(grep -q 'sha256 inattendu' "$tmp/bl-sha/sortie" && echo present || echo absent)" "sha256 faux : message"
+verdict present "$(grep -q 'garde secrets inactif' "$tmp/bl-sha/sortie" && echo present || echo absent)" "sha256 faux : signalé en fin d'install"
+
+socle_betterleaks bl-dry "$sha_asset"
+installer_bouchon bl-dry --dry-run; verdict 0 "$?" "betterleaks dry-run : sans erreur"
+verdict absent "$(existe "$tmp/bl-dry/home/.claude/bin/betterleaks")" "betterleaks dry-run : rien de posé"
+
+socle_betterleaks bl-sans "$sha_asset"
+: >"$tmp/curl-appels"
+installer_bouchon bl-sans --sans-externes; verdict 0 "$?" "--sans-externes : install sans erreur"
+verdict absent "$(existe "$tmp/bl-sans/home/.claude/bin/betterleaks")" "--sans-externes : betterleaks non posé"
+verdict 0 "$(wc -l <"$tmp/curl-appels" | tr -d ' ')" "--sans-externes : aucun téléchargement"
+verdict present "$(existe "$tmp/bl-sans/home/.claude/claude-config.sans-externes")" "--sans-externes : choix mémorisé"
+installer_bouchon bl-sans; verdict 0 "$?" "sans externes mémorisé : 2e passe sans erreur"
+verdict absent "$(existe "$tmp/bl-sans/home/.claude/bin/betterleaks")" "sans externes mémorisé : toujours rien de posé"
+installer_bouchon bl-sans --avec-externes; verdict 0 "$?" "--avec-externes : install sans erreur"
+verdict absent "$(existe "$tmp/bl-sans/home/.claude/claude-config.sans-externes")" "--avec-externes : mémo retiré"
+verdict 9.9.9 "$("$tmp/bl-sans/home/.claude/bin/betterleaks" version 2>/dev/null)" "--avec-externes : betterleaks posé"
+
+socle_betterleaks bl-sans-dry "$sha_asset"
+installer_bouchon bl-sans-dry --sans-externes --dry-run; verdict 0 "$?" "--sans-externes dry-run : sans erreur"
+verdict absent "$(existe "$tmp/bl-sans-dry/home/.claude/claude-config.sans-externes")" "--sans-externes dry-run : mémo non écrit"
+
 echo "$nb cas, $([ "$echec" -eq 0 ] && echo 'tous passent' || echo 'ECHEC')"
 exit "$echec"

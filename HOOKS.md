@@ -97,8 +97,8 @@ JSON réelle de l'événement, chemins réels compris (`agent_transcript_path` p
 `collecteur-agents.py`). Ce qui tranche dépend du hook :
 
 - **un hook de garde** (`guardrail.py`, `garde-push.py`) : son **code de sortie** — `2` refuse,
-  `0` laisse passer — et le motif qu'il donne (JSON `decision`/`reason` sur stdout pour
-  `guardrail.py`, message sur stderr pour `garde-push.py`) ;
+  `0` laisse passer — et le motif qu'il donne (JSON `decision`/`reason` sur stdout et
+  `reason` seul sur stderr pour `guardrail.py`, message sur stderr pour `garde-push.py`) ;
 - **un hook collecteur** (`collecteur-agents.py`) : il sort toujours `0`, son code ne dit rien. Ce
   qui tranche est ce qu'il a produit — sa ligne `… — envoye` ou `… — en attente`, et
   `~/.claude/telemetrie-agents/en-attente.jsonl` quand l'envoi a échoué.
@@ -116,13 +116,14 @@ ligne, est refusée par le `garde-push.py` installé — la lire depuis un fichi
 
 | Brique | Ce qu'elle demande |
 |---|---|
-| `guardrail.py` | rien — bibliothèque standard. **Commandes destructrices : outil `Bash` seulement, pas l'outil PowerShell** |
+| `guardrail.py` | rien — bibliothèque standard. **Commandes destructrices : outil `Bash` seulement, pas l'outil PowerShell**. Refuse aussi un Write, Edit, MultiEdit ou NotebookEdit qui **ajoute** une exemption `gitleaks:allow` / `betterleaks:allow` : il compte les marqueurs avant et après (fichier sur disque pour Write, cellule pour NotebookEdit) ; une écriture qui conserve leur nombre passe |
 | `collecteur-agents.py` | une adresse de collecte dans `env` (dossier perso), et une instance VictoriaMetrics derrière — celle de [home-server-telemetry](https://github.com/AxiaCoder/home-server-telemetry), par exemple |
 | `session-git-context`, `post-write-lint` | `sh` sur macOS ; `pwsh` (PowerShell 7) sous Windows. `post-write-lint` demande aussi `pnpm` dans un projet AdonisJS |
 | `statusline.py` | rien — bibliothèque standard |
-| `garde-push.py` | python — bibliothèque standard. Refuse une commande de l'agent qui désarmerait `git-hooks/pre-push` |
+| `garde-push.py` | python — bibliothèque standard. Refuse une commande de l'agent qui désarmerait `git-hooks/pre-push` ou `git-hooks/pre-commit`, mémo `--sans-externes` compris, et toute commande qui cite `gitleaks:allow` / `betterleaks:allow` ; l'écriture de ce mémo par les outils d'édition est refusée par `permissions.deny` (`settings.base.json`) |
 | `git-hooks/` (`pre-push` et le relais `_relais`) | git et `sh` (celui de Git for Windows sous Windows). Hooks git, pas hooks Claude ; chacun relaie au hook du même nom dans `.git/hooks/` du dépôt — détail au README, § Hooks git globaux. Ils sont activés par `install` via `core.hooksPath` global, **sauf si un autre dossier y est déjà déclaré** — l'installation avertit et n'écrase pas. Contrôle : `git config --global --get core.hooksPath` |
 | `git-hooks/_garde-public` (lancé par `pre-push`) | `gh` connecté, et la variable `GARDE_PUBLIC_MARQUEURS` qui désigne le fichier de marqueurs du dossier perso. Sans l'un ou l'autre, il laisse passer avec une ligne sur stderr — format et périmètre au README, § Hooks git globaux |
+| `git-hooks/_garde-secrets` (lancé par `pre-commit` sur l'indexé, et par `pre-push` sur chaque commit qui part : `rebase --continue`, `cherry-pick` ou `commit-tree` créent des commits sans `pre-commit`) | `~/.claude/bin/betterleaks`, posé par `install` à la version épinglée de `git-hooks/betterleaks.version` ([`DEPENDANCES.md`](./DEPENDANCES.md)). Absent, il **bloque** les commits et les pushes ; installation faite avec `--sans-externes`, il laisse passer avec une ligne sur stderr. Gabarit du rapport : `git-hooks/_garde-secrets.tmpl` ; config fixée par `git-hooks/_garde-secrets.toml` et liste d'empreintes ignorées vide `git-hooks/_garde-secrets.ignore` — un `.gitleaks.toml`, un `.gitleaksignore` ou une variable `GITLEAKS_*` / `BETTERLEAKS_*` du dépôt sont sans effet |
 
 ⚠️ **`OTEL_LOG_TOOL_DETAILS=1` (`settings.base.json`) ne met aujourd'hui que des noms d'agents et de
 skills sur les métriques.** Il déverrouille aussi, sur les *événements* et les *traces*, la commande

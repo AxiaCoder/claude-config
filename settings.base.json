@@ -6,5 +6,10 @@
     "OTEL_LOGS_EXPORTER": "none",
     "OTEL_LOG_TOOL_DETAILS": "1",
     "CLAUDE_CODE_PLUGIN_DIRS": "{{MODS}}"
+  },
+  "permissions": {
+    "deny": [
+      "Edit(~/.claude/claude-config.sans-externes)"
+    ]
   }
 }

@@ -13,6 +13,11 @@ trap 'rm -rf "$tmp"' EXIT
 GIT_CONFIG_GLOBAL="$tmp/gitconfig-vide"
 GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
+# Garde secrets du pre-push hors champ : HOME jetable, installation « sans externes ».
+HOME="$tmp/home"
+mkdir -p "$HOME/.claude"
+: >"$HOME/.claude/claude-config.sans-externes"
+export HOME
 unset GARDE_PUBLIC_MARQUEURS
 unset ALLOW_PUSH_MAIN
 

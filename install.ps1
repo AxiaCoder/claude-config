@@ -17,12 +17,26 @@
   ignorer son CLAUDE.md. Memorise dans
   ~/.claude/claude-config.perso, repris sans -Perso aux passes suivantes.
 
+.PARAMETER SansExternes
+  N'installe rien de ce qui se telecharge (betterleaks) et desactive le garde
+  secrets du pre-commit. Memorise dans ~/.claude/claude-config.sans-externes,
+  repris aux passes suivantes. Inventaire des outils externes : DEPENDANCES.md.
+
+.PARAMETER AvecExternes
+  Defait -SansExternes : retire le memo et installe betterleaks.
+
 .PARAMETER WhatIfOnly
   Affiche les actions sans rien modifier.
+
+.NOTES
+  betterleaks, a la version et au sha256 de git-hooks/betterleaks.version, est
+  telecharge dans ~/.claude/bin pour le garde secrets du pre-commit.
 #>
 [CmdletBinding()]
 param(
   [string] $Perso = '',
+  [switch] $SansExternes,
+  [switch] $AvecExternes,
   [switch] $WhatIfOnly
 )
 
@@ -385,8 +399,100 @@ else {
   Write-Warning "core.hooksPath global vaut deja '$actuel' : laisse tel quel, le garde pre-push n'est pas actif."
 }
 
+# --- betterleaks, garde secrets du pre-commit ------------------------------
+
+# Pose dans ~/.claude/bin le betterleaks.exe epingle par git-hooks/betterleaks.version,
+# s'il n'y est pas deja a cette version. Rend $false, avec un avertissement, quand il n'a
+# pas pu etre pose : fichier de version absent, plateforme sans asset, telechargement,
+# sha256 ou extraction en echec. En simulation, annonce l'installation sans rien ecrire.
+function Install-Betterleaks {
+  $fichier = Join-Path $Repo 'git-hooks/betterleaks.version'
+  $bin = Join-Path $ClaudeHome 'bin/betterleaks.exe'
+  if (-not (Test-Path $fichier)) {
+    Write-Warning "betterleaks : $fichier absent, non installe."
+    return $false
+  }
+  $valeurs = @{}
+  foreach ($ligne in Get-Content $fichier) {
+    if ($ligne -match '^([a-z0-9_]+)=(.+)$') { $valeurs[$Matches[1]] = $Matches[2].Trim() }
+  }
+  $arch = switch ($env:PROCESSOR_ARCHITECTURE) { 'ARM64' { 'arm64' } 'AMD64' { 'x64' } default { '' } }
+  $version = $valeurs['version']
+  $sha = $valeurs["windows_$arch"]
+  if (-not $version -or -not $arch -or -not $sha) {
+    Write-Warning "betterleaks : aucun asset epingle pour windows/$($env:PROCESSOR_ARCHITECTURE) dans $fichier, non installe."
+    return $false
+  }
+  if (Test-Path $bin) {
+    $actuelle = "$(& $bin version 2>$null)".Trim()
+    if ($actuelle -eq $version) {
+      Step "betterleaks : $version deja en place"
+      return $true
+    }
+  }
+  $asset = "betterleaks_${version}_windows_$arch.zip"
+  $url = "https://github.com/betterleaks/betterleaks/releases/download/v$version/$asset"
+  Step "betterleaks : installation de $version ($asset) dans $(Join-Path $ClaudeHome 'bin')"
+  if ($WhatIfOnly) { return $true }
+  $dl = Join-Path ([System.IO.Path]::GetTempPath()) "betterleaks-$Stamp"
+  New-Item -ItemType Directory -Force -Path $dl | Out-Null
+  try {
+    try {
+      Invoke-WebRequest -Uri $url -OutFile (Join-Path $dl $asset) -UseBasicParsing -TimeoutSec 120
+    } catch {
+      Write-Warning "betterleaks : telechargement impossible ($url), non installe."
+      return $false
+    }
+    $obtenu = (Get-FileHash (Join-Path $dl $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($obtenu -ne $sha) {
+      Write-Warning "betterleaks : sha256 inattendu pour $asset (attendu $sha, obtenu $obtenu), non installe."
+      return $false
+    }
+    try {
+      Expand-Archive -Path (Join-Path $dl $asset) -DestinationPath (Join-Path $dl 'x') -Force
+      New-Item -ItemType Directory -Force -Path (Join-Path $ClaudeHome 'bin') | Out-Null
+      Move-Item -Force (Join-Path $dl 'x/betterleaks.exe') $bin
+    } catch {
+      Write-Warning "betterleaks : extraction de $asset impossible, non installe."
+      return $false
+    }
+    return $true
+  } finally {
+    Remove-Item -Recurse -Force $dl -ErrorAction SilentlyContinue
+  }
+}
+
+$ExternesMemo = Join-Path $ClaudeHome 'claude-config.sans-externes'
+if ($SansExternes) {
+  Step "externes : desactives (-SansExternes), choix memorise dans $ExternesMemo"
+  if (-not $WhatIfOnly) { Set-Content $ExternesMemo '' -Encoding utf8 }
+  $Sans = $true
+}
+elseif ($AvecExternes) {
+  Step "externes : reactives (-AvecExternes)"
+  if (-not $WhatIfOnly) { Remove-Item $ExternesMemo -Force -ErrorAction SilentlyContinue }
+  $Sans = $false
+}
+else {
+  $Sans = Test-Path $ExternesMemo
+}
+
+$GardeSecretsInactif = $false
+if ($Sans) {
+  Step "betterleaks : non installe (sans externes ; -AvecExternes pour revenir) : garde secrets desactive"
+  if (Test-Path (Join-Path $ClaudeHome 'bin/betterleaks.exe')) {
+    Step "betterleaks : $(Join-Path $ClaudeHome 'bin/betterleaks.exe') reste en place, le retirer a la main (DEPENDANCES.md)"
+  }
+}
+elseif (-not (Install-Betterleaks)) {
+  $GardeSecretsInactif = $true
+}
+
 Write-Host ""
 Write-Host "Termine. Verifier les liens :"
 Write-Host "  Get-Item ~\.claude\agents, ~\.claude\commands, ~\.claude\skills, ~\.claude\hooks, ~\.claude\git-hooks | Select-Object Name, LinkType, Target"
 Write-Host "  git config --global --get core.hooksPath"
 if (Test-Path $BackupDir) { Write-Host "Sauvegarde : $BackupDir" }
+if ($GardeSecretsInactif) {
+  Write-Warning "garde secrets inactif : betterleaks absent. les commits sont refuses tant qu'il manque : relancer install.ps1, ou -SansExternes pour s'en passer."
+}
