@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Garde de push, côté Claude — hook PreToolUse sur Bash et PowerShell.
 
-Le refus d'un push vers main appartient au hook git `git-hooks/pre-push`. Ce hook-ci
-empêche seulement une commande de l'agent de le désarmer : il refuse (sortie 2) une
-commande qui contient
+Le refus d'un push vers main appartient au hook git `git-hooks/pre-push`, celui d'un
+secret indexé au hook git `git-hooks/pre-commit`. Ce hook-ci empêche seulement une commande
+de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 
 - `--no-verify`, ou l'une de ses abréviations dès `--no-ver`, avec le mot `push` ;
 - `--no-verify` (mêmes abréviations) ou `-n` comme option d'un `git commit` : `-n` seul ou
@@ -13,7 +13,9 @@ commande qui contient
 - `garde.pushMain` ;
 - `ALLOW_PUSH_PERSONAL` ;
 - `GARDE_PUBLIC_MARQUEURS` ;
-- `ALLOW_COMMIT_SECRET`, le contournement du garde secrets du pre-commit.
+- `ALLOW_COMMIT_SECRET`, le contournement du garde secrets du pre-commit ;
+- `sans-externes` ou `SansExternes` : l'option d'installation sans externes et son mémo
+  `~/.claude/claude-config.sans-externes`, qui désarment le garde secrets.
 
 La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
@@ -39,6 +41,7 @@ _MOTIFS_INTERDITS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"allow_push_personal", re.IGNORECASE), "ALLOW_PUSH_PERSONAL", GARDE_PUSH),
     (re.compile(r"garde_public_marqueurs", re.IGNORECASE), "GARDE_PUBLIC_MARQUEURS", GARDE_PUSH),
     (re.compile(r"allow_commit_secret", re.IGNORECASE), "ALLOW_COMMIT_SECRET", GARDE_SECRETS),
+    (re.compile(r"sans-?externes", re.IGNORECASE), "sans-externes", GARDE_SECRETS),
 )
 _NO_VERIFY = re.compile(r"--no-ver(?:i(?:fy?)?)?\b", re.IGNORECASE)
 _MOT_PUSH = re.compile(r"\bpush\b", re.IGNORECASE)

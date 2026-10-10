@@ -166,7 +166,9 @@ if [ -x "$reel" ]; then
 	echo "  betterleaks $("$bouchon" version 2>/dev/null) ($reel)"
 	r="$tmp/reel"
 	depot "$r"
-	jeton="ghp_$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 36)"
+	# Tire un nouveau jeton GitHub dans $jeton : un essai qui passe le laisse dans HEAD.
+	jeton_neuf() { jeton="ghp_$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 36)"; }
+	jeton_neuf
 	essai "$r" "token = \"$jeton\"" BLOQUE "jeton GitHub indexé → bloqué"
 	sed 's/^/    | /' "$tmp/err"
 	stderr_contient "a.txt:1" "  stderr : fichier:ligne"
@@ -174,6 +176,47 @@ if [ -x "$reel" ]; then
 	if grep -q -e "$jeton" "$tmp/err"; then o=EN_CLAIR; else o=MASQUE; fi
 	verdict MASQUE "$o" "  stderr : jeton masqué"
 	essai "$r" "token = \"$jeton\" # gitleaks:allow" PASSE "même jeton, gitleaks:allow → passe"
+
+	printf '[extend]\nuseDefault = true\n[allowlist]\npaths = ['"'''"'.*'"'''"']\n' >"$tmp/tout-permis.toml"
+	mkdir -p "$r/.git/info"
+	printf '%s\n' .gitleaks.toml .betterleaks.toml .gitleaksignore .betterleaksignore >>"$r/.git/info/exclude"
+	cp "$tmp/tout-permis.toml" "$r/.gitleaks.toml"
+	jeton_neuf
+	essai "$r" "token = \"$jeton\"" BLOQUE "jeton, .gitleaks.toml local tout permis → bloqué"
+	mv "$r/.gitleaks.toml" "$r/.betterleaks.toml"
+	jeton_neuf
+	essai "$r" "token = \"$jeton\"" BLOQUE "jeton, .betterleaks.toml local tout permis → bloqué"
+	rm -f "$r/.betterleaks.toml"
+
+	echo "a.txt:github-pat:1" >"$r/.gitleaksignore"
+	jeton_neuf
+	essai "$r" "token = \"$jeton\"" BLOQUE "jeton, .gitleaksignore local → bloqué"
+	mv "$r/.gitleaksignore" "$r/.betterleaksignore"
+	jeton_neuf
+	essai "$r" "token = \"$jeton\"" BLOQUE "jeton, .betterleaksignore local → bloqué"
+	rm -f "$r/.betterleaksignore"
+
+	for var in GITLEAKS_CONFIG_TOML BETTERLEAKS_CONFIG_TOML; do
+		export "$var=$(cat "$tmp/tout-permis.toml")"
+		jeton_neuf
+		essai "$r" "token = \"$jeton\"" BLOQUE "jeton, $var tout permis → bloqué"
+		unset "$var"
+	done
+	for var in GITLEAKS_CONFIG BETTERLEAKS_CONFIG; do
+		export "$var=$tmp/tout-permis.toml"
+		jeton_neuf
+		essai "$r" "token = \"$jeton\"" BLOQUE "jeton, $var tout permis → bloqué"
+		unset "$var"
+	done
+
+	for option in -a a.txt; do
+		jeton_neuf
+		printf 'token = "%s"\n' "$jeton" >"$r/a.txt"
+		if git -C "$r" commit -q -m essai "$option" >/dev/null 2>"$tmp/err"; then o=PASSE; else o=BLOQUE; fi
+		verdict BLOQUE "$o" "jeton, commit $option sans add (index temporaire) → bloqué"
+		stderr_contient "github-pat" "  stderr : règle github-pat"
+	done
+
 	cle=$(openssl genrsa 2048 2>/dev/null)
 	if [ -n "$cle" ]; then
 		essai "$r" "$cle" BLOQUE "clé privée PEM générée → bloqué"

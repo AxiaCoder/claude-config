@@ -22,6 +22,8 @@ APP = "ALLOW_" + "PUSH_" + "PERSONAL"
 GPMQ = "GARDE_" + "PUBLIC_" + "MARQUEURS"
 ACS = "ALLOW_" + "COMMIT_" + "SECRET"
 PM = "push origin " + "ma" + "in"
+SE = "sans-" + "externes"
+SEP = "Sans" + "Externes"
 
 REFUS, PASSE = 2, 0
 
@@ -69,6 +71,11 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, "git -C repo commit -n -m x"),
     (REFUS, "git add . && git commit -an -m 'wip'"),
     (REFUS, f"git -c {HP}=/dev/null commit -m x"),
+    (REFUS, f"touch ~/.claude/claude-config.{SE} && git commit -m x"),
+    (REFUS, f"bash install.sh --{SE}"),
+    (REFUS, f".\\install.ps1 -{SEP}"),
+    (REFUS, f"New-Item $HOME/.claude/claude-config.{SE}"),
+    (REFUS, f"echo > ~/.claude/claude-config.{SE.upper()}"),
     # --- doivent passer ---
     (PASSE, "git push"),
     (PASSE, f"git {PM}"),
@@ -87,6 +94,7 @@ CAS: tuple[tuple[int, str], ...] = (
     (PASSE, "git push --no-version-check"),
     (PASSE, "git config --global core.editor vim"),
     (PASSE, "ls hooks"),
+    (PASSE, "bash install.sh"),
     (PASSE, ""),
 )
 
