@@ -18,6 +18,8 @@ NV = "--no-" + "verify"
 HP = "core." + "hooksPath"
 APM = "ALLOW_" + "PUSH_" + "MAIN"
 GPM = "garde." + "pushMain"
+APP = "ALLOW_" + "PUSH_" + "PERSONAL"
+GPMQ = "GARDE_" + "PUBLIC_" + "MARQUEURS"
 PM = "push origin " + "ma" + "in"
 
 REFUS, PASSE = 2, 0
@@ -43,6 +45,16 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f"git config --local {GPM} off"),
     (REFUS, f"git config {GPM.upper()} off"),
     (REFUS, f"gh pr create --body 'voir {APM}'"),
+    (REFUS, f"{APP}=1 git push origin feat/x"),
+    (REFUS, f"export {APP}=1"),
+    (REFUS, f"$env:{APP} = '1'; git push"),
+    (REFUS, f"{APP.lower()}=1 git push"),
+    (REFUS, f"{GPMQ}= git push origin feat/x"),
+    (REFUS, f"export {GPMQ}=''"),
+    (REFUS, f"unset {GPMQ}; git push"),
+    (REFUS, f"env -u {GPMQ} git push"),
+    (REFUS, f"Remove-Item Env:{GPMQ}; git push"),
+    (REFUS, f"{GPMQ.lower()}=x git push"),
     # --- doivent passer ---
     (PASSE, "git push"),
     (PASSE, f"git {PM}"),

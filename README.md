@@ -236,6 +236,9 @@ liste pour chacun le marqueur, le `fichier:ligne` ou le commit, et un extrait.
 ALLOW_PUSH_PERSONAL=1 git push …             # une fois, en connaissance de cause
 ```
 
+Ce geste, comme vider ou retirer `GARDE_PUBLIC_MARQUEURS`, est réservé à l'utilisateur : le
+hook Claude `garde-push` refuse une commande d'agent qui cite l'une ou l'autre variable.
+
 **Un dépôt peut reprendre la main.** `core.hooksPath` suit la hiérarchie normale de git : une
 valeur posée dans le dépôt (`git config --local core.hooksPath <dossier>`) remplace la
 globale, et ni le relais ni le garde de push n'y jouent plus. C'est ce que fait **Husky**

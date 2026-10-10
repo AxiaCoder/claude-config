@@ -8,7 +8,9 @@ commande qui contient
 - `--no-verify`, ou l'une de ses abréviations dès `--no-ver`, avec le mot `push` ;
 - `core.hooksPath` ;
 - `ALLOW_PUSH_MAIN` ;
-- `garde.pushMain`.
+- `garde.pushMain` ;
+- `ALLOW_PUSH_PERSONAL` ;
+- `GARDE_PUBLIC_MARQUEURS`.
 
 La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
@@ -26,6 +28,8 @@ _MOTIFS_INTERDITS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"core\.hookspath", re.IGNORECASE), "core.hooksPath"),
     (re.compile(r"allow_push_main", re.IGNORECASE), "ALLOW_PUSH_MAIN"),
     (re.compile(r"garde\.pushmain", re.IGNORECASE), "garde.pushMain"),
+    (re.compile(r"allow_push_personal", re.IGNORECASE), "ALLOW_PUSH_PERSONAL"),
+    (re.compile(r"garde_public_marqueurs", re.IGNORECASE), "GARDE_PUBLIC_MARQUEURS"),
 )
 _NO_VERIFY = re.compile(r"--no-ver(?:i(?:fy?)?)?\b", re.IGNORECASE)
 _MOT_PUSH = re.compile(r"\bpush\b", re.IGNORECASE)
