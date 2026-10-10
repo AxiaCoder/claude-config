@@ -279,7 +279,9 @@ part au `pre-push`, vers tout remote. Il refuse si un secret s'y trouve, en list
 
 - **Aucun appel réseau** : la validation des secrets auprès des API est coupée
   (`--validation=false`).
-- **Un faux positif s'exempte** par un commentaire `gitleaks:allow` sur la ligne.
+- **Un faux positif s'exempte** par un commentaire `gitleaks:allow` sur la ligne. Ce
+  commentaire est réservé à l'utilisateur : `guardrail.py` et `garde-push.py` refusent qu'un
+  agent l'écrive.
 - **Il bloque** quand betterleaks est absent, avec le geste pour le reposer — relancer
   l'installation — ou quand son analyse échoue.
 - **Il laisse passer** hors dépôt, sans rien d'indexé ni de commit à pousser, et — avec une

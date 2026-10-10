@@ -5,6 +5,7 @@ Detects and blocks:
 - Infinite loops (same tool called repeatedly with same args)
 - Destructive commands (rm -rf, DROP TABLE, etc.)
 - Runaway subagents
+- A write or edit that adds the gitleaks/betterleaks `:allow` exemption marker
 """
 
 from __future__ import annotations
@@ -56,6 +57,11 @@ _COMMAND_BREAK = re.compile(r"[;&|\n)]")
 # aucune cible -- donc il laissait passer. Le `\d*` avale le descripteur de fichier,
 # le `&?` la forme qui fusionne les deux flux.
 _REDIRECTION = re.compile(r"\d*\s*(?:>>|>|<)\s*&?\s*\S+")
+# Marqueur d'exemption ligne à ligne, reconnu par gitleaks et par betterleaks.
+_SECRET_EXEMPTION = re.compile(r"(?:git|better)leaks:allow", re.IGNORECASE)
+SECRET_EXEMPTION_REASON = (
+    "l'exemption gitleaks:allow est réservée à l'utilisateur (faux positif confirmé par lui)"
+)
 
 
 def utc_ts() -> str:
@@ -144,6 +150,41 @@ def check_recursive_delete(command: str) -> str | None:
     return None
 
 
+def _adds_exemption(old: object, new: object) -> bool:
+    """Say whether `new` carries the secret exemption marker while `old` did not."""
+    if not isinstance(new, str) or not _SECRET_EXEMPTION.search(new):
+        return False
+    return not (isinstance(old, str) and _SECRET_EXEMPTION.search(old))
+
+
+def check_secret_exemption(tool_name: str, tool_input: dict) -> str | None:
+    """Return the refusal reason when a Write, Edit, MultiEdit or NotebookEdit adds the exemption marker.
+
+    An edit whose `old_string` already held the marker passes: it only keeps an exemption
+    the user wrote. Any other tool, or a malformed input, passes.
+    """
+    if not isinstance(tool_input, dict):
+        return None
+    if tool_name == "Write":
+        pairs = [(None, tool_input.get("content"))]
+    elif tool_name == "Edit":
+        pairs = [(tool_input.get("old_string"), tool_input.get("new_string"))]
+    elif tool_name == "MultiEdit":
+        edits = tool_input.get("edits")
+        pairs = [
+            (edit.get("old_string"), edit.get("new_string"))
+            for edit in (edits if isinstance(edits, list) else [])
+            if isinstance(edit, dict)
+        ]
+    elif tool_name == "NotebookEdit":
+        pairs = [(None, tool_input.get("new_source"))]
+    else:
+        return None
+    if any(_adds_exemption(old, new) for old, new in pairs):
+        return SECRET_EXEMPTION_REASON
+    return None
+
+
 def main() -> None:
     try:
         raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
@@ -203,6 +244,11 @@ def main() -> None:
                 should_block = True
                 block_reason = f"Destructive command blocked: {deletion}"
 
+    exemption = check_secret_exemption(tool_name, tool_input)
+    if exemption:
+        should_block = True
+        block_reason = exemption
+
     # Update state
     session_data["hashes"].append(call_hash)
     session_data["hashes"] = session_data["hashes"][-50:]  # Keep last 50
@@ -215,6 +261,8 @@ def main() -> None:
             "reason": block_reason,
         }
         print(json.dumps(response))
+        sys.stderr.reconfigure(encoding="utf-8")
+        print(block_reason, file=sys.stderr)
         sys.exit(2)  # Exit code 2 = block
 
 

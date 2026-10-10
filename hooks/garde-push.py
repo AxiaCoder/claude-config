@@ -15,7 +15,9 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 - `GARDE_PUBLIC_MARQUEURS` ;
 - `ALLOW_COMMIT_SECRET`, le contournement du garde secrets du pre-commit ;
 - `sans-externes` ou `SansExternes` : l'option d'installation sans externes et son mémo
-  `~/.claude/claude-config.sans-externes`, qui désarment le garde secrets.
+  `~/.claude/claude-config.sans-externes`, qui désarment le garde secrets ;
+- le marqueur d'exemption de gitleaks ou betterleaks (`…leaks:allow`), où qu'il soit dans
+  la commande : l'exemption d'un faux positif reste à l'utilisateur.
 
 La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
@@ -33,6 +35,7 @@ import sys
 GARDE_PUSH = "le garde de push (hook git pre-push)"
 GARDE_SECRETS = "le garde secrets (hook git pre-commit)"
 GARDE_HOOKS = "les hooks git, garde de push et garde secrets compris"
+EXEMPTION = "gitleaks:allow"
 
 _MOTIFS_INTERDITS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"core\.hookspath", re.IGNORECASE), "core.hooksPath", GARDE_HOOKS),
@@ -42,6 +45,7 @@ _MOTIFS_INTERDITS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"garde_public_marqueurs", re.IGNORECASE), "GARDE_PUBLIC_MARQUEURS", GARDE_PUSH),
     (re.compile(r"allow_commit_secret", re.IGNORECASE), "ALLOW_COMMIT_SECRET", GARDE_SECRETS),
     (re.compile(r"sans-?externes", re.IGNORECASE), "sans-externes", GARDE_SECRETS),
+    (re.compile(r"(?:git|better)leaks:allow", re.IGNORECASE), EXEMPTION, GARDE_SECRETS),
 )
 _NO_VERIFY = re.compile(r"--no-ver(?:i(?:fy?)?)?\b", re.IGNORECASE)
 _MOT_PUSH = re.compile(r"\bpush\b", re.IGNORECASE)
@@ -130,13 +134,20 @@ def main() -> int:
     if refus is None:
         return 0
     nom, garde = refus
+    sys.stderr.reconfigure(encoding="utf-8")
+    if nom == EXEMPTION:
+        print(
+            "garde-push : commande refusée, "
+            "l'exemption gitleaks:allow est réservée à l'utilisateur (faux positif confirmé par lui).",
+            file=sys.stderr,
+        )
+        return 2
     if garde == GARDE_PUSH:
         consigne = "Le push vers main passe par une pull request. "
     elif garde == GARDE_SECRETS:
         consigne = "Un secret détecté se retire du commit, il ne se force pas. "
     else:
         consigne = ""
-    sys.stderr.reconfigure(encoding="utf-8")
     print(
         f"garde-push : commande refusée, elle touche à « {nom} ». "
         f"Ce réglage désarme {garde} et reste réservé à l'utilisateur. "

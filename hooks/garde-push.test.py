@@ -24,6 +24,8 @@ ACS = "ALLOW_" + "COMMIT_" + "SECRET"
 PM = "push origin " + "ma" + "in"
 SE = "sans-" + "externes"
 SEP = "Sans" + "Externes"
+GA = "gitleaks" + ":allow"
+BA = "betterleaks" + ":allow"
 
 REFUS, PASSE = 2, 0
 
@@ -76,7 +78,13 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f".\\install.ps1 -{SEP}"),
     (REFUS, f"New-Item $HOME/.claude/claude-config.{SE}"),
     (REFUS, f"echo > ~/.claude/claude-config.{SE.upper()}"),
+    (REFUS, f"echo 'token = 1  # {GA}' >> config.py"),
+    (REFUS, f"sed -i '' 's/$/ # {GA}/' config.py"),
+    (REFUS, f"printf '%s\\n' '# {GA.upper()}' | tee -a config.py"),
+    (REFUS, f"cat >> config.py <<'EOF'\nx = 1  # {BA}\nEOF"),
+    (REFUS, f"git commit -m 'ajoute {GA}'"),
     # --- doivent passer ---
+    (PASSE, "echo gitleaks detect"),
     (PASSE, "git push"),
     (PASSE, f"git {PM}"),
     (PASSE, "git push -u origin feat/garde"),
