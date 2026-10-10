@@ -91,8 +91,10 @@ elle a été rebasée ou force-poussée. Le périmètre incrémental n'existe pl
 et écris-le tel quel dans la ligne `Périmètre :` plutôt que de laisser croire à une passe bornée.
 
 ⚠️ **Hors de ce périmètre, tu ne commentes pas.** Le code inchangé depuis la passe précédente a
-déjà été arbitré. Un fil résolu avec une réponse argumentée ne se rouvre pas tant que le code qu'il
-vise n'a pas rebougé, même si tu maintiens ton avis. Sans cette borne, des retours tombent en
+déjà été arbitré. Un fil auquel l'auteur a répondu par un argument — résolu s'il a corrigé, laissé
+ouvert s'il a refusé — **tu n'y reviens pas** : ni nouveau commentaire, ni relance dans le fil, tant
+que le code visé n'a pas rebougé, même si tu maintiens ton avis. Un refus laissé ouvert attend la
+décision de l'utilisateur, pas une nouvelle passe. Sans cette borne, des retours tombent en
 quatorzième passe sur des fichiers gelés depuis dix.
 
 ⚠️ **Deux extensions, et elles comptent autant que la restriction.**

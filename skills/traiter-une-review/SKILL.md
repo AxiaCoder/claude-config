@@ -241,6 +241,16 @@ de travail, et le répertoire courant d'un agent ne tient pas d'un appel à l'au
 Chaque réponse porte : **ce qui était juste dans le retour**, le sha de la correction, et **le
 rayon d'action vérifié**. Un refus porte son argument et sa source.
 
+⚠️ **Un fil traité se résout, juste après la réponse** : sinon l'utilisateur voit un retour ouvert
+et le reprend lui-même, alors qu'il est corrigé. Un fil **refusé** ou **en attente d'une décision**
+reste ouvert — c'est à l'utilisateur de trancher.
+
+```bash
+T=$(gh api graphql --paginate -f query='query($endCursor:String){repository(owner:"<OWNER>",name:"<REPO>"){pullRequest(number:<PR>){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id comments(first:1){nodes{databaseId}}}}}}}' \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].databaseId==<COMMENT_ID>) | .id')
+gh api graphql -f query="mutation{resolveReviewThread(input:{threadId:\"$T\"}){thread{isResolved}}}"
+```
+
 Puis mettre à jour la **description de PR** si la correction la périme — c'est le cas dès qu'un
 chiffre, un libellé ou un tableau y figure.
 
