@@ -1,3 +1,5 @@
 #!/bin/sh
-# Relaie le hook pre-commit vers celui du dépôt, voir _relais.
+# Hook pre-commit global : garde secrets (git-hooks/_garde-secrets), puis relais vers
+# celui du dépôt, voir _relais. Un refus du garde arrête le commit sans lancer le relais.
+sh "$(dirname "$0")/_garde-secrets" || exit 1
 exec "$(dirname "$0")/_relais" "$(basename "$0")" "$@"

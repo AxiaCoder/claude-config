@@ -20,6 +20,7 @@ APM = "ALLOW_" + "PUSH_" + "MAIN"
 GPM = "garde." + "pushMain"
 APP = "ALLOW_" + "PUSH_" + "PERSONAL"
 GPMQ = "GARDE_" + "PUBLIC_" + "MARQUEURS"
+ACS = "ALLOW_" + "COMMIT_" + "SECRET"
 PM = "push origin " + "ma" + "in"
 
 REFUS, PASSE = 2, 0
@@ -55,6 +56,10 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f"env -u {GPMQ} git push"),
     (REFUS, f"Remove-Item Env:{GPMQ}; git push"),
     (REFUS, f"{GPMQ.lower()}=x git push"),
+    (REFUS, f"{ACS}=1 git commit -m x"),
+    (REFUS, f"export {ACS}=1"),
+    (REFUS, f"$env:{ACS} = '1'; git commit -m x"),
+    (REFUS, f"{ACS.lower()}=1 git commit -m x"),
     # --- doivent passer ---
     (PASSE, "git push"),
     (PASSE, f"git {PM}"),

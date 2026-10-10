@@ -15,13 +15,21 @@
 # est mémorisé dans ~/.claude/claude-config.perso : les passes suivantes le
 # reprennent sans --perso.
 #
-# Usage : bash install.sh [--perso <dossier>] [--dry-run]
+# betterleaks, à la version et au sha256 de git-hooks/betterleaks.version, est
+# téléchargé dans ~/.claude/bin pour le garde secrets du pre-commit. Inventaire des
+# outils externes : DEPENDANCES.md. --sans-externes n'installe rien de ce qui se
+# télécharge et désactive le garde secrets ; le choix est mémorisé dans
+# ~/.claude/claude-config.sans-externes, --avec-externes le défait.
+#
+# Usage : bash install.sh [--perso <dossier>] [--sans-externes | --avec-externes] [--dry-run]
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_HOME="$HOME/.claude"
 PERSO_MEMO="$CLAUDE_HOME/claude-config.perso"
+EXTERNES_MEMO="$CLAUDE_HOME/claude-config.sans-externes"
+EXTERNES=""
 PERSO=""
 DRY_RUN=0
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -32,6 +40,8 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --perso)   PERSO="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --sans-externes) EXTERNES=sans; shift ;;
+    --avec-externes) EXTERNES=avec; shift ;;
     *) echo "Option inconnue : $1" >&2; exit 1 ;;
   esac
 done
@@ -303,9 +313,87 @@ else
   echo "  ATTENTION : core.hooksPath global vaut déjà '$actuel' : laissé tel quel, le garde pre-push n'est pas actif." >&2
 fi
 
+# Pose dans ~/.claude/bin le betterleaks épinglé par git-hooks/betterleaks.version, s'il
+# n'y est pas déjà à cette version. Rend 1, avec un message sur stderr, quand il n'a pas
+# pu être posé : fichier de version absent, plateforme sans asset, téléchargement,
+# sha256 ou extraction en échec. En simulation, annonce l'installation sans rien écrire.
+installer_betterleaks() {
+  local fichier="$REPO/git-hooks/betterleaks.version" bin="$CLAUDE_HOME/bin/betterleaks"
+  local version os arch sha asset url dl obtenu
+  if [ ! -f "$fichier" ]; then
+    echo "  ATTENTION : betterleaks : $fichier absent, non installé." >&2
+    return 1
+  fi
+  version="$(sed -n 's/^version=//p' "$fichier")"
+  case "$(uname -s)" in Darwin) os=darwin ;; Linux) os=linux ;; *) os="" ;; esac
+  case "$(uname -m)" in arm64 | aarch64) arch=arm64 ;; x86_64 | amd64) arch=x64 ;; *) arch="" ;; esac
+  sha="$(sed -n "s/^${os}_${arch}=//p" "$fichier")"
+  if [ -z "$version" ] || [ -z "$os" ] || [ -z "$arch" ] || [ -z "$sha" ]; then
+    echo "  ATTENTION : betterleaks : aucun asset épinglé pour $(uname -s)/$(uname -m) dans $fichier, non installé." >&2
+    return 1
+  fi
+  if [ -x "$bin" ] && [ "$("$bin" version 2>/dev/null)" = "$version" ]; then
+    echo "  betterleaks : $version déjà en place"
+    return 0
+  fi
+  asset="betterleaks_${version}_${os}_${arch}.tar.gz"
+  url="https://github.com/betterleaks/betterleaks/releases/download/v${version}/${asset}"
+  echo "  betterleaks : installation de $version ($asset) dans $CLAUDE_HOME/bin"
+  [ "$DRY_RUN" -eq 1 ] && return 0
+  dl="$(mktemp -d)" || return 1
+  if ! curl -fsSL --max-time 120 -o "$dl/$asset" "$url"; then
+    echo "  ATTENTION : betterleaks : téléchargement impossible ($url), non installé." >&2
+    rm -rf "${dl:?}"
+    return 1
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    obtenu="$(sha256sum "$dl/$asset" | cut -d' ' -f1)"
+  else
+    obtenu="$(shasum -a 256 "$dl/$asset" | cut -d' ' -f1)"
+  fi
+  if [ "$obtenu" != "$sha" ]; then
+    echo "  ATTENTION : betterleaks : sha256 inattendu pour $asset (attendu $sha, obtenu $obtenu), non installé." >&2
+    rm -rf "${dl:?}"
+    return 1
+  fi
+  if ! { tar -xzf "$dl/$asset" -C "$dl" betterleaks && mkdir -p "$CLAUDE_HOME/bin" && mv -f "$dl/betterleaks" "$bin" && chmod +x "$bin"; }; then
+    echo "  ATTENTION : betterleaks : extraction de $asset impossible, non installé." >&2
+    rm -rf "${dl:?}"
+    return 1
+  fi
+  rm -rf "${dl:?}"
+}
+
+case "$EXTERNES" in
+  sans)
+    echo "  externes : désactivés (--sans-externes), choix mémorisé dans $EXTERNES_MEMO"
+    [ "$DRY_RUN" -eq 1 ] || : > "$EXTERNES_MEMO"
+    SANS_EXTERNES=1 ;;
+  avec)
+    echo "  externes : réactivés (--avec-externes)"
+    run rm -f "$EXTERNES_MEMO"
+    SANS_EXTERNES=0 ;;
+  *)
+    SANS_EXTERNES=0
+    if [ -f "$EXTERNES_MEMO" ]; then SANS_EXTERNES=1; fi ;;
+esac
+
+GARDE_SECRETS_INACTIF=0
+if [ "$SANS_EXTERNES" -eq 1 ]; then
+  echo "  betterleaks : non installé (sans externes ; --avec-externes pour revenir) : garde secrets désactivé"
+  if [ -e "$CLAUDE_HOME/bin/betterleaks" ]; then
+    echo "  betterleaks : $CLAUDE_HOME/bin/betterleaks reste en place, le retirer à la main (DEPENDANCES.md)"
+  fi
+else
+  installer_betterleaks || GARDE_SECRETS_INACTIF=1
+fi
+
 echo
 echo "Terminé. Vérifier les liens :"
 echo "  ls -l ~/.claude | grep -E 'agents|commands|skills|hooks'"
 echo "  git config --global --get core.hooksPath"
 [ -d "$BACKUP_DIR" ] && echo "Sauvegarde : $BACKUP_DIR"
+if [ "$GARDE_SECRETS_INACTIF" -eq 1 ]; then
+  echo "ATTENTION : garde secrets inactif : betterleaks absent. les commits sont refusés tant qu'il manque : relancer install.sh, ou --sans-externes pour s'en passer." >&2
+fi
 exit 0

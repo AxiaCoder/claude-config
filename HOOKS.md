@@ -123,6 +123,7 @@ ligne, est refusée par le `garde-push.py` installé — la lire depuis un fichi
 | `garde-push.py` | python — bibliothèque standard. Refuse une commande de l'agent qui désarmerait `git-hooks/pre-push` |
 | `git-hooks/` (`pre-push` et le relais `_relais`) | git et `sh` (celui de Git for Windows sous Windows). Hooks git, pas hooks Claude ; chacun relaie au hook du même nom dans `.git/hooks/` du dépôt — détail au README, § Hooks git globaux. Ils sont activés par `install` via `core.hooksPath` global, **sauf si un autre dossier y est déjà déclaré** — l'installation avertit et n'écrase pas. Contrôle : `git config --global --get core.hooksPath` |
 | `git-hooks/_garde-public` (lancé par `pre-push`) | `gh` connecté, et la variable `GARDE_PUBLIC_MARQUEURS` qui désigne le fichier de marqueurs du dossier perso. Sans l'un ou l'autre, il laisse passer avec une ligne sur stderr — format et périmètre au README, § Hooks git globaux |
+| `git-hooks/_garde-secrets` (lancé par `pre-commit`) | `~/.claude/bin/betterleaks`, posé par `install` à la version épinglée de `git-hooks/betterleaks.version` ([`DEPENDANCES.md`](./DEPENDANCES.md)). Absent, il **bloque** les commits ; installation faite avec `--sans-externes`, il laisse passer avec une ligne sur stderr. Gabarit du rapport : `git-hooks/_garde-secrets.tmpl` |
 
 ⚠️ **`OTEL_LOG_TOOL_DETAILS=1` (`settings.base.json`) ne met aujourd'hui que des noms d'agents et de
 skills sur les métriques.** Il déverrouille aussi, sur les *événements* et les *traces*, la commande
