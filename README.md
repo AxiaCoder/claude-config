@@ -217,22 +217,31 @@ liste pour chacun le marqueur, le `fichier:ligne` ou le commit, et un extrait.
 
 - **Les marqueurs** vivent hors du dépôt, dans le fichier que désigne la variable
   d'environnement `GARDE_PUBLIC_MARQUEURS` — typiquement dans le dossier perso. Un motif par
-  ligne, en expression régulière étendue (`grep -E`), **casse ignorée** ; lignes vides et
-  lignes qui commencent par `#` ignorées. Un point vaut « n'importe quel caractère » :
+  ligne, en expression régulière étendue (`grep -E`), **casse ignorée pour les lettres ASCII
+  seulement** — la comparaison se fait octet par octet : un marqueur accentué s'écrit en motif
+  tolérant, `[Éé]lise` ; lignes vides et lignes qui commencent par `#` ignorées. Un point vaut « n'importe quel caractère » :
   `192\.0\.2\.10` pour une adresse exacte. Vers un dépôt public, un motif que `grep -E` refuse
   **bloque** le push, avec le motif sur stderr : un garde qui l'ignorerait se croirait actif.
 - **Ce qui est examiné**, pour chaque ref poussée, dans le diff entre ce que le remote a déjà
   et ce qui part — pour une nouvelle branche, depuis la merge-base avec la branche par défaut
-  du remote — : les lignes **ajoutées** et les **noms** des fichiers ajoutés ou renommés. Et,
+  du remote — : les lignes **ajoutées**, fichiers binaires compris, et les **noms** des
+  fichiers ajoutés ou renommés. Et,
   pour chaque commit qui part, son message, son **auteur** et son **committer** (nom et
   e-mail) ; pour un tag annoté, son message et son tagger. Une ligne supprimée ne compte pas.
-- **Public ou non** : `gh repo view <owner/repo> --json visibility`, réponse gardée 24 h dans
-  `${XDG_CACHE_HOME:-~/.cache}/claude-config/garde-public/`.
-- **Il laisse passer, avec une ligne sur stderr**, quand il ne peut pas juger : variable
-  absente ou fichier illisible, `gh` absent, non connecté ou en erreur. Un défaut d'outil ne
-  bloque pas un push — mais vers un dépôt public, le garde n'a alors pas tourné.
-- **Ce qu'il ne couvre pas** : le contenu des fichiers binaires ; le corps et le titre d'une
-  PR ou d'une issue créées par `gh`, les commentaires, tout ce qui part sans `git push`.
+- **GitHub ou non** : l'hôte `github.com`, ou un alias SSH (`git@github-perso:owner/repo`)
+  que `ssh -G` résout vers `github.com`.
+- **Public ou non** : l'API GitHub **sans authentification**
+  (`https://api.github.com/repos/<owner/repo>`) — un dépôt public y est toujours visible,
+  quel que soit le jeton de `gh`. 200 : public ; 404 : privé ou inexistant ; toute autre
+  réponse : repli sur `gh repo view`. Seul « public » est gardé 24 h, dans
+  `${XDG_CACHE_HOME:-~/.cache}/claude-config/garde-public/` ; un dépôt privé est re-vérifié à
+  chaque push, et un dépôt passé public est examiné dès le push suivant.
+- **Il bloque quand la visibilité reste inconnue** — API et `gh` en échec, hors réseau par
+  exemple : un push vers GitHub sans réseau échouerait de toute façon.
+- **Il laisse passer, avec une ligne sur stderr**, quand la variable est absente ou le fichier
+  illisible : le garde n'a alors pas tourné.
+- **Ce qu'il ne couvre pas** : le corps et le titre d'une PR ou d'une issue créées par `gh`,
+  les commentaires, tout ce qui part sans `git push`.
 
 ```bash
 ALLOW_PUSH_PERSONAL=1 git push …             # une fois, en connaissance de cause

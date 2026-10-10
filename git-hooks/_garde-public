@@ -1,7 +1,7 @@
 #!/bin/sh
 # Garde « données personnelles » du pre-push, lancé par git-hooks/pre-push.
 # Sort en 1 si un marqueur est trouvé dans ce qui part vers un dépôt GitHub public,
-# en 0 sinon — y compris quand il ne peut pas juger (voir plus bas).
+# ou si la visibilité du dépôt GitHub visé ne peut pas être établie ; en 0 sinon.
 #
 # Marqueurs : fichier désigné par GARDE_PUBLIC_MARQUEURS, hors de tout dépôt public.
 # Un motif par ligne, expression régulière étendue (grep -E), casse ignorée ;
@@ -15,12 +15,17 @@
 # tag annoté : son message et son tagger. Comparaison octet par octet (LC_ALL=C) : la
 # casse n'est ignorée que pour les lettres ASCII.
 #
-# Visibilité : `gh repo view <owner/repo> --json visibility`, gardée 24 h dans
-# ${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public/.
+# Remote GitHub : hôte github.com, ou alias SSH que `ssh -G` résout vers github.com.
+#
+# Visibilité : l'API GitHub sans authentification (200 : public ; 404 : privé ou
+# inexistant), `gh repo view` en repli pour toute autre réponse. Seul « public » est gardé,
+# 24 h, dans ${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public/ ; un dépôt privé
+# est re-vérifié à chaque push.
 #
 # Laisse passer, avec une ligne sur stderr : remote non GitHub (sans ligne), variable
-# absente ou fichier illisible, gh absent ou en erreur.
-# Bloque vers un dépôt public quand l'analyse elle-même échoue (git, awk ou grep).
+# absente ou fichier illisible.
+# Bloque quand la visibilité reste inconnue (API et gh en échec), et vers un dépôt public
+# quand l'analyse elle-même échoue (git, awk ou grep).
 #
 # Contournement ponctuel :
 #   ALLOW_PUSH_PERSONAL=1 git push …
@@ -34,10 +39,43 @@ remote_nom=$1
 remote_url=$2
 Z=0000000000000000000000000000000000000000
 
-case "$remote_url" in
-*[Gg][Ii][Tt][Hh][Uu][Bb].[Cc][Oo][Mm]*) ;;
-*) exit 0 ;;
-esac
+# Affiche « hôte chemin » d'après l'URL $1 (forme schéma://[user@]hôte[:port]/chemin ou
+# [user@]hôte:chemin), puis « ssh » ou « autre » selon que l'hôte peut être un alias SSH ;
+# sortie 1 pour un chemin local.
+hote_et_chemin() {
+	case "$1" in
+	ssh://* | git+ssh://* | ssh+git://*)
+		reste=${1#*://}
+		printf '%s %s ssh\n' "${reste%%/*}" "${reste#*/}"
+		;;
+	*://*)
+		reste=${1#*://}
+		printf '%s %s autre\n' "${reste%%/*}" "${reste#*/}"
+		;;
+	/* | ./* | ../*) return 1 ;;
+	*:*)
+		avant=${1%%:*}
+		case "$avant" in */*) return 1 ;; esac
+		printf '%s %s ssh\n' "$avant" "${1#*:}"
+		;;
+	*) return 1 ;;
+	esac
+}
+
+ligne=$(hote_et_chemin "$remote_url") || exit 0
+genre=${ligne##* }
+chemin=${ligne#* }
+chemin=${chemin% *}
+hote=${ligne%% *}
+hote=${hote##*@}
+hote=$(printf '%s' "${hote%%:*}" | tr 'A-Z' 'a-z')
+if [ "$hote" != github.com ]; then
+	[ "$genre" = ssh ] || exit 0
+	case "$hote" in -*) exit 0 ;; esac
+	reel=$(ssh -G "$hote" 2>/dev/null | awk '$1 == "hostname" { print tolower($2); exit }')
+	[ "$reel" = github.com ] || exit 0
+fi
+depot=$(printf '%s\n' "$chemin" | sed -e 's#^/*##' -e 's#/*$##' -e 's#\.git$##')
 
 marqueurs=${GARDE_PUBLIC_MARQUEURS:-}
 if [ -z "$marqueurs" ] || [ ! -r "$marqueurs" ]; then
@@ -45,32 +83,49 @@ if [ -z "$marqueurs" ] || [ ! -r "$marqueurs" ]; then
 	exit 0
 fi
 
-# Affiche « owner/repo » d'après l'URL GitHub $1.
-depot_de() {
-	printf '%s\n' "$1" | sed -e 's#^.*[Gg][Ii][Tt][Hh][Uu][Bb]\.[Cc][Oo][Mm][:/]##' \
-		-e 's#/*$##' -e 's#\.git$##'
-}
-
-# Affiche la visibilité (PUBLIC, PRIVATE, INTERNAL) du dépôt $1, depuis le cache de
-# moins de 24 h ou depuis gh ; rien et sortie 1 si gh est absent ou échoue.
+# Affiche la visibilité (PUBLIC, PRIVATE, INTERNAL) du dépôt « owner/repo » $1 : depuis
+# le cache « public » de moins de 24 h, sinon par l'API GitHub anonyme, sinon par gh.
+# Rien et sortie 1 si ni l'API ni gh ne répondent.
 visibilite() {
 	dossier_cache="${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public"
 	fichier_cache="$dossier_cache/$(printf '%s' "$1" | tr '/' '_')"
-	if [ -n "$(find "$fichier_cache" -mmin -1440 2>/dev/null)" ]; then
-		cat "$fichier_cache"
+	if [ -n "$(find "$fichier_cache" -mmin -1440 2>/dev/null)" ] && [ "$(cat "$fichier_cache" 2>/dev/null)" = PUBLIC ]; then
+		echo PUBLIC
 		return 0
 	fi
-	command -v gh >/dev/null 2>&1 || return 1
-	vue=$(gh repo view "$1" --json visibility --jq .visibility 2>/dev/null) || return 1
-	[ -n "$vue" ] || return 1
-	mkdir -p "$dossier_cache" 2>/dev/null && printf '%s\n' "$vue" >"$fichier_cache" 2>/dev/null
+	code=$(curl -sS -L --max-time 10 -o /dev/null -w '%{http_code}' "https://api.github.com/repos/$1" 2>/dev/null)
+	case "$code" in
+	200) vue=PUBLIC ;;
+	404) vue=PRIVATE ;;
+	*)
+		command -v gh >/dev/null 2>&1 || return 1
+		vue=$(gh repo view "$1" --json visibility --jq .visibility 2>/dev/null) || return 1
+		[ -n "$vue" ] || return 1
+		;;
+	esac
+	if [ "$vue" = PUBLIC ]; then
+		mkdir -p "$dossier_cache" 2>/dev/null && echo PUBLIC >"$fichier_cache" 2>/dev/null
+	else
+		rm -f "$fichier_cache" 2>/dev/null
+	fi
 	printf '%s\n' "$vue"
 }
 
-depot=$(depot_de "$remote_url")
 if ! vis=$(visibilite "$depot"); then
-	echo "pre-push : visibilité de $depot inconnue (gh absent ou en erreur), garde données personnelles non appliqué." >&2
-	exit 0
+	if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+		echo "pre-push : visibilité de $depot inconnue, garde données personnelles non appliqué (ALLOW_PUSH_PERSONAL=1)." >&2
+		exit 0
+	fi
+	{
+		echo
+		echo "  ⛔  Push refusé : visibilité de $depot inconnue (api.github.com et gh en échec)."
+		echo "      Le garde données personnelles ne peut pas savoir si le dépôt est public."
+		echo
+		echo "  Contournement ponctuel :"
+		echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+		echo
+	} >&2
+	exit 1
 fi
 [ "$vis" = "PUBLIC" ] || exit 0
 

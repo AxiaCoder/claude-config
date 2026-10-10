@@ -2,8 +2,11 @@
 # Cas de test du garde données personnelles (git-hooks/_garde-public), appelé par
 # git-hooks/pre-push. Sortie 0 si tous passent.
 #
-# gh est remplacé par un bouchon placé en tête du PATH : a/public est public, a/prive
-# privé, tout autre dépôt fait échouer gh.
+# curl, gh et ssh sont remplacés par des bouchons placés en tête du PATH.
+# curl : a/public et a/cache répondent 200, a/prive 404, a/repli 500, tout autre dépôt
+# échoue (réseau). gh : a/public, a/cache et a/repli sont publics, a/prive privé, tout
+# autre dépôt échoue, et tout appel échoue quand GH_TOKEN vaut « x ». ssh -G : l'alias
+# github-perso résout vers github.com, tout autre hôte vers lui-même.
 
 ici=$(cd "$(dirname "$0")" && pwd -P)
 hook="$ici/pre-push"
@@ -28,13 +31,35 @@ mkdir "$tmp/bin"
 cat >"$tmp/bin/gh" <<EOF
 #!/bin/sh
 echo "\$3" >>"$tmp/gh-appels"
+[ "\${GH_TOKEN:-}" = x ] && exit 1
 case "\$3" in
-a/public | a/cache) echo PUBLIC ;;
+a/public | a/cache | a/repli) echo PUBLIC ;;
 a/prive) echo PRIVATE ;;
 *) exit 1 ;;
 esac
 EOF
-chmod +x "$tmp/bin/gh"
+cat >"$tmp/bin/curl" <<EOF
+#!/bin/sh
+for arg; do url=\$arg; done
+depot=\${url#https://api.github.com/repos/}
+echo "\$depot" >>"$tmp/curl-appels"
+case "\$depot" in
+a/public | a/cache) printf 200 ;;
+a/prive) printf 404 ;;
+a/repli) printf 500 ;;
+*) printf 000; exit 7 ;;
+esac
+EOF
+cat >"$tmp/bin/ssh" <<'EOF'
+#!/bin/sh
+[ "$1" = -G ] || exit 255
+case "$2" in
+github-perso) echo "hostname github.com" ;;
+*) echo "hostname $2" ;;
+esac
+echo "port 22"
+EOF
+chmod +x "$tmp/bin/gh" "$tmp/bin/curl" "$tmp/bin/ssh"
 PATH="$tmp/bin:$PATH"
 export PATH
 
@@ -134,8 +159,27 @@ unset ALLOW_PUSH_PERSONAL
 echo "— autres cas —"
 essai PASSE "https://github.com/a/prive" "dépôt privé"
 essai PASSE "nas:/volume1/x.git" "remote non GitHub"
-essai PASSE "git@github.com:a/inconnu.git" "gh en erreur"
-stderr_contient "inconnue" "  stderr : avertissement gh"
+essai BLOQUE "git@github.com:a/inconnu.git" "curl et gh en échec"
+stderr_contient "inconnue" "  stderr : visibilité inconnue"
+stderr_contient ALLOW_PUSH_PERSONAL "  stderr : contournement proposé"
+ALLOW_PUSH_PERSONAL=1
+export ALLOW_PUSH_PERSONAL
+essai PASSE "git@github.com:a/inconnu.git" "curl et gh en échec, ALLOW_PUSH_PERSONAL=1"
+unset ALLOW_PUSH_PERSONAL
+rm -f "$XDG_CACHE_HOME/claude-config/garde-public/a_public"
+GH_TOKEN=x
+export GH_TOKEN
+essai BLOQUE "$PUBLIC" "GH_TOKEN invalide, dépôt public"
+unset GH_TOKEN
+rm -f "$XDG_CACHE_HOME/claude-config/garde-public/a_public"
+: >"$tmp/gh-appels"
+essai BLOQUE "git@github.com:a/repli.git" "curl 500, repli sur gh : public"
+n=$(grep -c '^a/repli$' "$tmp/gh-appels")
+verdict 1 "$n" "  appels à gh pour a/repli"
+: >"$tmp/gh-appels"
+essai BLOQUE "https://github.com/a/public" "curl 200, sans appel à gh"
+n=$(grep -c . "$tmp/gh-appels")
+verdict 0 "$n" "  appels à gh"
 
 GARDE_PUBLIC_MARQUEURS="$tmp/absent"
 essai PASSE "$PUBLIC" "fichier de marqueurs absent"
@@ -146,16 +190,33 @@ GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs"
 export GARDE_PUBLIC_MARQUEURS
 
 echo "— cache —"
-: >"$tmp/gh-appels"
+: >"$tmp/curl-appels"
 essai BLOQUE "https://github.com/a/cache.git" "1er push"
 essai BLOQUE "git@github.com:a/cache" "2e push"
-n=$(grep -c '^a/cache$' "$tmp/gh-appels")
-verdict 1 "$n" "appels à gh pour a/cache"
+n=$(grep -c '^a/cache$' "$tmp/curl-appels")
+verdict 1 "$n" "appels à curl pour a/cache"
 
 touch -t 200001010000 "$XDG_CACHE_HOME/claude-config/garde-public/a_cache"
 essai BLOQUE "https://github.com/a/cache/" "3e push, cache de plus de 24 h"
-n=$(grep -c '^a/cache$' "$tmp/gh-appels")
-verdict 2 "$n" "appels à gh pour a/cache après expiration"
+n=$(grep -c '^a/cache$' "$tmp/curl-appels")
+verdict 2 "$n" "appels à curl pour a/cache après expiration"
+
+essai PASSE "https://github.com/a/prive" "privé, 1er push"
+essai PASSE "https://github.com/a/prive" "privé, 2e push"
+n=$(grep -c '^a/prive$' "$tmp/curl-appels")
+verdict 2 "$n" "appels à curl pour a/prive : privé jamais gardé"
+
+mkdir -p "$XDG_CACHE_HOME/claude-config/garde-public"
+echo PRIVATE >"$XDG_CACHE_HOME/claude-config/garde-public/a_public"
+essai BLOQUE "$PUBLIC" "ancien cache PRIVATE ignoré"
+rm -f "$XDG_CACHE_HOME/claude-config/garde-public/a_public"
+
+echo "— alias ssh —"
+essai BLOQUE "git@github-perso:a/public.git" "alias ssh vers github.com"
+stderr_contient "a/public" "  stderr : dépôt nommé"
+essai BLOQUE "ssh://git@github-perso:2222/a/public" "alias ssh://, avec port"
+essai BLOQUE "ssh://git@github.com:22/a/public.git" "github.com en ssh:// avec port"
+essai PASSE "git@nas-perso:a/public.git" "alias ssh vers un autre hôte"
 
 echo "— plusieurs refs, tags, formes d'entrée —"
 
