@@ -152,6 +152,85 @@ essai BLOQUE "git@github.com:a/cache" "2e push"
 n=$(grep -c '^a/cache$' "$tmp/gh-appels")
 verdict 1 "$n" "appels à gh pour a/cache"
 
+touch -t 200001010000 "$XDG_CACHE_HOME/claude-config/garde-public/a_cache"
+essai BLOQUE "https://github.com/a/cache/" "3e push, cache de plus de 24 h"
+n=$(grep -c '^a/cache$' "$tmp/gh-appels")
+verdict 2 "$n" "appels à gh pour a/cache après expiration"
+
+echo "— plusieurs refs, tags, formes d'entrée —"
+
+# Lance le pre-push vers l'URL $2 avec l'entrée $4 telle quelle. $1 attendu · $3 libellé.
+essai_brut() {
+	if printf '%s\n' "$4" | sh "$hook" origin "$2" >/dev/null 2>"$tmp/err"; then
+		obtenu=PASSE
+	else
+		obtenu=BLOQUE
+	fi
+	verdict "$1" "$obtenu" "$3"
+}
+
+propre=$(git rev-parse f4~1)
+marque=$(git rev-parse f1)
+essai_brut BLOQUE "$PUBLIC" "deux refs, marqueur dans la seconde seulement" \
+	"refs/heads/f4 $propre refs/heads/f4 $Z
+refs/heads/f1 $marque refs/heads/f1 $Z"
+stderr_contient "ajout.txt:2" "  stderr : lieu de la seconde ref"
+
+essai_brut PASSE "$PUBLIC" "suppression d'une ref distante seule" \
+	"(delete) $Z refs/heads/f1 $marque"
+
+essai_brut PASSE "$PUBLIC" "suppression d'une ref puis ref propre" \
+	"(delete) $Z refs/heads/f1 $marque
+refs/heads/f4 $propre refs/heads/f4 $Z"
+
+git tag t-leger f1
+essai_brut BLOQUE "$PUBLIC" "tag léger sur un commit marqué" \
+	"refs/tags/t-leger $marque refs/tags/t-leger $Z"
+
+git tag -a t-annote -m "version" f1
+essai_brut BLOQUE "$PUBLIC" "tag annoté sur un commit marqué" \
+	"refs/tags/t-annote $(git rev-parse t-annote) refs/tags/t-annote $Z"
+
+branche f5 plus.txt "++ serveur-9" "propre"
+essai BLOQUE "$PUBLIC" "ligne ajoutée commençant par ++"
+stderr_contient "plus.txt:1" "  stderr : ligne ++ bien située"
+
+git checkout -q -B f6 "$M"
+printf 'rien\r\nici Mot-Secret\r\n' >crlf.txt
+git add crlf.txt
+git commit -q -m "propre"
+essai BLOQUE "ssh://git@github.com/a/public.git" "contenu en CRLF, URL ssh://"
+stderr_contient "crlf.txt:2" "  stderr : ligne CRLF bien située"
+
+printf 'serveur-[0-9]+\r\n' >"$tmp/marqueurs-crlf"
+GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs-crlf"
+git checkout -q f1
+essai BLOQUE "$PUBLIC" "fichier de marqueurs en CRLF"
+GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs"
+
+git checkout -q --orphan f8
+git rm -q -r --cached . >/dev/null
+printf 'serveur-5\n' >orphelin.txt
+git add orphelin.txt
+git commit -q -m "orphelin Mot-Secret"
+git clean -q -f
+essai BLOQUE "$PUBLIC" "branche sans ancêtre commun"
+stderr_contient "commit $(git rev-parse --short HEAD)" "  stderr : commit de la branche orpheline"
+stderr_contient "orphelin.txt:1" "  stderr : fichier de la branche orpheline"
+
+echo "— relais —"
+crochet="$(git rev-parse --git-common-dir)/hooks/pre-push"
+printf '#!/bin/sh\ntouch "%s"\n' "$tmp/relais-lance" >"$crochet"
+chmod +x "$crochet"
+essai BLOQUE "$PUBLIC" "refus du garde"
+if [ -e "$tmp/relais-lance" ]; then o=LANCE; else o=NON_LANCE; fi
+verdict NON_LANCE "$o" "  hook du dépôt non lancé après un refus"
+git checkout -q -B f7 f4~1
+essai PASSE "$PUBLIC" "push propre"
+if [ -e "$tmp/relais-lance" ]; then o=LANCE; else o=NON_LANCE; fi
+verdict LANCE "$o" "  hook du dépôt lancé après un passage"
+rm -f "$crochet"
+
 echo
 if [ $echec -eq 0 ]; then echo "$nb cas, tous verts."; else echo "$nb cas, au moins un ECHEC."; fi
 exit $echec
