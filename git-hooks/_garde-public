@@ -8,27 +8,31 @@
 # lignes vides et lignes commençant par « # » ignorées. Vers un dépôt public, un motif
 # invalide bloque le push.
 #
-# Contenu examiné, pour chaque ref poussée : les lignes ajoutées et les noms des fichiers
-# ajoutés ou renommés du diff entre ce que le remote a déjà et ce qui part (nouvelle
-# branche : depuis la merge-base avec la branche par défaut du remote), le message,
-# l'auteur et le committer des commits qui partent, le message et le tagger d'un tag
-# annoté. Les binaires ne sont pas examinés.
+# Contenu examiné, pour chaque ref poussée et pour chaque commit qui part (depuis la
+# merge-base avec ce que le remote a déjà ; nouvelle branche : avec la branche par défaut
+# du remote) : les lignes ajoutées, binaires compris, sans textconv ni attribut diff ; les
+# noms des fichiers ajoutés ou renommés ; le message, l'auteur et le committer. Pour un
+# tag annoté : son message et son tagger. Comparaison octet par octet (LC_ALL=C) : la
+# casse n'est ignorée que pour les lettres ASCII.
 #
 # Visibilité : `gh repo view <owner/repo> --json visibility`, gardée 24 h dans
 # ${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public/.
 #
 # Laisse passer, avec une ligne sur stderr : remote non GitHub (sans ligne), variable
 # absente ou fichier illisible, gh absent ou en erreur.
+# Bloque vers un dépôt public quand l'analyse elle-même échoue (git, awk ou grep).
 #
 # Contournement ponctuel :
 #   ALLOW_PUSH_PERSONAL=1 git push …
 #
 # Arguments : $1 nom du remote, $2 URL. Entrée : celle du pre-push.
 
+LC_ALL=C
+export LC_ALL
+
 remote_nom=$1
 remote_url=$2
 Z=0000000000000000000000000000000000000000
-ARBRE_VIDE=4b825dc642cb6eb9a060e54bf8d69288fbee4904
 
 case "$remote_url" in
 *[Gg][Ii][Tt][Hh][Uu][Bb].[Cc][Oo][Mm]*) ;;
@@ -100,7 +104,25 @@ if [ -n "$invalides" ]; then
 	exit 1
 fi
 
-tmp=$(mktemp -d) || exit 0
+# Refuse le push faute d'avoir pu analyser ce qui part, sauf ALLOW_PUSH_PERSONAL=1.
+# $1 : l'étape en échec.
+refus_analyse() {
+	if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+		echo "pre-push : analyse impossible ($1), garde données personnelles non appliqué (ALLOW_PUSH_PERSONAL=1)." >&2
+		exit 0
+	fi
+	{
+		echo
+		echo "  ⛔  Push refusé : $depot est public et ce qui part n'a pas pu être analysé ($1)."
+		echo
+		echo "  Contournement ponctuel :"
+		echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+		echo
+	} >&2
+	exit 1
+}
+
+tmp=$(mktemp -d) || refus_analyse "mktemp"
 trap 'rm -rf "$tmp"' EXIT
 : >"$tmp/lieux"
 : >"$tmp/contenus"
@@ -113,9 +135,15 @@ branche_defaut() {
 	return 1
 }
 
-# Ajoute aux fichiers lieux/contenus les lignes ajoutées entre $1 (arbre ou commit) et $2.
-ajoute_diff() {
-	git -c core.quotePath=false diff -U0 --no-color --no-ext-diff --no-renames "$1" "$2" -- 2>/dev/null | awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+# Ajoute aux fichiers lieux/contenus, pour chaque commit de la plage $@ : l'auteur, le
+# committer, les lignes du message, le nom de chaque fichier ajouté et chaque ligne
+# ajoutée (pour une fusion, celles qui ne viennent d'aucun parent). Sortie non nulle si
+# git ou awk échoue.
+ajoute_commits() {
+	git -c core.quotePath=false log --no-color --no-ext-diff --no-textconv --text --no-renames \
+		--root -p --cc -U0 --raw --format='%x01%h%n%an <%ae>%n%cn <%ce>%n%B%n%x02' "$@" \
+		>"$tmp/log" 2>/dev/null || return 1
+	awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
 		function sans_guillemets(s,   r, c, i) {
 			if (substr(s, 1, 1) != "\"") return s
 			s = substr(s, 2, length(s) - 2)
@@ -130,52 +158,57 @@ ajoute_diff() {
 			}
 			return r
 		}
-		/^diff --git / { entete = 1; next }
+		function emet(lieu, contenu) { print lieu >> lieux; print contenu >> contenus }
+		/^\001/ { court = substr($0, 2); etat = "auteur"; entete = 0; np = 0; next }
+		etat == "auteur" { emet("commit " court " (auteur)", $0); etat = "committer"; next }
+		etat == "committer" { emet("commit " court " (committer)", $0); etat = "message"; next }
+		etat == "message" {
+			if ($0 == "\002") etat = "diff"
+			else if ($0 != "") emet("commit " court, $0)
+			next
+		}
+		etat != "diff" { next }
+		/^:[0-7]/ {
+			t = index($0, "\t")
+			split(substr($0, 1, t - 1), m, " ")
+			if (m[5] == "A") emet("commit " court " · nom de fichier", sans_guillemets(substr($0, t + 1)))
+			next
+		}
+		/^diff --(git|cc|combined) / { entete = 1; np = 0; next }
 		entete && /^\+\+\+ / { f = sans_guillemets(substr($0, 5)); sub(/^b\//, "", f); next }
-		/^@@ / { entete = 0; split($3, a, ","); n = substr(a[1], 2) + 0; next }
-		!entete && /^\+/ { print f ":" n >> lieux; print substr($0, 2) >> contenus; n++ }
-	'
-}
-
-# Ajoute aux fichiers lieux/contenus le nom de chaque fichier ajouté ou renommé entre $1
-# (arbre ou commit) et $2.
-ajoute_noms() {
-	git -c core.quotePath=false diff --name-only -z --no-renames --diff-filter=A "$1" "$2" -- 2>/dev/null |
-		tr '\0' '\n' | while IFS= read -r nom; do
-		printf 'nom de fichier\n' >>"$tmp/lieux"
-		printf '%s\n' "$nom" >>"$tmp/contenus"
-	done
+		/^@@+ / {
+			entete = 0
+			match($0, /^@+/)
+			np = RLENGTH - 1
+			for (i = 2; i <= NF; i++) if (substr($i, 1, 1) == "+") { split($i, a, ","); n = substr(a[1], 2) + 0; break }
+			next
+		}
+		entete || np == 0 { next }
+		{
+			p = substr($0, 1, np)
+			if (p !~ /^[-+ ]+$/ || index(p, "-")) next
+			if (p ~ /^\++$/) emet("commit " court " · " f ":" n, substr($0, np + 1))
+			n++
+		}
+	' "$tmp/log"
 }
 
 # Ajoute aux fichiers lieux/contenus le tagger et les lignes du message du tag annoté $1,
-# nommé $2.
+# nommé $2. Sortie non nulle si git ou awk échoue.
 ajoute_tag() {
-	git cat-file tag "$1" 2>/dev/null | awk -v nom="tag $2" -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+	git cat-file tag "$1" >"$tmp/tag" 2>/dev/null || return 1
+	awk -v nom="tag $2" -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
 		corps { print nom >> lieux; print >> contenus; next }
 		/^$/ { corps = 1; next }
 		/^tagger / { sub(/^tagger /, ""); sub(/ [0-9]+ [-+][0-9]+$/, ""); print nom " (tagger)" >> lieux; print >> contenus }
-	'
-}
-
-# Ajoute aux fichiers lieux/contenus l'auteur, le committer et les lignes du message de
-# chaque commit de la plage $@.
-ajoute_messages() {
-	git rev-list "$@" 2>/dev/null | while read -r commit; do
-		court=$(git rev-parse --short "$commit")
-		printf 'commit %s (auteur)\ncommit %s (committer)\n' "$court" "$court" >>"$tmp/lieux"
-		git log -1 --format='%an <%ae>%n%cn <%ce>' "$commit" >>"$tmp/contenus"
-		git log -1 --format=%B "$commit" | while IFS= read -r ligne || [ -n "$ligne" ]; do
-			printf 'commit %s\n' "$court" >>"$tmp/lieux"
-			printf '%s\n' "$ligne" >>"$tmp/contenus"
-		done
-	done
+	' "$tmp/tag"
 }
 
 while read -r _ref_locale sha_local ref_distante sha_distant; do
 	[ -n "$sha_local" ] && [ "$sha_local" != "$Z" ] || continue
 	objet=$sha_local
 	while [ "$(git cat-file -t "$objet" 2>/dev/null)" = tag ]; do
-		ajoute_tag "$objet" "${ref_distante#refs/tags/}"
+		ajoute_tag "$objet" "${ref_distante#refs/tags/}" || refus_analyse "tag ${ref_distante#refs/tags/}"
 		objet=$(git cat-file tag "$objet" | sed -n '1s/^object //p')
 	done
 	base=
@@ -185,20 +218,18 @@ while read -r _ref_locale sha_local ref_distante sha_distant; do
 		base=$(git merge-base "$defaut" "$sha_local" 2>/dev/null)
 	fi
 	if [ -n "$base" ]; then
-		ajoute_diff "$base" "$sha_local"
-		ajoute_noms "$base" "$sha_local"
-		ajoute_messages "$base..$sha_local"
+		ajoute_commits "$base..$sha_local" || refus_analyse "historique de $ref_distante"
 	else
-		ajoute_diff "$ARBRE_VIDE" "$sha_local"
-		ajoute_noms "$ARBRE_VIDE" "$sha_local"
-		ajoute_messages "$sha_local"
+		ajoute_commits "$sha_local" || refus_analyse "historique de $ref_distante"
 	fi
 done
 
 : >"$tmp/trouves"
 tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
 	case "$motif" in '' | '#'*) continue ;; esac
-	grep -n -i -E -e "$motif" "$tmp/contenus" 2>/dev/null | awk -v motif="$motif" -v lieux="$tmp/lieux" '
+	grep -a -n -i -E -e "$motif" "$tmp/contenus" >"$tmp/occurrences" 2>/dev/null
+	[ $? -le 1 ] || { : >"$tmp/echec-grep"; continue; }
+	awk -v motif="$motif" -v lieux="$tmp/lieux" '
 		BEGIN { while ((getline l < lieux) > 0) lieu[++i] = l }
 		{
 			p = index($0, ":"); n = substr($0, 1, p - 1); texte = substr($0, p + 1)
@@ -207,9 +238,10 @@ tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
 			if (length(texte) > 80) texte = substr(texte, 1, 77) "..."
 			printf "    %s · %s · %s\n", motif, lieu[n], texte
 		}
-	' >>"$tmp/trouves"
+	' "$tmp/occurrences" >>"$tmp/trouves" || : >"$tmp/echec-grep"
 done
 
+[ -e "$tmp/echec-grep" ] && refus_analyse "recherche des marqueurs"
 [ -s "$tmp/trouves" ] || exit 0
 
 if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
@@ -224,7 +256,8 @@ fi
 	echo
 	cat "$tmp/trouves"
 	echo
-	echo "  Retirer ces données (commit corrigé, rebase pour un message), puis repousser."
+	echo "  Chaque commit qui part est examiné : un commit correctif ne suffit pas."
+	echo "  Retirer ces données de l'historique (git commit --amend, git rebase -i), puis repousser."
 	echo
 	echo "  Contournement ponctuel :"
 	echo "    ALLOW_PUSH_PERSONAL=1 git push …"

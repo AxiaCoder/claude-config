@@ -262,6 +262,52 @@ essai BLOQUE "$PUBLIC" "contenu en CRLF"
 if grep -q "$(printf '\r')" "$tmp/err"; then o=PRESENT; else o=ABSENT; fi
 verdict ABSENT "$o" "  stderr : extrait sans \\r final"
 
+echo "— chaque commit, octets, attributs, durée —"
+git checkout -q -B f15 f4~1
+printf 'ajout mot-secret\n' >retire.txt
+git add retire.txt
+git commit -q -m "propre"
+git rm -q retire.txt
+git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "marqueur ajouté puis retiré par le commit suivant"
+stderr_contient "commit $(git rev-parse --short HEAD~1) · retire.txt:1" "  stderr : commit et fichier:ligne"
+
+git checkout -q -B f16 f4~1
+printf 'caf\351 cr\350me\n' >a-latin1.txt
+printf 'serveur-8\n' >b-marque.txt
+git add a-latin1.txt b-marque.txt
+git commit -q -m "propre"
+LC_ALL=fr_FR.UTF-8
+export LC_ALL
+essai BLOQUE "$PUBLIC" "fichier Latin-1 avant le fichier marqué, LC_ALL=fr_FR.UTF-8"
+unset LC_ALL
+
+git checkout -q -B f17 f4~1
+printf 'serveur-6\n' >attribut.txt
+git add attribut.txt
+git commit -q -m "propre"
+attributs="$(git rev-parse --git-common-dir)/info/attributes"
+mkdir -p "$(dirname "$attributs")"
+printf '* -diff\n' >"$attributs"
+essai BLOQUE "$PUBLIC" "« * -diff » dans info/attributes"
+rm -f "$attributs"
+
+base_perf=$(git rev-parse f4~1)
+i=1
+while [ $i -le 300 ]; do
+	printf 'commit refs/heads/f18\ncommitter essai <essai@example.invalid> %d +0000\ndata <<FIN\nc%d\nFIN\n' $((1700000000 + i)) "$i"
+	[ $i -eq 1 ] && printf 'from %s\n' "$base_perf"
+	printf 'M 100644 inline p%d.txt\ndata <<FIN\nligne a\nligne b\nligne c\nFIN\n\n' "$i"
+	i=$((i + 1))
+done | git fast-import --quiet
+debut=$(date +%s)
+essai_brut PASSE "$PUBLIC" "300 commits propres" \
+	"refs/heads/f18 $(git rev-parse f18) refs/heads/f18 $Z"
+duree=$(($(date +%s) - debut))
+echo "      (300 commits : ${duree} s)"
+if [ $duree -lt 3 ]; then o=RAPIDE; else o=LENT; fi
+verdict RAPIDE "$o" "  300 commits en moins de 3 s"
+
 printf 'Mot-Secret\n(\n' >"$tmp/marqueurs-invalides"
 GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs-invalides"
 git checkout -q -B f14 f4~1
