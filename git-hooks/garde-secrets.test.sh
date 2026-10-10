@@ -1,10 +1,11 @@
 #!/bin/sh
-# Cas de test du garde secrets (git-hooks/_garde-secrets), appelé par git-hooks/pre-commit.
-# Sortie 0 si tous passent.
+# Cas de test du garde secrets (git-hooks/_garde-secrets), appelé par git-hooks/pre-commit
+# et git-hooks/pre-push. Sortie 0 si tous passent.
 #
 # HOME est un dossier jetable : son .claude/bin/betterleaks est un bouchon qui note ses
-# arguments, trouve un secret (sortie 3) dans un indexé qui contient FAUX-SECRET, échoue
-# (sortie 1) sur PLANTE, et passe sinon.
+# arguments, trouve un secret (sortie 3) quand ce qu'il examine contient FAUX-SECRET — l'indexé,
+# ou le `git log -p` de la plage donnée par --log-opts —, échoue (sortie 1) sur PLANTE, et
+# passe sinon.
 #
 # Essai réel en fin de fichier, avec le betterleaks désigné par BETTERLEAKS_REEL (par
 # défaut celui de ~/.claude/bin) : sauté, et dit, quand il est absent. Les faux secrets
@@ -33,6 +34,8 @@ export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_CEILING_DIRECTORIES HOME
 
 REGLAGE="core.hooks""Path"
 CONTOURNEMENT="ALLOW_""COMMIT_""SECRET"
+POUSSER="pu""sh"
+SANS_HOOK="--no-""verify"
 unset "$CONTOURNEMENT"
 bouchon="$HOME/.claude/bin/betterleaks"
 memo="$HOME/.claude/claude-config.sans-externes"
@@ -41,11 +44,14 @@ mkdir -p "$HOME/.claude/bin" "$tmp/modele-vide"
 cat >"$tmp/bouchon" <<EOF
 #!/bin/sh
 printf '%s\n' "\$@" >"$tmp/args"
-if git diff --cached | grep -q '^+.*FAUX-SECRET'; then
+plage=
+for arg; do case "\$arg" in --log-opts=*) plage=\${arg#--log-opts=} ;; esac; done
+if [ -n "\$plage" ]; then git log -p \$plage >"$tmp/examine"; else git diff --cached >"$tmp/examine"; fi
+if grep -q '^+.*FAUX-SECRET' "$tmp/examine"; then
 	echo "    a.txt:1  (regle-essai)"
 	exit 3
 fi
-if git diff --cached | grep -q '^+.*PLANTE'; then
+if grep -q '^+.*PLANTE' "$tmp/examine"; then
 	echo "erreur interne"
 	exit 1
 fi
@@ -160,6 +166,101 @@ if [ -e "$tmp/relais-lance" ]; then o=LANCE; else o=NON_LANCE; fi
 verdict LANCE "$o" "  hook du dépôt lancé après un passage"
 rm -f "$d/.git/hooks/pre-commit"
 
+echo "— pre-push, betterleaks bouchonné —"
+# Crée le dépôt $1 et son remote nu $1.git, avec un premier commit poussé sur main.
+depot_et_remote() {
+	depot "$1"
+	git init -q --bare "$1.git"
+	git -C "$1" remote add origin "$1.git"
+	git -C "$1" symbolic-ref HEAD refs/heads/main
+	printf 'base\n' >"$1/a.txt"
+	git -C "$1" add a.txt
+	git -C "$1" commit -q -m base
+	git -C "$1" "$POUSSER" -q origin main 2>/dev/null
+	git -C "$1" fetch -q origin
+	git -C "$1" remote set-head origin main
+}
+
+# Commit sans pre-commit dans le dépôt $1 : a.txt au contenu $2.
+commit_sans_garde() {
+	printf '%s\n' "$2" >"$1/a.txt"
+	git -C "$1" add a.txt
+	git -C "$1" commit -q "$SANS_HOOK" -m "$2"
+}
+
+# Pousse depuis le dépôt $1 les refs $3… ; $2 attendu, libellé en dernier argument via $LIBELLE.
+# stderr dans $tmp/err.
+pousse() {
+	d_=$1 attendu_=$2
+	shift 2
+	if git -C "$d_" "$POUSSER" -q origin "$@" >/dev/null 2>"$tmp/err"; then o=PASSE; else o=BLOQUE; fi
+	verdict "$attendu_" "$o" "$LIBELLE"
+}
+
+poser
+p="$tmp/p"
+depot_et_remote "$p"
+git -C "$p" switch -q -c propre
+commit_sans_garde "$p" "rien à signaler"
+LIBELLE="push propre → passe" pousse "$p" PASSE propre
+argument "--validation=false" PRESENT "commande : --validation=false"
+argument "--redact" PRESENT "commande : --redact"
+argument "--staged" ABSENT "commande : pas de --staged"
+
+git -C "$p" switch -q -c fuite main
+commit_sans_garde "$p" "x FAUX-SECRET"
+commit_sans_garde "$p" "retiré"
+LIBELLE="secret ajouté puis retiré dans 2 commits → bloqué" pousse "$p" BLOQUE fuite
+stderr_contient "a.txt:1" "  stderr : fichier:ligne"
+stderr_contient "historique" "  stderr : réécrire l'historique"
+stderr_contient "$CONTOURNEMENT=1" "  stderr : contournement"
+argument "--log-opts=$(git -C "$p" rev-parse main)..$(git -C "$p" rev-parse fuite)" PRESENT "commande : plage base..local, nouvelle branche"
+
+LIBELLE="plusieurs refs, secret dans la 2e → bloqué" pousse "$p" BLOQUE propre fuite
+git -C "$p" switch -q -c propre2 main
+commit_sans_garde "$p" "toujours rien"
+LIBELLE="plusieurs refs propres → passe" pousse "$p" PASSE propre propre2
+
+git -C "$p" switch -q propre
+commit_sans_garde "$p" "y FAUX-SECRET"
+LIBELLE="branche connue du remote, secret dans la suite → bloqué" pousse "$p" BLOQUE propre
+argument "--log-opts=$(git -C "$p" rev-parse origin/propre)..$(git -C "$p" rev-parse propre)" PRESENT "commande : plage distant..local"
+
+export "$CONTOURNEMENT=1"
+LIBELLE="secret, contournement → passe" pousse "$p" PASSE fuite
+stderr_contient "non appliqué" "  stderr : contournement signalé"
+unset "$CONTOURNEMENT"
+
+LIBELLE="suppression de ref, betterleaks bouchonné → passe" pousse "$p" PASSE :fuite
+
+git -C "$p" switch -q -c orpheline main
+git -C "$p" remote remove origin
+git -C "$p" remote add origin "$p.git"
+commit_sans_garde "$p" "z FAUX-SECRET"
+LIBELLE="sans branche par défaut connue, secret → bloqué" pousse "$p" BLOQUE orpheline
+argument "--log-opts=$(git -C "$p" rev-parse orpheline) --not --remotes" PRESENT "commande : plage --not --remotes"
+
+git -C "$p" reset -q --hard HEAD~1
+commit_sans_garde "$p" "x PLANTE"
+LIBELLE="analyse en échec → bloqué" pousse "$p" BLOQUE orpheline
+stderr_contient "a échoué" "  stderr : échec signalé"
+git -C "$p" reset -q --hard HEAD~1
+
+retirer
+git -C "$p" switch -q -c sans-binaire main
+commit_sans_garde "$p" "rien"
+LIBELLE="betterleaks absent → bloqué" pousse "$p" BLOQUE sans-binaire
+stderr_contient "install.sh" "  stderr : relancer install.sh"
+export "$CONTOURNEMENT=1"
+LIBELLE="betterleaks absent, contournement → passe" pousse "$p" PASSE sans-binaire
+unset "$CONTOURNEMENT"
+commit_sans_garde "$p" "encore"
+: >"$memo"
+LIBELLE="sans externes, betterleaks absent → passe" pousse "$p" PASSE sans-binaire
+stderr_contient "désactivé à l'installation" "  stderr : garde désactivé signalé"
+rm -f "$memo"
+LIBELLE="rien de neuf à pousser, betterleaks absent → passe" pousse "$p" PASSE sans-binaire
+
 echo "— essai réel —"
 if [ -x "$reel" ]; then
 	cp "$reel" "$bouchon"
@@ -221,6 +322,57 @@ if [ -x "$reel" ]; then
 	if [ -n "$cle" ]; then
 		essai "$r" "$cle" BLOQUE "clé privée PEM générée → bloqué"
 	fi
+
+	q="$tmp/q"
+	depot_et_remote "$q"
+	git -C "$q" switch -q -c rebase-conflit
+	commit_sans_garde "$q" "branche"
+	git -C "$q" switch -q main
+	commit_sans_garde "$q" "main"
+	git -C "$q" switch -q rebase-conflit
+	git -C "$q" rebase -q main >/dev/null 2>&1
+	jeton_neuf
+	printf 'token = "%s"\n' "$jeton" >"$q/a.txt"
+	git -C "$q" add a.txt
+	if GIT_EDITOR=true git -C "$q" rebase --continue >/dev/null 2>"$tmp/err"; then o=PASSE; else o=BLOQUE; fi
+	verdict PASSE "$o" "jeton introduit par rebase --continue après conflit → commit créé"
+	git -C "$q" "$POUSSER" -q origin main 2>/dev/null
+	LIBELLE="  … puis push → bloqué" pousse "$q" BLOQUE rebase-conflit
+	sed 's/^/    | /' "$tmp/err"
+	stderr_contient "$(git -C "$q" rev-parse --short=7 rebase-conflit)" "  stderr : commit nommé"
+	stderr_contient "a.txt:1" "  stderr : fichier:ligne"
+	stderr_contient "github-pat" "  stderr : règle github-pat"
+	if grep -q -e "$jeton" "$tmp/err"; then o=EN_CLAIR; else o=MASQUE; fi
+	verdict MASQUE "$o" "  stderr : jeton masqué"
+
+	git -C "$q" switch -q -c ajoute-retire main
+	jeton_neuf
+	commit_sans_garde "$q" "token = \"$jeton\""
+	commit_sans_garde "$q" "retiré"
+	LIBELLE="jeton ajouté puis retiré dans 2 commits → bloqué" pousse "$q" BLOQUE ajoute-retire
+
+	git -C "$q" switch -q -c propre-reel main
+	commit_sans_garde "$q" "rien à signaler"
+	LIBELLE="push propre → passe" pousse "$q" PASSE propre-reel
+
+	git -C "$q" switch -q -c volume main
+	sha_base=$(git -C "$q" rev-parse HEAD)
+	{
+		i=1
+		while [ $i -le 300 ]; do
+			printf 'commit refs/heads/volume\ncommitter essai <essai@example.invalid> %s +0000\ndata 6\nc%04d\n' $((1700000000 + i)) $i
+			[ $i -eq 1 ] && printf 'from %s\n' "$sha_base"
+			printf 'M 100644 inline f%d.txt\ndata <<FIN\nligne %d de f%d\nFIN\n\n' $((i % 40)) $i $i
+			i=$((i + 1))
+		done
+	} | git -C "$q" fast-import --quiet --force
+	git -C "$q" reset -q --hard volume
+	debut=$(date +%s)
+	LIBELLE="300 commits propres → passe" pousse "$q" PASSE volume
+	duree=$(($(date +%s) - debut))
+	echo "    durée : ${duree} s"
+	if [ "$duree" -lt 5 ]; then o=RAPIDE; else o=LENT; fi
+	verdict RAPIDE "$o" "  300 commits en moins de 5 s"
 else
 	echo "  sauté : $reel absent (bash install.sh, ou BETTERLEAKS_REEL=<chemin>)"
 fi

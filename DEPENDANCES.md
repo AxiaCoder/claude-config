@@ -15,9 +15,9 @@ fichier dans le même commit.
 | Source | `https://github.com/betterleaks/betterleaks/releases/download/v1.9.0/betterleaks_1.9.0_<plateforme>.tar.gz` (`.zip` sous Windows) |
 | Empreinte | sha256 par plateforme dans `git-hooks/betterleaks.version`, recopié du `checksums.txt` de la release. L'installation refuse un asset dont le sha256 diffère |
 | Où | `~/.claude/bin/betterleaks` (Windows : `betterleaks.exe`) |
-| À quoi il sert | Le garde secrets du `pre-commit` global (`git-hooks/_garde-secrets`), lancé avec `--validation=false` : aucun appel réseau |
+| À quoi il sert | Le garde secrets du `pre-commit` et du `pre-push` globaux (`git-hooks/_garde-secrets`), lancé avec `--validation=false` : aucun appel réseau |
 | Le refuser | `bash install.sh --sans-externes` / `.\install.ps1 -SansExternes` : rien n'est téléchargé, le garde secrets est désactivé. Choix mémorisé dans `~/.claude/claude-config.sans-externes` ; `--avec-externes` / `-AvecExternes` le défait |
-| Le retirer | supprimer `~/.claude/bin/betterleaks` (ou `.exe`), puis relancer l'installation avec `--sans-externes` — sans quoi la passe suivante le repose et, d'ici là, le `pre-commit` refuse les commits |
+| Le retirer | supprimer `~/.claude/bin/betterleaks` (ou `.exe`), puis relancer l'installation avec `--sans-externes` — sans quoi la passe suivante le repose et, d'ici là, le `pre-commit` refuse les commits et le `pre-push` les pushes |
 
 **Monter de version.** Lire les assets et le `checksums.txt` de la nouvelle release, reporter
 version et sha256 dans `git-hooks/betterleaks.version`, vérifier les options du garde sur le

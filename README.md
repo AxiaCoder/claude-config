@@ -74,7 +74,7 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
 
    L'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
    `git-hooks/betterleaks.version`, dans `~/.claude/bin/` — le garde secrets du `pre-commit`
-   s'en sert. Un sha256 qui diffère ou un réseau absent : betterleaks n'est pas posé, le reste
+   et du `pre-push` s'en sert. Un sha256 qui diffère ou un réseau absent : betterleaks n'est pas posé, le reste
    de l'installation continue, et la fin le signale. `--sans-externes` (`-SansExternes`) s'en
    passe et est mémorisé ; `--avec-externes` (`-AvecExternes`) le défait.
 
@@ -201,7 +201,7 @@ même entrée. Un `pre-commit` ou un `commit-msg` local continue donc de tourner
 
 | Hook | Ce qu'il fait |
 |---|---|
-| `pre-push` | refuse un push vers `main` ou `master` d'un remote GitHub, ou porteur d'un marqueur personnel vers un dépôt GitHub public, puis relaie |
+| `pre-push` | refuse un push vers `main` ou `master` d'un remote GitHub, porteur d'un marqueur personnel vers un dépôt GitHub public, ou dont un commit porte un secret (garde secrets), puis relaie |
 | `pre-commit` | refuse un commit dont l'indexé porte un secret (garde secrets), puis relaie |
 | `applypatch-msg`, `pre-applypatch`, `post-applypatch`, `pre-merge-commit`, `prepare-commit-msg`, `commit-msg`, `post-commit`, `pre-rebase`, `post-checkout`, `post-merge`, `post-rewrite`, `pre-auto-gc`, `sendemail-validate` | relaient seulement (`git-hooks/_relais`) |
 
@@ -261,21 +261,31 @@ ALLOW_PUSH_PERSONAL=1 git push …             # une fois, en connaissance de ca
 Ce geste, comme vider ou retirer `GARDE_PUBLIC_MARQUEURS`, est réservé à l'utilisateur : le
 hook Claude `garde-push` refuse une commande d'agent qui cite l'une ou l'autre variable.
 
-**Le garde secrets** (`git-hooks/_garde-secrets`, lancé par `pre-commit` avant le relais).
-Il passe ce qui est indexé à betterleaks (`~/.claude/bin/betterleaks`, version épinglée — voir
-[`DEPENDANCES.md`](./DEPENDANCES.md)) et refuse le commit si un secret s'y trouve, en listant
-`fichier:ligne` et la règle, jamais le secret.
+**Le garde secrets** (`git-hooks/_garde-secrets`, lancé par `pre-commit` et par `pre-push`,
+avant le relais). Il passe à betterleaks (`~/.claude/bin/betterleaks`, version épinglée — voir
+[`DEPENDANCES.md`](./DEPENDANCES.md)) ce qui est indexé au `pre-commit`, et chaque commit qui
+part au `pre-push`, vers tout remote. Il refuse si un secret s'y trouve, en listant
+`fichier:ligne` et la règle — plus le commit au `pre-push` —, jamais le secret.
+
+- **Pourquoi aussi au `pre-push`** : git crée des commits sans passer par le `pre-commit` —
+  `rebase --continue` après un conflit ou un arrêt `edit`, `cherry-pick`, `commit-tree`,
+  `commit --no-verify`. Le `pre-push` les rattrape avant qu'ils quittent la machine. Commits
+  examinés par ref poussée : depuis ce que le remote a déjà ; nouvelle branche, depuis la
+  merge-base avec la branche par défaut du remote, à défaut ceux qu'aucun remote n'a. Un secret
+  ajouté puis retiré est trouvé : il faut réécrire l'historique, un commit correctif ne suffit
+  pas.
 
 - **Aucun appel réseau** : la validation des secrets auprès des API est coupée
   (`--validation=false`).
 - **Un faux positif s'exempte** par un commentaire `gitleaks:allow` sur la ligne.
 - **Il bloque** quand betterleaks est absent, avec le geste pour le reposer — relancer
   l'installation — ou quand son analyse échoue.
-- **Il laisse passer** hors dépôt, sans rien d'indexé, et — avec une ligne sur stderr — quand
-  l'installation a été faite avec `--sans-externes`.
+- **Il laisse passer** hors dépôt, sans rien d'indexé ni de commit à pousser, et — avec une
+  ligne sur stderr — quand l'installation a été faite avec `--sans-externes`.
 
 ```bash
 ALLOW_COMMIT_SECRET=1 git commit …           # une fois, en connaissance de cause
+ALLOW_COMMIT_SECRET=1 git push …             # idem, au pre-push
 ```
 
 Ce contournement est réservé à l'utilisateur : le hook Claude `garde-push` refuse une commande

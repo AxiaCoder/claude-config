@@ -15,6 +15,10 @@
 # refuse ce qui contient un marqueur du fichier GARDE_PUBLIC_MARQUEURS.
 # Contournement ponctuel : ALLOW_PUSH_PERSONAL=1 git push …
 #
+# Garde secrets (git-hooks/_garde-secrets --push) : vers tout remote, refuse un commit qui
+# part avec un secret, y compris ceux que le pre-commit n'a pas vus.
+# Contournement ponctuel : ALLOW_COMMIT_SECRET=1 git push …
+#
 # Quand le push est autorisé, le hook propre au dépôt (<git-common-dir>/hooks/pre-push),
 # s'il existe et est exécutable, est lancé avec les mêmes arguments et la même entrée ;
 # son code de sortie devient celui de ce hook.
@@ -76,6 +80,7 @@ MSG
 fi
 
 printf '%s\n' "$entree" | sh "$(dirname "$0")/_garde-public" "$remote_nom" "$remote_url" || exit 1
+printf '%s\n' "$entree" | sh "$(dirname "$0")/_garde-secrets" --push "$remote_nom" || exit 1
 
 dossier_commun=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
 suivant="$dossier_commun/hooks/pre-push"

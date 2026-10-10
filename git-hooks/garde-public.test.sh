@@ -26,6 +26,11 @@ GIT_CONFIG_NOSYSTEM=1
 GIT_CEILING_DIRECTORIES="$tmp"
 XDG_CACHE_HOME="$tmp/cache"
 export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_CEILING_DIRECTORIES XDG_CACHE_HOME
+# Garde secrets du pre-push hors champ : HOME jetable, installation « sans externes ».
+HOME="$tmp/home"
+mkdir -p "$HOME/.claude"
+: >"$HOME/.claude/claude-config.sans-externes"
+export HOME
 unset ALLOW_PUSH_PERSONAL
 
 mkdir "$tmp/bin"
