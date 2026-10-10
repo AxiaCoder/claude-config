@@ -313,6 +313,11 @@ essai_brut BLOQUE "$PUBLIC" "marqueur dans le message d'un tag annoté" \
 	"refs/tags/t-message $(git rev-parse t-message) refs/tags/t-message $Z"
 stderr_contient "tag t-message" "  stderr : lieu tag"
 
+printf 'ab\000c mot-secret\n' >"$tmp/message-nul"
+git tag -a t-nul -F "$tmp/message-nul" f4~1
+essai_brut BLOQUE "$PUBLIC" "marqueur après un octet NUL dans le message d'un tag annoté" \
+	"refs/tags/t-nul $(git rev-parse t-nul) refs/tags/t-nul $Z"
+
 git checkout -q -B f12 f4~1
 printf 'x\n' >auteur.txt
 git add auteur.txt

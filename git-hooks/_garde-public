@@ -255,7 +255,8 @@ ajoute_commits() {
 # Ajoute aux fichiers lieux/contenus le tagger et les lignes du message du tag annoté $1,
 # nommé $2. Sortie non nulle si git ou awk échoue.
 ajoute_tag() {
-	git cat-file tag "$1" >"$tmp/tag" 2>/dev/null || return 1
+	git cat-file tag "$1" >"$tmp/tag-brut" 2>/dev/null || return 1
+	tr '\000' ' ' <"$tmp/tag-brut" >"$tmp/tag" || return 1
 	awk -v nom="tag $2" -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
 		corps { print nom >> lieux; print >> contenus; next }
 		/^$/ { corps = 1; next }
