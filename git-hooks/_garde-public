@@ -1,0 +1,155 @@
+#!/bin/sh
+# Garde « données personnelles » du pre-push, lancé par git-hooks/pre-push.
+# Sort en 1 si un marqueur est trouvé dans ce qui part vers un dépôt GitHub public,
+# en 0 sinon — y compris quand il ne peut pas juger (voir plus bas).
+#
+# Marqueurs : fichier désigné par GARDE_PUBLIC_MARQUEURS, hors de tout dépôt public.
+# Un motif par ligne, expression régulière étendue (grep -E), casse ignorée ;
+# lignes vides et lignes commençant par « # » ignorées.
+#
+# Contenu examiné, pour chaque ref poussée : les lignes ajoutées du diff entre ce que le
+# remote a déjà et ce qui part (nouvelle branche : depuis la merge-base avec la branche
+# par défaut du remote), et les messages des commits qui partent.
+#
+# Visibilité : `gh repo view <owner/repo> --json visibility`, gardée 24 h dans
+# ${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public/.
+#
+# Laisse passer, avec une ligne sur stderr : remote non GitHub (sans ligne), variable
+# absente ou fichier illisible, gh absent ou en erreur.
+#
+# Contournement ponctuel :
+#   ALLOW_PUSH_PERSONAL=1 git push …
+#
+# Arguments : $1 nom du remote, $2 URL. Entrée : celle du pre-push.
+
+remote_nom=$1
+remote_url=$2
+Z=0000000000000000000000000000000000000000
+ARBRE_VIDE=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+
+case "$remote_url" in
+*[Gg][Ii][Tt][Hh][Uu][Bb].[Cc][Oo][Mm]*) ;;
+*) exit 0 ;;
+esac
+
+marqueurs=${GARDE_PUBLIC_MARQUEURS:-}
+if [ -z "$marqueurs" ] || [ ! -r "$marqueurs" ]; then
+	echo "pre-push : garde données personnelles inactif, GARDE_PUBLIC_MARQUEURS ne désigne aucun fichier lisible." >&2
+	exit 0
+fi
+
+# Affiche « owner/repo » d'après l'URL GitHub $1.
+depot_de() {
+	printf '%s\n' "$1" | sed -e 's#^.*[Gg][Ii][Tt][Hh][Uu][Bb]\.[Cc][Oo][Mm][:/]##' \
+		-e 's#/*$##' -e 's#\.git$##'
+}
+
+# Affiche la visibilité (PUBLIC, PRIVATE, INTERNAL) du dépôt $1, depuis le cache de
+# moins de 24 h ou depuis gh ; rien et sortie 1 si gh est absent ou échoue.
+visibilite() {
+	dossier_cache="${XDG_CACHE_HOME:-$HOME/.cache}/claude-config/garde-public"
+	fichier_cache="$dossier_cache/$(printf '%s' "$1" | tr '/' '_')"
+	if [ -n "$(find "$fichier_cache" -mmin -1440 2>/dev/null)" ]; then
+		cat "$fichier_cache"
+		return 0
+	fi
+	command -v gh >/dev/null 2>&1 || return 1
+	vue=$(gh repo view "$1" --json visibility --jq .visibility 2>/dev/null) || return 1
+	[ -n "$vue" ] || return 1
+	mkdir -p "$dossier_cache" 2>/dev/null && printf '%s\n' "$vue" >"$fichier_cache" 2>/dev/null
+	printf '%s\n' "$vue"
+}
+
+depot=$(depot_de "$remote_url")
+if ! vis=$(visibilite "$depot"); then
+	echo "pre-push : visibilité de $depot inconnue (gh absent ou en erreur), garde données personnelles non appliqué." >&2
+	exit 0
+fi
+[ "$vis" = "PUBLIC" ] || exit 0
+
+tmp=$(mktemp -d) || exit 0
+trap 'rm -rf "$tmp"' EXIT
+: >"$tmp/lieux"
+: >"$tmp/contenus"
+
+# Affiche le sha de la branche par défaut du remote suivie localement, rien sinon.
+branche_defaut() {
+	for ref in "refs/remotes/$remote_nom/HEAD" "refs/remotes/$remote_nom/main" "refs/remotes/$remote_nom/master"; do
+		git rev-parse -q --verify "$ref^{commit}" 2>/dev/null && return 0
+	done
+	return 1
+}
+
+# Ajoute aux fichiers lieux/contenus les lignes ajoutées entre $1 (arbre ou commit) et $2.
+ajoute_diff() {
+	git diff -U0 --no-color --no-ext-diff --no-renames "$1" "$2" -- 2>/dev/null | awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
+		/^diff --git / { entete = 1; next }
+		entete && /^\+\+\+ / { f = substr($0, 5); sub(/^b\//, "", f); next }
+		/^@@ / { entete = 0; split($3, a, ","); n = substr(a[1], 2) + 0; next }
+		!entete && /^\+/ { print f ":" n >> lieux; print substr($0, 2) >> contenus; n++ }
+	'
+}
+
+# Ajoute aux fichiers lieux/contenus les lignes du message de chaque commit de la plage $@.
+ajoute_messages() {
+	git rev-list "$@" 2>/dev/null | while read -r commit; do
+		court=$(git rev-parse --short "$commit")
+		git log -1 --format=%B "$commit" | while IFS= read -r ligne || [ -n "$ligne" ]; do
+			printf 'commit %s\n' "$court" >>"$tmp/lieux"
+			printf '%s\n' "$ligne" >>"$tmp/contenus"
+		done
+	done
+}
+
+while read -r _ref_locale sha_local _ref_distante sha_distant; do
+	[ -n "$sha_local" ] && [ "$sha_local" != "$Z" ] || continue
+	base=
+	if [ "$sha_distant" != "$Z" ] && git cat-file -e "$sha_distant^{commit}" 2>/dev/null; then
+		base=$(git merge-base "$sha_distant" "$sha_local" 2>/dev/null)
+	elif defaut=$(branche_defaut); then
+		base=$(git merge-base "$defaut" "$sha_local" 2>/dev/null)
+	fi
+	if [ -n "$base" ]; then
+		ajoute_diff "$base" "$sha_local"
+		ajoute_messages "$base..$sha_local"
+	else
+		ajoute_diff "$ARBRE_VIDE" "$sha_local"
+		ajoute_messages "$sha_local"
+	fi
+done
+
+: >"$tmp/trouves"
+tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
+	case "$motif" in '' | '#'*) continue ;; esac
+	grep -n -i -E -e "$motif" "$tmp/contenus" 2>/dev/null | awk -v motif="$motif" -v lieux="$tmp/lieux" '
+		BEGIN { while ((getline l < lieux) > 0) lieu[++i] = l }
+		{
+			p = index($0, ":"); n = substr($0, 1, p - 1); texte = substr($0, p + 1)
+			gsub(/^[ \t]+/, "", texte)
+			if (length(texte) > 80) texte = substr(texte, 1, 77) "..."
+			printf "    %s · %s · %s\n", motif, lieu[n], texte
+		}
+	' >>"$tmp/trouves"
+done
+
+[ -s "$tmp/trouves" ] || exit 0
+
+if [ "${ALLOW_PUSH_PERSONAL:-}" = "1" ]; then
+	echo "pre-push : marqueurs personnels vers $depot (public) autorisés par ALLOW_PUSH_PERSONAL=1." >&2
+	exit 0
+fi
+
+{
+	echo
+	echo "  ⛔  Push refusé : $depot est public et ce qui part contient des marqueurs personnels."
+	echo "      (marqueur · fichier:ligne ou commit · extrait)"
+	echo
+	cat "$tmp/trouves"
+	echo
+	echo "  Retirer ces données (commit corrigé, rebase pour un message), puis repousser."
+	echo
+	echo "  Contournement ponctuel :"
+	echo "    ALLOW_PUSH_PERSONAL=1 git push …"
+	echo
+} >&2
+exit 1

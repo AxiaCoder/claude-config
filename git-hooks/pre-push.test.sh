@@ -13,6 +13,7 @@ trap 'rm -rf "$tmp"' EXIT
 GIT_CONFIG_GLOBAL="$tmp/gitconfig-vide"
 GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
+unset GARDE_PUBLIC_MARQUEURS
 unset ALLOW_PUSH_MAIN
 
 P="git pu""sh"

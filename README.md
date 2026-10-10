@@ -191,7 +191,7 @@ même entrée. Un `pre-commit` ou un `commit-msg` local continue donc de tourner
 
 | Hook | Ce qu'il fait |
 |---|---|
-| `pre-push` | refuse un push vers `main` ou `master` d'un remote GitHub, puis relaie |
+| `pre-push` | refuse un push vers `main` ou `master` d'un remote GitHub, ou porteur d'un marqueur personnel vers un dépôt GitHub public, puis relaie |
 | `applypatch-msg`, `pre-applypatch`, `post-applypatch`, `pre-commit`, `pre-merge-commit`, `prepare-commit-msg`, `commit-msg`, `post-commit`, `pre-rebase`, `post-checkout`, `post-merge`, `post-rewrite`, `pre-auto-gc`, `sendemail-validate` | relaient seulement (`git-hooks/_relais`) |
 
 Ne sont **pas** relayés : `reference-transaction` et `post-index-change`, que git lance à
@@ -210,6 +210,31 @@ git config --local --unset garde.pushMain    # le rétablir
 Ces gestes sont réservés à l'utilisateur : le hook Claude `garde-push` refuse qu'un agent
 lance une commande qui les cite, ou qui cite `core.hooksPath`. Il lit le texte de la
 commande : un outil qui pose ce réglage sans le nommer (`npx husky init`) passe.
+
+**Le garde données personnelles** (`git-hooks/_garde-public`, lancé par `pre-push`). Vers un
+dépôt GitHub **public**, il refuse un push dont le contenu porte un marqueur personnel, et
+liste pour chacun le marqueur, le `fichier:ligne` ou le commit, et un extrait.
+
+- **Les marqueurs** vivent hors du dépôt, dans le fichier que désigne la variable
+  d'environnement `GARDE_PUBLIC_MARQUEURS` — typiquement dans le dossier perso. Un motif par
+  ligne, en expression régulière étendue (`grep -E`), **casse ignorée** ; lignes vides et
+  lignes qui commencent par `#` ignorées. Un point vaut « n'importe quel caractère » :
+  `192\.0\.2\.10` pour une adresse exacte.
+- **Ce qui est examiné**, pour chaque ref poussée : les lignes **ajoutées** du diff entre ce
+  que le remote a déjà et ce qui part — pour une nouvelle branche, depuis la merge-base avec
+  la branche par défaut du remote —, et les messages des commits qui partent. Une ligne
+  supprimée ne compte pas.
+- **Public ou non** : `gh repo view <owner/repo> --json visibility`, réponse gardée 24 h dans
+  `${XDG_CACHE_HOME:-~/.cache}/claude-config/garde-public/`.
+- **Il laisse passer, avec une ligne sur stderr**, quand il ne peut pas juger : variable
+  absente ou fichier illisible, `gh` absent, non connecté ou en erreur. Un défaut d'outil ne
+  bloque pas un push — mais vers un dépôt public, le garde n'a alors pas tourné.
+- **Ce qu'il ne couvre pas** : le corps et le titre d'une PR ou d'une issue créées par `gh`,
+  les commentaires, tout ce qui part sans `git push`.
+
+```bash
+ALLOW_PUSH_PERSONAL=1 git push …             # une fois, en connaissance de cause
+```
 
 **Un dépôt peut reprendre la main.** `core.hooksPath` suit la hiérarchie normale de git : une
 valeur posée dans le dépôt (`git config --local core.hooksPath <dossier>`) remplace la
@@ -265,6 +290,7 @@ vérification.
 sh scripts/install.test.sh        # fusion des réglages, rendu de CLAUDE.md
 sh git-hooks/relais.test.sh       # relais des hooks git
 sh git-hooks/pre-push.test.sh     # garde de push
+sh git-hooks/garde-public.test.sh # garde données personnelles
 python3 hooks/guardrail.test.py
 python3 hooks/garde-push.test.py
 python3 scripts/verifier-les-ecrits.py .   # renvois morts et notes en double dans les .md
