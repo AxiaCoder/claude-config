@@ -222,14 +222,14 @@ liste pour chacun le marqueur, le `fichier:ligne` ou le commit, et un extrait.
   tolérant, `[Éé]lise` ; lignes vides et lignes qui commencent par `#` ignorées. Un point vaut « n'importe quel caractère » :
   `192\.0\.2\.10` pour une adresse exacte. Vers un dépôt public, un motif que `grep -E` refuse
   **bloque** le push, avec le motif sur stderr : un garde qui l'ignorerait se croirait actif.
-- **Ce qui est examiné**, pour chaque ref poussée, dans le diff entre ce que le remote a déjà
-  et ce qui part — pour une nouvelle branche, depuis la merge-base avec la branche par défaut
-  du remote — : les lignes **ajoutées**, fichiers binaires compris, et les **noms** des
-  fichiers ajoutés ou renommés. Et,
-  pour chaque commit qui part, son message, son **auteur** et son **committer** (nom et
-  e-mail) ; pour un tag annoté, son message et son tagger. Une ligne supprimée ne compte pas.
-- **GitHub ou non** : l'hôte `github.com`, ou un alias SSH (`git@github-perso:owner/repo`)
-  que `ssh -G` résout vers `github.com`.
+- **Ce qui est examiné**, pour chaque ref poussée : chaque commit qui part, un par un — ceux
+  que le remote n'a pas encore ; pour une nouvelle branche, ceux qui suivent la merge-base avec
+  la branche par défaut du remote. Dans chacun, les lignes **ajoutées**, fichiers binaires
+  compris, et les **noms** des fichiers ajoutés ou renommés ; puis son message, son **auteur**
+  et son **committer** (nom et e-mail) ; pour un tag annoté, son message et son tagger. Une ligne supprimée ne compte pas.
+- **GitHub ou non** : l'hôte `github.com` ou `ssh.github.com`, ou un alias SSH
+  (`git@github-perso:owner/repo`) que `ssh -G` résout vers l'un des deux — `ssh.github.com`
+  est l'accès SSH par le port 443.
 - **Public ou non** : l'API GitHub **sans authentification**
   (`https://api.github.com/repos/<owner/repo>`) — un dépôt public y est toujours visible,
   quel que soit le jeton de `gh`. 200 : public ; 404 : privé ou inexistant ; toute autre

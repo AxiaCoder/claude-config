@@ -6,7 +6,8 @@
 # curl : a/public et a/cache répondent 200, a/prive 404, a/repli 500, tout autre dépôt
 # échoue (réseau). gh : a/public, a/cache et a/repli sont publics, a/prive privé, tout
 # autre dépôt échoue, et tout appel échoue quand GH_TOKEN vaut « x ». ssh -G : l'alias
-# github-perso résout vers github.com, tout autre hôte vers lui-même.
+# github-perso résout vers github.com, github-443 vers ssh.github.com, tout autre hôte vers
+# lui-même.
 
 ici=$(cd "$(dirname "$0")" && pwd -P)
 hook="$ici/pre-push"
@@ -55,6 +56,7 @@ cat >"$tmp/bin/ssh" <<'EOF'
 [ "$1" = -G ] || exit 255
 case "$2" in
 github-perso) echo "hostname github.com" ;;
+github-443) echo "hostname ssh.github.com" ;;
 *) echo "hostname $2" ;;
 esac
 echo "port 22"
@@ -140,6 +142,12 @@ printf 'ligne propre\n' >base.txt
 git commit -q -am "retrait"
 essai PASSE "$PUBLIC" "ligne supprimée contenant le marqueur, déjà sur le remote"
 
+git checkout -q -B f3b "$M"
+printf 'ab\000c mot-secret\n' >donnees.bin
+git add donnees.bin
+git commit -q -m "binaire"
+essai BLOQUE "$PUBLIC" "marqueur après un octet NUL dans un fichier binaire"
+
 branche f4 propre.txt "rien" "propre"
 essai PASSE "$PUBLIC" "rien de marqué"
 
@@ -216,6 +224,7 @@ essai BLOQUE "git@github-perso:a/public.git" "alias ssh vers github.com"
 stderr_contient "a/public" "  stderr : dépôt nommé"
 essai BLOQUE "ssh://git@github-perso:2222/a/public" "alias ssh://, avec port"
 essai BLOQUE "ssh://git@github.com:22/a/public.git" "github.com en ssh:// avec port"
+essai BLOQUE "git@github-443:a/public.git" "alias ssh vers ssh.github.com"
 essai PASSE "git@nas-perso:a/public.git" "alias ssh vers un autre hôte"
 
 echo "— plusieurs refs, tags, formes d'entrée —"

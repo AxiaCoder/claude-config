@@ -15,7 +15,7 @@
 # tag annoté : son message et son tagger. Comparaison octet par octet (LC_ALL=C) : la
 # casse n'est ignorée que pour les lettres ASCII.
 #
-# Remote GitHub : hôte github.com, ou alias SSH que `ssh -G` résout vers github.com.
+# Remote GitHub : hôte github.com ou ssh.github.com, ou alias SSH que `ssh -G` résout vers l'un des deux.
 #
 # Visibilité : l'API GitHub sans authentification (200 : public ; 404 : privé ou
 # inexistant), `gh repo view` en repli pour toute autre réponse. Seul « public » est gardé,
@@ -69,12 +69,15 @@ chemin=${chemin% *}
 hote=${ligne%% *}
 hote=${hote##*@}
 hote=$(printf '%s' "${hote%%:*}" | tr 'A-Z' 'a-z')
-if [ "$hote" != github.com ]; then
+case "$hote" in
+github.com | ssh.github.com) ;;
+*)
 	[ "$genre" = ssh ] || exit 0
 	case "$hote" in -*) exit 0 ;; esac
 	reel=$(ssh -G "$hote" 2>/dev/null | awk '$1 == "hostname" { print tolower($2); exit }')
-	[ "$reel" = github.com ] || exit 0
-fi
+	case "$reel" in github.com | ssh.github.com) ;; *) exit 0 ;; esac
+	;;
+esac
 depot=$(printf '%s\n' "$chemin" | sed -e 's#^/*##' -e 's#/*$##' -e 's#\.git$##')
 
 marqueurs=${GARDE_PUBLIC_MARQUEURS:-}
@@ -197,7 +200,8 @@ branche_defaut() {
 ajoute_commits() {
 	git -c core.quotePath=false log --no-color --no-ext-diff --no-textconv --text --no-renames \
 		--root -p --cc -U0 --raw --format='%x01%h%n%an <%ae>%n%cn <%ce>%n%B%n%x02' "$@" \
-		>"$tmp/log" 2>/dev/null || return 1
+		>"$tmp/brut" 2>/dev/null || return 1
+	tr '\000' ' ' <"$tmp/brut" >"$tmp/log" || return 1
 	awk -v lieux="$tmp/lieux" -v contenus="$tmp/contenus" '
 		function sans_guillemets(s,   r, c, i) {
 			if (substr(s, 1, 1) != "\"") return s
