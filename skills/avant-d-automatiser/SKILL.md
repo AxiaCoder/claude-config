@@ -28,7 +28,8 @@ dessus — ou aucune. Porté de `the-goal` (glebis/claude-skills, MIT), d'après
 
 ## Le déroulé
 
-**Raccourci** — goulot déjà connu → étape 1 (but et débit), puis 4 à 6.
+**Raccourci** — goulot déjà connu → étape 1 (but et débit), puis 4 à 7 ; dans la fiche, la preuve du
+goulot est « connu de l'utilisateur ».
 
 1. **But et débit.** Une phrase, et un **taux**. Sans taux → s'arrêter et le chercher avec
    l'utilisateur. « Gagner du temps » est refusé : baisser la dépense n'est pas monter le débit —

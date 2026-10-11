@@ -95,9 +95,10 @@ def verifier_json_prime_sur_drapeaux() -> list[str]:
 
 
 def verifier_contradictions() -> list[str]:
-    """Lancé à la main et sans surveillance : la main l'emporte, et une remarque le signale."""
+    """Deux faits qui s'excluent : la forme reste décidée, et une remarque le signale."""
     defauts: list[str] = []
     for arguments, attendu in (
+        (["--evenement-declencheur", "--lance-par-l-utilisateur"], 1),
         (["--lance-par-l-utilisateur", "--sans-surveillance"], 3),
         (["--lance-par-l-utilisateur", "--sans-surveillance", "--jugement", "chaque-etape"], 5),
         (["--lance-par-l-utilisateur", "--sans-surveillance", "--jugement", "une-etape"], 5),
