@@ -104,6 +104,7 @@ Le dossier peut contenir, chacun facultatif :
 | `settings.macos.json` / `settings.windows.json` | fusionné ensuite, sur cet OS seulement |
 | `CLAUDE.md` | inséré dans le `CLAUDE.md` rendu, à la place de `{{PERSO_CLAUDE_MD}}` |
 | `CLAUDE.complet.md` | remplace tout le `CLAUDE.md` du dépôt, et fait ignorer le `CLAUDE.md` perso — pour une machine qui n'a que des sessions sans humain, un serveur ou une CI. ⚠️ Les règles du dépôt ne suivent plus : à recopier quand elles changent |
+| `outils-d-automatisation.md` | vos outils par forme d'automatisation, avec leur effort — lu par le skill `avant-d-automatiser`, qui le trouve par la variable `AVANT_D_AUTOMATISER_OUTILS` de `settings.json`. Sans lui, le skill s'arrête à la forme |
 
 Dans ce `CLAUDE.md` comme dans `CLAUDE.complet.md`, `{{PERSO}}` est remplacé par le chemin du dossier perso, normalisé :
 `{{PERSO}}/../notes/USER.md` devient le chemin absolu du `notes/USER.md` voisin.

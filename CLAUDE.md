@@ -31,6 +31,7 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 - Ne jamais répéter ce qui vient d'être dit — **sauf une question restée sans réponse**
 - Avant toute implémentation : spec Markdown d'abord
 - Pas d'options non demandées
+- Avant de proposer ou de construire une automatisation : passer par le skill `avant-d-automatiser`
 
 ⚠️ **Une question sans réponse se repose en entier, jamais par renvoi.** Un « ma question reste
 ouverte » est un accusé de réception, pas une question : l'utilisateur ne peut pas y répondre sans
