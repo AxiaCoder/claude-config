@@ -175,6 +175,79 @@ def verifier_entrees_limites() -> list[str]:
     return defauts
 
 
+def lancer_brut(*arguments: str) -> tuple[int, dict | None, str]:
+    """Lance choisir_la_forme.py ; rend le code de sortie, le JSON de stdout (None s'il n'en est pas) et stderr."""
+    res = subprocess.run(
+        [sys.executable, str(_ICI / "choisir_la_forme.py"), *arguments],
+        capture_output=True, timeout=30,
+    )
+    try:
+        sortie = json.loads(res.stdout.decode("utf-8"))
+    except ValueError:
+        sortie = None
+    return res.returncode, sortie, res.stderr.decode("utf-8")
+
+
+def erreur_json(arguments: tuple[str, ...], fragment: str = "") -> str | None:
+    """Rend un défaut si ces arguments ne donnent pas une erreur JSON, exit 0, contenant fragment."""
+    code, sortie, _ = lancer_brut(*arguments)
+    if code != 0 or not isinstance(sortie, dict) or "error" not in sortie or "forme" in sortie:
+        return f"{arguments!r} : exit {code}, sortie {sortie}"
+    if fragment and fragment not in sortie["error"]:
+        return f"{arguments!r} : l'erreur ne nomme pas {fragment!r} : {sortie['error']!r}"
+    return None
+
+
+def verifier_faits_non_booleens() -> list[str]:
+    """--json : un fait qui n'est pas true/false est refusé, jamais converti."""
+    defauts: list[str] = []
+    for valeur in ("non", "false", "true", 1, 0, None, [], {}):
+        defaut = erreur_json(("--json", json.dumps({"en_continu": valeur})), "en_continu")
+        if defaut:
+            defauts.append(defaut)
+    code, sortie, _ = lancer_brut("--json", json.dumps({"en_continu": False, "colle_entre_services": True}))
+    if code != 0 or not sortie or sortie.get("forme") != 2:
+        defauts.append(f"booléens stricts refusés : {sortie}")
+    return defauts
+
+
+def verifier_cles_json() -> list[str]:
+    """--json : clé inconnue refusée et nommée ; clé à tirets lue comme sa forme à soulignés."""
+    defauts: list[str] = []
+    defaut = erreur_json(("--json", json.dumps({"inconnu": True})), "inconnu")
+    if defaut:
+        defauts.append(defaut)
+    defaut = erreur_json(("--json", json.dumps({"en_continu": True, "sans_surveilance": True})), "sans_surveilance")
+    if defaut:
+        defauts.append(defaut)
+    for faits, attendu in (({"en-continu": True}, 7),
+                           ({"lance-par-l-utilisateur": True, "jugement": "une-etape"}, 5)):
+        code, sortie, _ = lancer_brut("--json", json.dumps(faits))
+        if code != 0 or not sortie or sortie.get("forme") != attendu:
+            defauts.append(f"clé à tirets {faits} : forme {sortie and sortie.get('forme')} au lieu de {attendu}")
+    return defauts
+
+
+def verifier_drapeau_inconnu() -> list[str]:
+    """Drapeau inconnu : erreur JSON sur stdout, exit 0, pas d'usage argparse."""
+    defauts: list[str] = []
+    for arguments in (("--nope",), ("--en-continu", "--sans-surveilance"), ("positionnel",)):
+        defaut = erreur_json(arguments)
+        if defaut:
+            defauts.append(defaut)
+    return defauts
+
+
+def verifier_json_vide() -> list[str]:
+    """--json '' est une erreur, pas un repli silencieux sur les drapeaux."""
+    defauts: list[str] = []
+    for arguments in (("--json", ""), ("--en-continu", "--json", "")):
+        defaut = erreur_json(arguments)
+        if defaut:
+            defauts.append(defaut)
+    return defauts
+
+
 def main() -> int:
     """Joue toutes les vérifications et rend 1 si l'une d'elles relève un défaut."""
     echec = False
@@ -185,7 +258,11 @@ def main() -> int:
                        ("faits contradictoires", verifier_contradictions),
                        ("remarques", verifier_remarques),
                        ("modificateur", verifier_modificateur),
-                       ("entrées limites", verifier_entrees_limites)):
+                       ("entrées limites", verifier_entrees_limites),
+                       ("--json : faits non booléens refusés", verifier_faits_non_booleens),
+                       ("--json : clés inconnues ou à tirets", verifier_cles_json),
+                       ("drapeau inconnu -> erreur JSON", verifier_drapeau_inconnu),
+                       ("--json vide -> erreur", verifier_json_vide)):
         defauts = verif()
         echec = echec or bool(defauts)
         print(f"{'  ok ' if not defauts else 'ECHEC'} {nom}")

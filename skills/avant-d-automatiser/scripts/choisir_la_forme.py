@@ -34,6 +34,10 @@ Decision order:
   9. evenement_declencheur                        -> 1 Réagir à un événement
   10. nothing else                                -> no form (facts missing)
 
+--json keys may use hyphens or underscores; facts must be exactly true/false.
+An unknown key or flag, a non-boolean fact, an empty --json or a bad jugement
+(case-sensitive) prints {"error": ...} instead of a decision.
+
 Usage:
   choisir_la_forme.py --jugement une-etape --sans-surveillance
   choisir_la_forme.py --json '{"jugement": "aucun", "colle_entre_services": true}'
@@ -129,26 +133,49 @@ def choisir(f):
 
 
 def normaliser(data):
-    """Turn a raw facts mapping into the normalized facts dict; raise ValueError on a bad jugement."""
-    jugement = str(data.get("jugement", "aucun")).replace("-", "_")
+    """Turn a raw facts mapping into the normalized facts dict.
+
+    Keys may use hyphens or underscores. Raises ValueError, naming the key, on an
+    unknown key, a fact that is not exactly true/false, or a bad jugement (case-sensitive).
+    """
+    brut = {}
+    for cle, valeur in data.items():
+        nom = str(cle).replace("-", "_")
+        if nom != "jugement" and nom not in BOOLEENS:
+            raise ValueError(f"unknown fact: {cle}")
+        brut[nom] = valeur
+    jugement = str(brut.get("jugement", "aucun")).replace("-", "_")
     if jugement not in JUGEMENTS:
         raise ValueError(f"jugement must be one of {', '.join(JUGEMENTS)}")
-    f = {k: bool(data.get(k, False)) for k in BOOLEENS}
+    f = {}
+    for fait in BOOLEENS:
+        valeur = brut.get(fait, False)
+        if not isinstance(valeur, bool):
+            raise ValueError(f"{fait} must be true or false, got {json.dumps(valeur)}")
+        f[fait] = valeur
     f["jugement"] = jugement
     return f
 
 
+class ParseurSansSortie(argparse.ArgumentParser):
+    """ArgumentParser that raises ValueError instead of printing usage and exiting 2."""
+
+    def error(self, message):
+        """Raise ValueError carrying argparse's message."""
+        raise ValueError(message)
+
+
 def main():
-    """Parse flags or --json, print the decision as JSON."""
-    ap = argparse.ArgumentParser(description="Pick the cheapest automation form from closed facts.")
+    """Parse flags or --json, print the decision as JSON; any bad input prints {"error": ...}."""
+    ap = ParseurSansSortie(description="Pick the cheapest automation form from closed facts.")
     for fait in BOOLEENS:
         ap.add_argument("--" + fait.replace("_", "-"), action="store_true")
     ap.add_argument("--jugement", default="aucun",
                     help="aucun | une-etape | chaque-etape (default: aucun)")
     ap.add_argument("--json", help="JSON object of facts (overrides flags)")
-    args = ap.parse_args()
     try:
-        if args.json:
+        args = ap.parse_args()
+        if args.json is not None:
             data = json.loads(args.json)
             if not isinstance(data, dict):
                 raise ValueError("--json must be a JSON object of facts")
