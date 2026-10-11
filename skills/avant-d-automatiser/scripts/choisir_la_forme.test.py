@@ -248,11 +248,34 @@ def verifier_json_vide() -> list[str]:
     return defauts
 
 
+CAS_SANS_JUGEMENT = [
+    ("événement + sans surveillance", ["--evenement-declencheur", "--sans-surveillance"], 1),
+    ("colle + sans surveillance", ["--colle-entre-services", "--sans-surveillance"], 2),
+    ("colle + logique à tester", ["--colle-entre-services", "--logique-a-tester"], 3),
+    ("sans surveillance seul", ["--sans-surveillance"], 3),
+    ("lancé à la main seul", ["--lance-par-l-utilisateur"], 3),
+]
+
+
+def verifier_sans_surveillance_ne_monte_pas() -> list[str]:
+    """Sans jugement, sans_surveillance ne fait pas monter 1 ou 2 vers 3 ; drapeaux et --json concordent."""
+    defauts: list[str] = []
+    for nom, arguments, attendu in CAS_SANS_JUGEMENT:
+        _, par_drapeaux = lancer(*arguments)
+        _, par_json = lancer("--json", json.dumps(faits_json(arguments)))
+        if par_drapeaux.get("forme") != attendu:
+            defauts.append(f"{nom} (drapeaux) : forme {par_drapeaux.get('forme')} au lieu de {attendu}")
+        if par_json.get("forme") != attendu:
+            defauts.append(f"{nom} (--json) : forme {par_json.get('forme')} au lieu de {attendu}")
+    return defauts
+
+
 def main() -> int:
     """Joue toutes les vérifications et rend 1 si l'une d'elles relève un défaut."""
     echec = False
     for nom, verif in (("formes 0-7", verifier_formes),
                        ("--json", verifier_json),
+                       ("sans surveillance ne fait pas monter 1-2", verifier_sans_surveillance_ne_monte_pas),
                        ("parité drapeaux / --json", verifier_parite),
                        ("--json prime sur les drapeaux", verifier_json_prime_sur_drapeaux),
                        ("faits contradictoires", verifier_contradictions),

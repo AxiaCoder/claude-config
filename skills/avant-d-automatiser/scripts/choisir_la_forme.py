@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# Adapted from glebis/claude-skills (the-goal), commit 3b88261, MIT License,
-# Copyright (c) 2025-2026 Gleb Kalinin.
+# Same approach as recommend_rung.py in glebis/claude-skills (the-goal), commit 3b88261.
 """Pick the cheapest automation form that relieves the constraint, from closed facts.
 
 Claude gathers the facts; this script decides, so the choice is repeatable. The
@@ -21,18 +20,18 @@ Modifier:
   ne_doit_jamais_echouer_en_silence   a failure must always surface
 
 Decision order:
-  1. exploitation_suffit                          -> 0 Ne rien construire
-  2. en_continu                                   -> 7 Service permanent
+  1. exploitation_suffit                           -> 0 Ne rien construire
+  2. en_continu                                    -> 7 Service permanent
   3. jugement chaque_etape, sans_surveillance
-     and not lance_par_l_utilisateur              -> 6 Agent autonome
-  4. jugement chaque_etape                        -> 5 Commande lancée à la main
-  5. jugement une_etape, lance_par_l_utilisateur  -> 5 Commande lancée à la main
-  6. jugement une_etape                           -> 4 Script avec une étape d'IA
-  7. logique_a_tester or lance_par_l_utilisateur
-     or sans_surveillance                         -> 3 Script déterministe planifié
-  8. colle_entre_services                         -> 2 Relier des services
-  9. evenement_declencheur                        -> 1 Réagir à un événement
-  10. nothing else                                -> no form (facts missing)
+     and not lance_par_l_utilisateur               -> 6 Agent autonome
+  4. jugement chaque_etape                         -> 5 Commande lancée à la main
+  5. jugement une_etape, lance_par_l_utilisateur   -> 5 Commande lancée à la main
+  6. jugement une_etape                            -> 4 Script avec une étape d'IA
+  7. logique_a_tester                              -> 3 Script déterministe planifié
+  8. colle_entre_services                          -> 2 Relier des services
+  9. evenement_declencheur                         -> 1 Réagir à un événement
+  10. lance_par_l_utilisateur or sans_surveillance -> 3 Script déterministe planifié
+  11. nothing else                                 -> no form (facts missing)
 
 --json keys may use hyphens or underscores; facts must be exactly true/false.
 An unknown key or flag, a non-boolean fact, an empty --json or a bad jugement
@@ -87,12 +86,14 @@ def forme_de_base(f):
         if f["lance_par_l_utilisateur"]:
             return 5, "Une étape de jugement, lancée par l'utilisateur : une commande à la main."
         return 4, "Tout est fixe sauf un jugement : un script avec une seule étape d'IA."
-    if f["logique_a_tester"] or f["lance_par_l_utilisateur"] or f["sans_surveillance"]:
+    if f["logique_a_tester"]:
         return 3, "Étapes fixes, sans jugement : un script déterministe, testé et versionné."
     if f["colle_entre_services"]:
         return 2, "Colle entre services, sans jugement : relier les services."
     if f["evenement_declencheur"]:
         return 1, "Un fait déclenche une action fixe : réagir à l'événement."
+    if f["lance_par_l_utilisateur"] or f["sans_surveillance"]:
+        return 3, "Étapes fixes, sans jugement : un script déterministe, testé et versionné."
     return None, "Aucun fait ne désigne une forme : préciser les faits."
 
 
@@ -109,6 +110,8 @@ def remarques(forme, f):
         notes.append("IA à chaque étape sans humain : vérifier qu'une forme plus basse ne suffit pas.")
     if f["lance_par_l_utilisateur"] and f["sans_surveillance"]:
         notes.append("Faits contradictoires : lancé par l'utilisateur et sans surveillance.")
+    if f["evenement_declencheur"] and f["lance_par_l_utilisateur"]:
+        notes.append("Faits contradictoires : déclenché par un événement et lancé à la main.")
     return notes
 
 

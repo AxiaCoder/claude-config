@@ -28,7 +28,7 @@ dessus — ou aucune. Porté de `the-goal` (glebis/claude-skills, MIT), d'après
 
 ## Le déroulé
 
-**Raccourci** — goulot déjà connu avec certitude → étapes 4 à 6 directement.
+**Raccourci** — goulot déjà connu → étape 1 (but et débit), puis 4 à 6.
 
 1. **But et débit.** Une phrase, et un **taux**. Sans taux → s'arrêter et le chercher avec
    l'utilisateur. « Gagner du temps » est refusé : baisser la dépense n'est pas monter le débit —
@@ -79,7 +79,7 @@ dessus — ou aucune. Porté de `the-goal` (glebis/claude-skills, MIT), d'après
    Du moins cher au plus cher, la première qui suffit. **L'IA seulement là où il faut juger** ; le
    reste déterministe, quitte à découper.
 6. **Outil.** Claude lit le fichier désigné par la variable d'environnement
-   `AVANT_D_AUTOMATISER_OUTILS` — une ligne par couple *Forme | Outil | Effort pour l'utilisateur |
+   `AVANT_D_AUTOMATISER_OUTILS` — étendre `~` avant de lire le chemin — une ligne par couple *Forme | Outil | Effort pour l'utilisateur |
    Effort pour Claude*. Parmi les outils de la forme retenue : le moins d'effort **pour
    l'utilisateur**, puis le moins cher à faire tourner — son temps est souvent le goulot. Un outil
    **non éprouvé** (Claude n'a jamais livré de cas réel avec) vaut effort fort.

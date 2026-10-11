@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Adapted from glebis/claude-skills (the-goal), commit 3b88261, MIT License,
 # Copyright (c) 2025-2026 Gleb Kalinin.
+# Full license text: ../LICENSE-the-goal
 """Deterministically rank candidate steps to find the binding constraint (Herbie).
 
 The LLM elicits the qualitative picture and maps it to ordinal scores (0..3);
