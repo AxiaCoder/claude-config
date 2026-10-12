@@ -268,15 +268,35 @@ brief porte le rang de passe — un agent neuf ne compte pas tout seul, c'est le
 le compte. Au même écart constaté deux fois, `qa` rend `desaccord` : ce n'est plus un défaut,
 c'est un critère qui ne tranche pas, et ça se règle avec l'utilisateur.
 
-Ce qui se plafonne, c'est ce qui tourne **en même temps** :
+Ce qui se plafonne, c'est ce qui tourne **en même temps** — et le plafond dépend de ce que
+l'agent touche, pas d'un chiffre unique :
 
-- **2 en vol** par défaut, et seulement sur des pistes qui ne partagent ni fichiers ni contexte ;
-- **4 au maximum**, quand c'est demandé ou que le gain d'horloge est évident.
+| L'agent | En même temps |
+|---|---|
+| **écrit** dans l'arbre de travail | **1** |
+| **pilote un état partagé** — navigateur, serveur de dev, base de test | **2**, chacun avec ses propres onglets ou ressources |
+| **ne fait que lire** — exploration, recherche, `reviewer` | **autant que de pistes indépendantes** |
 
-⚠️ **Un seul agent qui écrit à la fois.** L'arbre de travail est un état partagé que rien ne
-verrouille : deux agents qui éditent en parallèle, ou un qui édite pendant qu'un autre relit, se
-marchent dessus sans que rien ne le signale. Les lecteurs (`reviewer`, exploration) peuvent aller
-à plusieurs.
+⚠️ **Un seul agent qui écrit à la fois, et personne ne relit l'arbre pendant qu'il écrit.**
+L'arbre de travail est un état partagé que rien ne verrouille : deux agents qui éditent en
+parallèle, ou un qui édite pendant qu'un autre relit, se marchent dessus sans que rien ne le
+signale. ⇒ Les plafonds se cumulent entre catégories, sauf celui-là : à côté d'un écrivain ne
+tourne rien qui touche l'arbre — une recherche web, un autre dépôt, un navigateur, oui.
+
+⚠️ **Le navigateur est un état partagé, même sans fichier commun.** Constaté le 12/10 : deux
+agents de recherche d'offres dans le même Chrome, le premier clic du second est tombé dans
+l'onglet que pilotait l'autre. ⇒ Chacun crée ses onglets et ne touche qu'à eux ; le découpage
+suit **la charge de chaque source**, pas un agent par site — la même passe a montré une source
+à 7 min contre quatre réunies à 4. **Le 2 vient de là** : l'extension donne un seul groupe
+d'onglets à toute la session, donc l'isolement tient à la discipline de chaque agent, pas à un
+mécanisme — chaque agent de plus est une collision possible de plus.
+
+📌 **Pour les lecteurs, la limite est le coût, pas la collision** : chaque agent repart du contexte
+injecté par le harnais (mesuré au § « Les briefs se rédigent en caveman »), et chaque rapport
+revient dans la conversation.
+⇒ **Une recherche se découpe en autant d'agents qu'elle a de pistes vraiment indépendantes** —
+c'est là que le parallélisme rend l'horloge. Ce qui ne se fait pas : découper une même piste en
+morceaux pour remplir des agents.
 
 ⛔ **`qa` ne tourne pas pendant que `dev` écrit.** Il charge des pages et lance des commandes sur
 l'arbre de travail : lancé en parallèle, il exerce un état à moitié écrit et son constat ne vaut
