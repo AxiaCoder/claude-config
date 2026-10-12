@@ -162,7 +162,7 @@ plus. Le rapport entre les deux se suit par la télémétrie, quand elle est con
 
 Déléguer quand la tâche le mérite, pas par principe :
 
-- **Large ou parallélisable** — plusieurs fichiers indépendants, plusieurs pistes à explorer en même temps → `Explore` pour la recherche, `dev` pour l'écriture.
+- **Large ou parallélisable** — plusieurs fichiers indépendants, plusieurs pistes à explorer en même temps → `Explore` pour la recherche, `dev` pour l'écriture — seul sur l'arbre pendant qu'il écrit (§ « Combien à la fois »).
 - **Répétitive** — le même geste sur de nombreux fichiers.
 - **Volumineuse en lecture** — quand seule la conclusion compte et que les fichiers lus n'ont pas à rester en contexte.
 - **Sous revue** — après une implémentation conséquente, `reviewer` avant de présenter le résultat.
