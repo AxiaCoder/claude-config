@@ -1,6 +1,6 @@
 ---
 name: dev
-description: "Écrit et modifie du code source. Déléguer pour implémenter une fonctionnalité, corriger un bug ou appliquer un refactor — dès que le changement crée un fichier de code ou en touche plus de deux, qu'il se répète, ou qu'il peut avancer pendant que la session principale fait autre chose — jamais à côté d'un autre agent qui écrit. Exemples : « implémente l'endpoint de recherche », « corrige la validation du formulaire », « passe ces douze composants en TypeScript »."
+description: "Écrit et modifie du code source. Déléguer pour implémenter une fonctionnalité, corriger un bug ou appliquer un refactor — dès que le changement crée un fichier de code ou en touche plus de deux, qu'il se répète, ou qu'il peut avancer pendant que la session principale fait autre chose — jamais à côté d'un autre agent qui touche l'arbre de travail. Exemples : « implémente l'endpoint de recherche », « corrige la validation du formulaire », « passe ces douze composants en TypeScript »."
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 color: green
