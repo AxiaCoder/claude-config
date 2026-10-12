@@ -281,7 +281,7 @@ l'agent touche, pas d'un chiffre unique :
 L'arbre de travail est un état partagé que rien ne verrouille : deux agents qui éditent en
 parallèle, ou un qui édite pendant qu'un autre relit, se marchent dessus sans que rien ne le
 signale. ⇒ Les plafonds se cumulent entre catégories, sauf celui-là : à côté d'un écrivain ne
-tournent que des lecteurs qui ne touchent pas l'arbre — recherche web, autre dépôt.
+tourne rien qui touche l'arbre — une recherche web, un autre dépôt, un navigateur, oui.
 
 ⚠️ **Le navigateur est un état partagé, même sans fichier commun.** Constaté le 12/10 : deux
 agents de recherche d'offres dans le même Chrome, le premier clic du second est tombé dans
