@@ -129,6 +129,14 @@ LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
 `claude.ai/code/session_…`, même quand l'outil les fournit comme attribution. Le
 `Co-Authored-By` et la ligne « Generated with Claude Code » restent.
 
+**Jira : la CLI `twg` d'Atlassian d'abord, le MCP en secours.** Une écriture par le MCP renvoie
+le ticket entier (~5 000 caractères), `twg` ~570 ; une recherche JQL de cinq tickets ~6 500
+contre ~1 550 _(mesuré le 13/10)_. Toujours `--output json --output-summary none`, et
+`--select` pour ne garder que les chemins utiles (`data.issues.key,data.issues.status.name`) :
+un chemin faux rend tout, avec un avertissement. Champs personnalisés par `--field
+customfield_*`, sprint par `--sprint`, transition par `--status`. ⇒ `twg help describe "jira
+workitem <commande>"` donne les options exactes.
+
 ## Délégation aux sous-agents
 
 ⚠️ **Ce qui fait couper un agent, c'est l'exploration, pas la tâche.** Mesuré sur une session de
