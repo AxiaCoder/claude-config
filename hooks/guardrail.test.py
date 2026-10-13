@@ -132,6 +132,11 @@ CAS: tuple[tuple[str, str], ...] = (
     ("REFUS", "rm -rf \"/tmp/${A:?}/${B}\""),
     ("PASSE", "rm -rf \"${A:?}/${B:?}/dist\""),
     ("PASSE", "rm -rf ${DIR:?}/build"),
+    ("REFUS", "rm -rf /tmp/${USER:?/x}/../../home/u"),
+    ("REFUS", "rm -rf /tmp/${USER:?/a/b}/../../../etc"),
+    ("REFUS", "rm -rf \"/tmp/${USER:?\"}/x\"}/../../home/u\""),
+    ("REFUS", "rm -rf /tmp/${USER:?\\}/x}/../../home/u"),
+    ("REFUS", "rm -rf /tmp/${USER:?{a,b}}"),
 )
 
 

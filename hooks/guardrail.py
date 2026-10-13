@@ -53,7 +53,7 @@ _RM_RECURSIVE = re.compile(
 )
 # Le seul `$` et la seule accolade admis dans une cible, lus sur le texte brut : tout
 # autre `$` (quote `$'…'`, variable non gardée) ou accolade (expansion) fait refuser.
-_GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?[^}]*\}")
+_GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?\}")
 # Coupe la liste des cibles au premier separateur de commande.
 _COMMAND_BREAK = re.compile(r"[;&|\n)]")
 # Une redirection se RETIRE, elle ne tronque pas. Tronquer a la premiere flechette
