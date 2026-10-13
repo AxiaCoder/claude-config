@@ -57,13 +57,17 @@ clos sans l'autre, et le premier qui part laisse le second sans état stable.
 ## 3. Validation
 
 - Affiche le ticket complet, et attends la validation de l'utilisateur.
-- Puis crée-le via le MCP Jira, dans le projet demandé.
+- Puis crée-le par `twg jira workitem create`, champs personnalisés par `--field customfield_*`,
+  dans le projet demandé ; le MCP Jira en secours (`CLAUDE.md` § Outillage).
 - Une épique se crée directement dans le statut de départ du projet, jamais en brouillon.
 
 ## Le sprint
 
-Le MCP Atlassian n'expose aucun outil de sprint : le sprint s'écrit par son **id numérique** dans
-`customfield_10020`, qui refuse le nom.
+Par `twg` : `--sprint <nom ou id>` à la création ou à la mise à jour (`twg jira workitem update
+--id <CLÉ> --sprint "<nom>"`).
+
+Par le MCP, en secours : il n'expose aucun outil de sprint, le sprint s'écrit par son **id
+numérique** dans `customfield_10020`, qui refuse le nom.
 
 ⇒ **L'id se lit, il ne se calcule pas.** Une JQL qui demande le champ le rend en entier :
 

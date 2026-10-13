@@ -11,7 +11,8 @@ la remplace là où ils se contredisent.
 
 ## 1. Le ticket
 
-Récupère-le via le MCP Jira — la clé est celle du projet courant, jamais un exemple codé ici.
+Récupère-le par `twg jira workitem get <CLÉ>`, le MCP Jira en secours (`CLAUDE.md` § Outillage) —
+la clé est celle du projet courant, jamais un exemple codé ici.
 
 ## 2. Le topo, c'est la paraphrase du ticket
 
