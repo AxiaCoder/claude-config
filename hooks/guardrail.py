@@ -43,6 +43,8 @@ DISPOSABLE_NAMES = frozenset(
     }
 )
 TEMP_ROOTS = ("/tmp/", "/private/tmp/", "/var/tmp/", "/var/folders/")
+# Le temp d'un utilisateur Windows, sous sa forme `C:/` comme sous celle de Git Bash (`/c/`).
+_WINDOWS_TEMP_ROOT = re.compile(r"^(?:[a-z]:|/[a-z])/users/[^/]+/appdata/local/temp/", re.IGNORECASE)
 # Les formes longues de GNU coreutils comptent autant que les courtes : `--recursive`
 # et `--force` existent sur Linux, et `-\w+` ne peut pas les reconnaitre puisque `\w`
 # n'admet pas le tiret. Sans elles le garde laissait passer une suppression de la racine.
@@ -121,7 +123,7 @@ def _rebuilds_itself(target: str) -> bool:
     path = posixpath.normpath(target.strip("'\"").replace("\\", "/")).rstrip("/")
     if not path or path in {".", ".."}:
         return False
-    if any(path.startswith(root) for root in TEMP_ROOTS):
+    if any(path.startswith(root) for root in TEMP_ROOTS) or _WINDOWS_TEMP_ROOT.match(path):
         return True
     return path.rsplit("/", 1)[-1] in DISPOSABLE_NAMES
 

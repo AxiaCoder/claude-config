@@ -63,6 +63,14 @@ CAS: tuple[tuple[str, str], ...] = (
     ("REFUS", "rm -rf ${DIR}/sous"),
     # --- doivent passer : la cible se reconstruit ---
     ("PASSE", "rm -rf /tmp/essai"),
+    ("PASSE", "rm -rf C:/Users/moi/AppData/Local/Temp/claude/x/scratchpad/wt"),
+    ("PASSE", r"rm -rf C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad"),
+    ("PASSE", 'rm -rf "/c/Users/moi/AppData/Local/Temp/claude/x/scratchpad/wt"'),
+    # --- le temp Windows ne couvre que son propre contenu ---
+    ("REFUS", "rm -rf C:/Users/moi/AppData/Local/Temp"),
+    ("REFUS", "rm -rf C:/Users/moi/AppData/Local/Temp/../../Documents"),
+    ("REFUS", "rm -rf C:/Users/moi/AppData/Local"),
+    ("REFUS", "rm -rf C:/Windows/Temp/x"),
     ("PASSE", "rm -rf /private/tmp/claude-501/x/scratchpad"),
     ("PASSE", "rm -rf node_modules"),
     ("PASSE", "rm -rf ./dist"),
