@@ -43,6 +43,7 @@ CAS: tuple[tuple[str, str], ...] = (
     ("REFUS", r"rm -rf C:/Users/moi/AppData/Local/Temp/\.\./\.\./\.\./Documents"),
     ("REFUS", "rm -rf /tmp/'..'/etc"),
     ("REFUS", 'rm -rf /tmp/".."/etc'),
+    ("REFUS", """rm -rf "'"/../tmp/x"""),
     ("REFUS", r"rm -rf C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad"),
     ("PASSE", r"rm -rf 'C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad'"),
     ("PASSE", r'rm -rf "C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad"'),
@@ -117,6 +118,13 @@ CAS: tuple[tuple[str, str], ...] = (
     ('REFUS', 'rm -rf 2>/dev/null /etc'),
     ('REFUS', 'rm -rf > journal.txt /'),
     ('PASSE', 'rm -rf 2>/dev/null /tmp/essai'),
+    # --- expansions que bash fait avant rm ---
+    ("REFUS", "rm -rf /tmp/{..,}/etc"),
+    ("REFUS", "rm -rf /tmp/{x/../..,y}/etc"),
+    ("REFUS", "rm -rf /tmp/x/\\\n../../etc"),
+    ("REFUS", "rm -rf \\\n/etc"),
+    ("PASSE", "rm -rf /tmp/x/\\\nbuild"),
+    ("PASSE", "rm -rf dist\nls"),
 )
 
 

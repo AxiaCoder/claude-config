@@ -51,6 +51,8 @@ _WINDOWS_TEMP_ROOT = re.compile(r"^(?:[a-z]:|/[a-z])/users/[^/]+/appdata/local/t
 _RM_RECURSIVE = re.compile(
     r"\brm(?:\s+--?[\w-]+)*\s+(?:-\w*[rR]\w*|--recursive)(?:\s+--?[\w-]+)*"
 )
+# Une accolade hors `${` : bash l'étend en plusieurs chemins avant `rm`, `..` compris.
+_BRACE_EXPANSION = re.compile(r"(?<!\$)\{")
 # Coupe la liste des cibles au premier separateur de commande.
 _COMMAND_BREAK = re.compile(r"[;&|\n)]")
 # Une redirection se RETIRE, elle ne tronque pas. Tronquer a la premiere flechette
@@ -104,8 +106,13 @@ def check_destructive(command: str) -> str | None:
 
 
 def _deletion_targets(command: str) -> list[str]:
-    """Return the operands of every recursive `rm` found in the command."""
+    """Return the operands of every recursive `rm` found in the command.
+
+    Line continuations (`\\` + newline) are joined first, as bash does, so a newline
+    only ends the operand list when it really ends the command.
+    """
     targets: list[str] = []
+    command = command.replace("\\\n", "")
     for match in _RM_RECURSIVE.finditer(command):
         tail = _REDIRECTION.sub(" ", command[match.end():])
         tail = _COMMAND_BREAK.split(tail, maxsplit=1)[0]
@@ -152,7 +159,7 @@ def _rebuilds_itself(target: str) -> bool:
     separator: `/tmp/../etc` starts with a temporary root but names
     a system directory, and comparing the raw prefix would let it through.
     """
-    path = posixpath.normpath(target.strip("'\"").replace("\\", "/")).rstrip("/")
+    path = posixpath.normpath(target.replace("\\", "/")).rstrip("/")
     if not path or path in {".", ".."}:
         return False
     if any(path.startswith(root) for root in TEMP_ROOTS) or _WINDOWS_TEMP_ROOT.match(path):
@@ -174,6 +181,8 @@ def check_recursive_delete(command: str) -> str | None:
         # An unset variable is the classic way to delete the root: the path collapses to
         # nothing and the slash after it becomes the target. Bash only guarantees a value
         # with the `${VAR:?}` form -- `set -u` still lets an empty value through.
+        if _BRACE_EXPANSION.search(operand):
+            return f"recursive delete on a brace expansion ({operand}) -- list the paths instead"
         if "$" in operand and ":?" not in operand:
             return (
                 f"recursive delete on an unguarded variable path ({operand}) -- "
