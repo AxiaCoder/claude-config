@@ -34,7 +34,7 @@ une référence devenue fausse, une contrainte découverte en lisant le code.
 - La base à jour **sans bouger de branche** : `git fetch`, puis la branche part de `origin/<base>`.
   Jamais `checkout <base>` puis `pull` : c'est une bascule.
 - ⛔ **Une autre session dans ce dépôt ?** Le `CLAUDE.md` global dit comment le voir, et que la
-  branche part alors dans un worktree hors du dépôt.
+  branche part alors dans un worktree, dans le scratchpad de la session.
 - Sinon, l'arbre doit être propre — s'il ne l'est pas, demande quoi faire —, puis
   `git switch --no-track -c <branche> origin/<base>`.
 - ⚠️ **`--no-track` n'est pas un ornement** : sans lui, la branche suit `origin/<base>` : un `pull` tire

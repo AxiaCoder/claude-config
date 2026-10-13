@@ -106,18 +106,20 @@ def check_destructive(command: str) -> str | None:
     return None
 
 
-def _deletion_targets(command: str) -> list[str]:
+def _deletion_targets(command: str) -> list[tuple[str, int]]:
     """Return the operands of every recursive `rm` found in the command.
 
-    Line continuations (`\\` + newline) are joined first, as bash does, so a newline
-    only ends the operand list when it really ends the command.
+    Each operand comes with the offset of its `rm` in `command`. Line continuations
+    (`\\` + newline) are expected joined by the caller, as bash does, so a newline only
+    ends the operand list when it really ends the command.
     """
-    targets: list[str] = []
-    command = command.replace("\\\n", "")
+    targets: list[tuple[str, int]] = []
     for match in _RM_RECURSIVE.finditer(command):
         tail = _REDIRECTION.sub(" ", command[match.end():])
         tail = _COMMAND_BREAK.split(tail, maxsplit=1)[0]
-        targets.extend(token for token in tail.split() if not token.startswith("-"))
+        targets.extend(
+            (token, match.start()) for token in tail.split() if not token.startswith("-")
+        )
     return targets
 
 
@@ -168,6 +170,36 @@ def _rebuilds_itself(target: str) -> bool:
     return path.rsplit("/", 1)[-1] in DISPOSABLE_NAMES
 
 
+def _assigned_value(command: str, name: str, before: int) -> str | None:
+    """Return the literal value `name` receives in `command` before offset `before`.
+
+    None unless the name appears exactly once as a bare word, in a `name=value` (or
+    `export name=value`) that is a whole command of the top-level sequence, ended by `;`,
+    `&&` or a newline, with no operator, group or keyword before it, and a value that
+    holds no expansion. Any other way to set it -- `for`, `read`, `+=`, a prefix
+    assignment, a second assignment, a sourced file -- leaves its value unknown.
+    """
+    if re.search(r"(?:^|[\s;&|(])(?:source|\.|eval)\s", command):
+        return None
+    bare = list(re.finditer(rf"(?<![\w$\{{]){re.escape(name)}(?!\w)", command))
+    if len(bare) != 1 or bare[0].start() >= before:
+        return None
+    statement = re.compile(
+        rf"(?:^|[;\n])\s*(?:export\s+)?{re.escape(name)}="
+        r"(\"[^\"$`]*\"|'[^']*'|[^\s;&|()<>\"'$`]+)[ \t]*(?:;|&&|\n)"
+    )
+    match = next(
+        (m for m in statement.finditer(command) if m.start() <= bare[0].start() < m.end()),
+        None,
+    )
+    if not match:
+        return None
+    if re.search(r"[&|(){}`]|\b(?:if|then|else|elif|do|case|while|until|function)\b",
+                 command[:match.start()]):
+        return None
+    return _shell_word(match.group(1))
+
+
 def check_recursive_delete(command: str) -> str | None:
     """Refuse a recursive delete unless its target is known to rebuild itself.
 
@@ -177,7 +209,8 @@ def check_recursive_delete(command: str) -> str | None:
     instead of the prefix, and its default is to refuse: a hole matters here, where a
     false positive only costs a round trip.
     """
-    for target in _deletion_targets(command):
+    command = command.replace("\\\n", "")
+    for target, position in _deletion_targets(command):
         operand = _shell_word(target)
         unguarded = _GUARDED_VARIABLE.sub("", target)
         if "{" in unguarded:
@@ -190,8 +223,19 @@ def check_recursive_delete(command: str) -> str | None:
                 f"recursive delete on an unguarded variable path ({operand}) -- "
                 "use ${VAR:?} so the shell fails instead of expanding to nothing"
             )
-        if not _rebuilds_itself(operand):
-            return f"recursive delete on a path that does not rebuild itself ({operand})"
+        if _rebuilds_itself(operand):
+            continue
+        resolved = operand
+        for name in set(re.findall(r"\$\{(\w+):\?\}", operand)):
+            value = _assigned_value(command, name, position)
+            if value is None:
+                return (
+                    f"recursive delete on a variable whose value is unknown here ({operand}) -- "
+                    f"assign {name}=<literal path> once in the same command, or write the path"
+                )
+            resolved = resolved.replace(f"${{{name}:?}}", value)
+        if not _rebuilds_itself(resolved):
+            return f"recursive delete on a path that does not rebuild itself ({resolved})"
     return None
 
 

@@ -84,18 +84,29 @@ dépôt ?** Trois signes, dont aucun ne s'annonce seul :
 - l'arbre porte des changements que tu n'as pas faits ;
 - L'utilisateur le dit.
 
-⇒ **Oui : un worktree hors du dépôt**, `git fetch` puis
-`git worktree add --no-track -b <branche> <dossier> origin/<base>`.
+⇒ **Oui : un worktree dans le scratchpad de la session**, `git fetch` puis
+`git worktree add --no-track -b <branche> <scratchpad>/wt-<branche> origin/<base>`.
 ⛔ Jamais `switch`, `stash` ni `checkout` dans l'arbre de l'autre : il est à elle.
+
+⛔ **Jamais à côté du dépôt** (`../<dépôt>-xxx`) : il s'affiche dans l'explorateur de l'utilisateur,
+et le garde de suppression y refuse un `rm -rf`. Le scratchpad est sous le temp du système, que le
+garde laisse vider.
 
 ⛔ **Sous Windows aussi, le worktree est permis — mais jamais de jonction ni de lien vers
 `node_modules`** ou tout autre dossier du dépôt principal : sa suppression suit la jonction et
 efface la cible. Les dépendances s'y installent depuis le lockfile. Vaut pour tout worktree, celui
 de `tester` compris.
 
-⚠️ **Après le merge, le worktree se retire avec sa branche locale** — `git worktree remove`, puis
-`git branch -D` une fois la PR `MERGED` selon `gh pr view` : après un squash, `-d` refuse la branche
-comme non fusionnée. Sinon il traîne : six trouvés le 29/09, dont aucun n'avait plus d'usage.
+⚠️ **Un worktree se retire dès qu'il ne sert plus** — par la session qui l'a créé, avec sa branche
+locale : `git worktree remove --force <dossier>`, puis `git branch -D` une fois la PR `MERGED` selon
+`gh pr view` (après un squash, `-d` refuse la branche comme non fusionnée). Sinon il traîne : six
+trouvés le 29/09, dont aucun n'avait plus d'usage.
+
+⇒ **Toute session qui merge balaie le dépôt**, pas seulement sa PR : pour chaque entrée de
+`git worktree list` hors de l'arbre principal, `gh pr view <branche>` ; `MERGED` ou `CLOSED` → elle
+la retire comme ci-dessus. C'est ce qui rattrape le worktree d'une PR mergée depuis une autre
+session ou l'autre machine. 📌 Une session ne voit que les worktrees de sa machine : celui du Windows
+mergé depuis le Mac part au prochain merge sur le Windows, dans ce dépôt.
 
 ## Actions interdites sans permission explicite
 
