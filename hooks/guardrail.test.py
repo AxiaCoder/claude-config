@@ -185,6 +185,19 @@ CAS: tuple[tuple[str, str], ...] = (
     ("REFUS", 'S=/tmp/x; . ./evil.sh; rm -rf "${S:?}"'),
     ("REFUS", 'S=/tmp/x; source ./evil.sh; rm -rf "${S:?}"'),
     ("REFUS", 'S=/tmp/x; eval "$X"; rm -rf "${S:?}"'),
+    ("REFUS", 'S="/tmp/x /d/Documents/precious"; rm -rf ${S:?}'),
+    ("REFUS", "S='/d/Documents/precious /tmp/node_modules'; rm -rf ${S:?}"),
+    ("REFUS", 'S="/tmp/x*"; rm -rf ${S:?}'),
+    ("REFUS", '\x0bS=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", '\x0cS=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", '\x1cS=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", '\xa0S=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", 'export\x0bS=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", 'export\x0cS=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", 'export\x1cS=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("REFUS", 'export\xa0S=C:/Users/moi/AppData/Local/Temp/x; rm -rf "${S:?}"'),
+    ("PASSE", 'S=/tmp/x; rm -rf ${S:?}/wt'),
+    ("PASSE", 'S="C:/Users/moi/AppData/Local/Temp/a-b_c.d"; rm -rf "${S:?}"'),
 )
 
 

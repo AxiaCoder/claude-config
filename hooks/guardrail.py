@@ -55,9 +55,11 @@ _RM_RECURSIVE = re.compile(
 # autre `$` (quote `$'…'`, variable non gardée) ou accolade (expansion) fait refuser.
 _GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?\}")
 # Une assignation littérale qui ouvre la commande, suivie de `;` ou `&&` et des blancs
-# qui précèdent la commande suivante.
+# qui précèdent la commande suivante. La valeur n'admet ni blanc ni joker : bash ne peut
+# pas la découper en plusieurs cibles, citée ou non. Seuls les blancs que bash reconnaît
+# comme séparateurs sont admis autour.
 _LEADING_ASSIGNMENT = re.compile(
-    r"\s*(?:export\s+)?([A-Za-z]\w*)=(\"(?:[^\"$`\\]|\\[^\"$`\\])*\"|'[^']*'|[^\s;&|()<>\"'$`\\#]+)"
+    r"[ \t\n]*(?:export[ \t]+)?([A-Za-z]\w*)=(\"[\w./:\\-]+\"|'[\w./:\\-]+'|[\w./:\\-]+)"
     r"[ \t]*(?:;|&&)[ \t]*"
 )
 # Coupe la liste des cibles au premier separateur de commande.
@@ -224,7 +226,8 @@ def check_recursive_delete(command: str) -> str | None:
             if assignment is None or assignment[0] != name:
                 return (
                     f"recursive delete on a variable whose value is unknown here ({operand}) -- "
-                    f"open the command with {name}=<literal path>; then the rm, or write the path"
+                    "open the command with d=<literal path, no blank nor wildcard>; then the rm "
+                    "on ${d:?} -- a single-letter or lowercase name -- or write the path"
                 )
             resolved = resolved.replace(f"${{{name}:?}}", assignment[1])
         if not _rebuilds_itself(resolved):
