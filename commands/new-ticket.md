@@ -63,8 +63,8 @@ clos sans l'autre, et le premier qui part laisse le second sans état stable.
 
 ## Le sprint
 
-Par `twg` : `--sprint <nom ou id>` à la création ou à la mise à jour (`twg jira workitem update
---id <CLÉ> --sprint "<nom>"`).
+Par `twg` : `create` n'a pas d'option de sprint, il se pose juste après la création par
+`twg jira workitem update --id <CLÉ> --sprint "<nom ou id>"`.
 
 Par le MCP, en secours : il n'expose aucun outil de sprint, le sprint s'écrit par son **id
 numérique** dans `customfield_10020`, qui refuse le nom.
