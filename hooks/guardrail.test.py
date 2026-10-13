@@ -38,6 +38,14 @@ CAS: tuple[tuple[str, str], ...] = (
     # --- traversée hors d'une racine temporaire : le chemin est normalisé avant d'être jugé ---
     ("REFUS", "rm -rf /tmp/../etc"),
     ("REFUS", "rm -rf node_modules/../.."),
+    # --- quoting de bash : le garde juge le chemin que bash lira, pas le texte brut ---
+    ("REFUS", r"rm -rf /tmp/\.\./etc"),
+    ("REFUS", r"rm -rf C:/Users/moi/AppData/Local/Temp/\.\./\.\./\.\./Documents"),
+    ("REFUS", "rm -rf /tmp/'..'/etc"),
+    ("REFUS", 'rm -rf /tmp/".."/etc'),
+    ("REFUS", r"rm -rf C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad"),
+    ("PASSE", r"rm -rf 'C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad'"),
+    ("PASSE", r'rm -rf "C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad"'),
     # --- variantes de drapeaux, courtes et longues ---
     ("REFUS", "rm -fr /"),
     ("REFUS", "rm -Rf /"),
@@ -64,7 +72,6 @@ CAS: tuple[tuple[str, str], ...] = (
     # --- doivent passer : la cible se reconstruit ---
     ("PASSE", "rm -rf /tmp/essai"),
     ("PASSE", "rm -rf C:/Users/moi/AppData/Local/Temp/claude/x/scratchpad/wt"),
-    ("PASSE", r"rm -rf C:\Users\moi\AppData\Local\Temp\claude\x\scratchpad"),
     ("PASSE", 'rm -rf "/c/Users/moi/AppData/Local/Temp/claude/x/scratchpad/wt"'),
     # --- le temp Windows ne couvre que son propre contenu ---
     ("REFUS", "rm -rf C:/Users/moi/AppData/Local/Temp"),

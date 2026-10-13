@@ -113,6 +113,38 @@ def _deletion_targets(command: str) -> list[str]:
     return targets
 
 
+def _shell_word(token: str) -> str:
+    """Return the word bash hands to the command for this token, before any expansion.
+
+    Quotes are removed wherever they sit in the token. A backslash outside single quotes
+    escapes the next character and disappears; inside double quotes it does so only
+    before `$`, a backtick, `"` or `\\`, and stays literal otherwise.
+    """
+    word: list[str] = []
+    quote: str | None = None
+    i = 0
+    while i < len(token):
+        char = token[i]
+        if quote == "'":
+            if char == "'":
+                quote = None
+            else:
+                word.append(char)
+        elif char == "\\" and i + 1 < len(token):
+            escaped = token[i + 1]
+            if quote == '"' and escaped not in '$`"\\':
+                word.append(char)
+            else:
+                word.append(escaped)
+                i += 1
+        elif char in "'\"" and quote in (None, char):
+            quote = None if quote else char
+        else:
+            word.append(char)
+        i += 1
+    return "".join(word)
+
+
 def _rebuilds_itself(target: str) -> bool:
     """Say whether deleting this path destroys anything that cannot be regenerated.
 
@@ -138,7 +170,7 @@ def check_recursive_delete(command: str) -> str | None:
     false positive only costs a round trip.
     """
     for target in _deletion_targets(command):
-        operand = target.strip("'\"")
+        operand = _shell_word(target)
         # An unset variable is the classic way to delete the root: the path collapses to
         # nothing and the slash after it becomes the target. Bash only guarantees a value
         # with the `${VAR:?}` form -- `set -u` still lets an empty value through.
