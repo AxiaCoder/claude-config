@@ -1,5 +1,5 @@
 ---
-description: Ouvre une pull request dont le corps dit le défaut, sa mesure et ce qui a été vérifié — le gabarit vient des PR déjà fusionnées ici, pas d'une convention importée
+description: À invoquer dès qu'une pull request doit s'ouvrir, même avec un corps déjà rédigé — jamais un `gh pr create` à la main. Porte tester/ci avant, reviewer après, et un corps qui dit le défaut, sa mesure et ce qui a été vérifié
 ---
 
 Ouvre une pull request depuis la branche courante.
