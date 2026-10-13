@@ -42,7 +42,7 @@ L'auteur du code est souvent celui des tests : c'est pour ça qu'un autre les po
    des commentaires, ou n'ajoute que des tests. ⚠️ Un `.json` qu'un module charge est un fichier de
    code : le modifier n'est pas « sans objet ».
 3. **Tombent-ils sans le changement ?** Rejoue les tests dans **un worktree jetable** de la base
-   que donne le brief — `git worktree add --detach <dossier hors du dépôt> <base>`, retiré avant de
+   que donne le brief — `git worktree add --detach <scratchpad>/wt-base <base>`, retiré avant de
    rendre : sans `--detach`, il verrouille la branche de base pour tout le monde —, où tu recopies les fichiers de
    test. Ses dépendances s'y installent depuis le lockfile — `pnpm install --frozen-lockfile
    --prefer-offline`, ou l'équivalent du gestionnaire du dépôt —, sans jonction (`CLAUDE.md`

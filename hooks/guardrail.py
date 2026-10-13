@@ -54,6 +54,16 @@ _RM_RECURSIVE = re.compile(
 # Le seul `$` et la seule accolade admis dans une cible, lus sur le texte brut : tout
 # autre `$` (quote `$'…'`, variable non gardée) ou accolade (expansion) fait refuser.
 _GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?\}")
+# Une assignation littérale qui ouvre la commande, suivie de `;` ou `&&` et des blancs
+# qui précèdent la commande suivante. La valeur n'admet ni blanc ni joker : bash ne peut
+# pas la découper en plusieurs cibles, citée ou non. Sans guillemets, elle n'admet pas
+# non plus d'antislash : bash le retire, et en fin de valeur il échappe le séparateur, ce
+# qui fait de l'assignation un simple préfixe d'environnement du `rm`. Seuls les blancs
+# que bash reconnaît comme séparateurs sont admis autour.
+_LEADING_ASSIGNMENT = re.compile(
+    r"[ \t\n]*(?:export[ \t]+)?([A-Za-z]\w*)=(\"[\w./:\\-]+\"|'[\w./:\\-]+'|[\w./:-]+)"
+    r"[ \t]*(?:;|&&)[ \t]*"
+)
 # Coupe la liste des cibles au premier separateur de commande.
 _COMMAND_BREAK = re.compile(r"[;&|\n)]")
 # Une redirection se RETIRE, elle ne tronque pas. Tronquer a la premiere flechette
@@ -106,18 +116,20 @@ def check_destructive(command: str) -> str | None:
     return None
 
 
-def _deletion_targets(command: str) -> list[str]:
+def _deletion_targets(command: str) -> list[tuple[str, int]]:
     """Return the operands of every recursive `rm` found in the command.
 
-    Line continuations (`\\` + newline) are joined first, as bash does, so a newline
-    only ends the operand list when it really ends the command.
+    Each operand comes with the offset of its `rm` in `command`. Line continuations
+    (`\\` + newline) are expected joined by the caller, as bash does, so a newline only
+    ends the operand list when it really ends the command.
     """
-    targets: list[str] = []
-    command = command.replace("\\\n", "")
+    targets: list[tuple[str, int]] = []
     for match in _RM_RECURSIVE.finditer(command):
         tail = _REDIRECTION.sub(" ", command[match.end():])
         tail = _COMMAND_BREAK.split(tail, maxsplit=1)[0]
-        targets.extend(token for token in tail.split() if not token.startswith("-"))
+        targets.extend(
+            (token, match.start()) for token in tail.split() if not token.startswith("-")
+        )
     return targets
 
 
@@ -168,6 +180,23 @@ def _rebuilds_itself(target: str) -> bool:
     return path.rsplit("/", 1)[-1] in DISPOSABLE_NAMES
 
 
+def _leading_assignment(command: str, rm_start: int) -> tuple[str, str] | None:
+    """Return the `(name, value)` the command opens with, when its next command is the `rm`.
+
+    None unless `command` starts with `name=<literal>` (or `export name=<literal>`),
+    followed by `;` or `&&` and directly by the recursive `rm` found at `rm_start`.
+    The name is a single letter or holds a lowercase letter, which no variable bash
+    manages itself (`1`, `_`, `PWD`, `OLDPWD`, `RANDOM`, `UID`...) does.
+    """
+    match = _LEADING_ASSIGNMENT.match(command)
+    if not match or match.end() != rm_start:
+        return None
+    name = match.group(1)
+    if len(name) > 1 and name.isupper():
+        return None
+    return name, _shell_word(match.group(2))
+
+
 def check_recursive_delete(command: str) -> str | None:
     """Refuse a recursive delete unless its target is known to rebuild itself.
 
@@ -177,7 +206,8 @@ def check_recursive_delete(command: str) -> str | None:
     instead of the prefix, and its default is to refuse: a hole matters here, where a
     false positive only costs a round trip.
     """
-    for target in _deletion_targets(command):
+    command = command.replace("\\\n", "")
+    for target, position in _deletion_targets(command):
         operand = _shell_word(target)
         unguarded = _GUARDED_VARIABLE.sub("", target)
         if "{" in unguarded:
@@ -190,8 +220,20 @@ def check_recursive_delete(command: str) -> str | None:
                 f"recursive delete on an unguarded variable path ({operand}) -- "
                 "use ${VAR:?} so the shell fails instead of expanding to nothing"
             )
-        if not _rebuilds_itself(operand):
-            return f"recursive delete on a path that does not rebuild itself ({operand})"
+        if _rebuilds_itself(operand):
+            continue
+        assignment = _leading_assignment(command, position)
+        resolved = operand
+        for name in set(re.findall(r"\$\{(\w+):\?\}", operand)):
+            if assignment is None or assignment[0] != name:
+                return (
+                    f"recursive delete on a variable whose value is unknown here ({operand}) -- "
+                    "open the command with d=<literal path, no blank nor wildcard>; then the rm "
+                    "on ${d:?} -- a single-letter or lowercase name -- or write the path"
+                )
+            resolved = resolved.replace(f"${{{name}:?}}", assignment[1])
+        if not _rebuilds_itself(resolved):
+            return f"recursive delete on a path that does not rebuild itself ({resolved})"
     return None
 
 
