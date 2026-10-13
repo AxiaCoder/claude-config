@@ -54,6 +54,12 @@ _RM_RECURSIVE = re.compile(
 # Le seul `$` et la seule accolade admis dans une cible, lus sur le texte brut : tout
 # autre `$` (quote `$'…'`, variable non gardée) ou accolade (expansion) fait refuser.
 _GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?\}")
+# Une assignation littérale qui ouvre la commande, suivie de `;` ou `&&` et des blancs
+# qui précèdent la commande suivante.
+_LEADING_ASSIGNMENT = re.compile(
+    r"\s*(?:export\s+)?([A-Za-z]\w*)=(\"(?:[^\"$`\\]|\\[^\"$`\\])*\"|'[^']*'|[^\s;&|()<>\"'$`\\#]+)"
+    r"[ \t]*(?:;|&&)[ \t]*"
+)
 # Coupe la liste des cibles au premier separateur de commande.
 _COMMAND_BREAK = re.compile(r"[;&|\n)]")
 # Une redirection se RETIRE, elle ne tronque pas. Tronquer a la premiere flechette
@@ -170,34 +176,21 @@ def _rebuilds_itself(target: str) -> bool:
     return path.rsplit("/", 1)[-1] in DISPOSABLE_NAMES
 
 
-def _assigned_value(command: str, name: str, before: int) -> str | None:
-    """Return the literal value `name` receives in `command` before offset `before`.
+def _leading_assignment(command: str, rm_start: int) -> tuple[str, str] | None:
+    """Return the `(name, value)` the command opens with, when its next command is the `rm`.
 
-    None unless the name appears exactly once as a bare word, in a `name=value` (or
-    `export name=value`) that is a whole command of the top-level sequence, ended by `;`,
-    `&&` or a newline, with no operator, group or keyword before it, and a value that
-    holds no expansion. Any other way to set it -- `for`, `read`, `+=`, a prefix
-    assignment, a second assignment, a sourced file -- leaves its value unknown.
+    None unless `command` starts with `name=<literal>` (or `export name=<literal>`),
+    followed by `;` or `&&` and directly by the recursive `rm` found at `rm_start`.
+    The name is a single letter or holds a lowercase letter, which no variable bash
+    manages itself (`1`, `_`, `PWD`, `OLDPWD`, `RANDOM`, `UID`...) does.
     """
-    if re.search(r"(?:^|[\s;&|(])(?:source|\.|eval)\s", command):
+    match = _LEADING_ASSIGNMENT.match(command)
+    if not match or match.end() != rm_start:
         return None
-    bare = list(re.finditer(rf"(?<![\w$\{{]){re.escape(name)}(?!\w)", command))
-    if len(bare) != 1 or bare[0].start() >= before:
+    name = match.group(1)
+    if len(name) > 1 and name.isupper():
         return None
-    statement = re.compile(
-        rf"(?:^|[;\n])\s*(?:export\s+)?{re.escape(name)}="
-        r"(\"[^\"$`]*\"|'[^']*'|[^\s;&|()<>\"'$`]+)[ \t]*(?:;|&&|\n)"
-    )
-    match = next(
-        (m for m in statement.finditer(command) if m.start() <= bare[0].start() < m.end()),
-        None,
-    )
-    if not match:
-        return None
-    if re.search(r"[&|(){}`]|\b(?:if|then|else|elif|do|case|while|until|function)\b",
-                 command[:match.start()]):
-        return None
-    return _shell_word(match.group(1))
+    return name, _shell_word(match.group(2))
 
 
 def check_recursive_delete(command: str) -> str | None:
@@ -225,15 +218,15 @@ def check_recursive_delete(command: str) -> str | None:
             )
         if _rebuilds_itself(operand):
             continue
+        assignment = _leading_assignment(command, position)
         resolved = operand
         for name in set(re.findall(r"\$\{(\w+):\?\}", operand)):
-            value = _assigned_value(command, name, position)
-            if value is None:
+            if assignment is None or assignment[0] != name:
                 return (
                     f"recursive delete on a variable whose value is unknown here ({operand}) -- "
-                    f"assign {name}=<literal path> once in the same command, or write the path"
+                    f"open the command with {name}=<literal path>; then the rm, or write the path"
                 )
-            resolved = resolved.replace(f"${{{name}:?}}", value)
+            resolved = resolved.replace(f"${{{name}:?}}", assignment[1])
         if not _rebuilds_itself(resolved):
             return f"recursive delete on a path that does not rebuild itself ({resolved})"
     return None

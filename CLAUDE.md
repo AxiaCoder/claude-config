@@ -104,7 +104,9 @@ trouvés le 29/09, dont aucun n'avait plus d'usage.
 
 ⇒ **Toute session qui merge balaie le dépôt**, pas seulement sa PR : pour chaque entrée de
 `git worktree list` hors de l'arbre principal, `gh pr view <branche>` ; `MERGED` ou `CLOSED` → elle
-la retire comme ci-dessus. C'est ce qui rattrape le worktree d'une PR mergée depuis une autre
+la retire **sans `--force`**, puis sa branche locale. ⛔ Un refus de `git worktree remove` se
+rapporte, il ne se force pas : ce worktree porte des changements non commités, peut-être ceux d'une
+session encore active. C'est ce qui rattrape le worktree d'une PR mergée depuis une autre
 session ou l'autre machine. 📌 Une session ne voit que les worktrees de sa machine : celui du Windows
 mergé depuis le Mac part au prochain merge sur le Windows, dans ce dépôt.
 
