@@ -144,4 +144,4 @@ dans `main`, et son contenu quitte alors tout historique vivant.
   une réponse qui est toujours oui.
 - Quand elle tombe : skill `traiter-une-review`. Il porte la suite — la seconde passe, due, et le
   critère qui en autorise une troisième.
-- Les lignes d'attribution que la session impose, si elle en impose.
+- Les lignes d'attribution que la session fournit, sauf le lien de session (`CLAUDE.md` § Outillage).
