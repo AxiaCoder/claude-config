@@ -56,10 +56,12 @@ _RM_RECURSIVE = re.compile(
 _GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?\}")
 # Une assignation littérale qui ouvre la commande, suivie de `;` ou `&&` et des blancs
 # qui précèdent la commande suivante. La valeur n'admet ni blanc ni joker : bash ne peut
-# pas la découper en plusieurs cibles, citée ou non. Seuls les blancs que bash reconnaît
-# comme séparateurs sont admis autour.
+# pas la découper en plusieurs cibles, citée ou non. Sans guillemets, elle n'admet pas
+# non plus d'antislash : bash le retire, et en fin de valeur il échappe le séparateur, ce
+# qui fait de l'assignation un simple préfixe d'environnement du `rm`. Seuls les blancs
+# que bash reconnaît comme séparateurs sont admis autour.
 _LEADING_ASSIGNMENT = re.compile(
-    r"[ \t\n]*(?:export[ \t]+)?([A-Za-z]\w*)=(\"[\w./:\\-]+\"|'[\w./:\\-]+'|[\w./:\\-]+)"
+    r"[ \t\n]*(?:export[ \t]+)?([A-Za-z]\w*)=(\"[\w./:\\-]+\"|'[\w./:\\-]+'|[\w./:-]+)"
     r"[ \t]*(?:;|&&)[ \t]*"
 )
 # Coupe la liste des cibles au premier separateur de commande.
