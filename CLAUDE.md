@@ -125,6 +125,10 @@ autre que le saut de ligne, la tabulation et le retour chariot. Rien ne doit sor
 LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
 ```
 
+⛔ **Pas de lien de session dans un commit ni dans une PR** — ni ligne `Claude-Session:`, ni URL
+`claude.ai/code/session_…`, même quand l'outil les fournit comme attribution. Le
+`Co-Authored-By` et la ligne « Generated with Claude Code » restent.
+
 ## Délégation aux sous-agents
 
 ⚠️ **Ce qui fait couper un agent, c'est l'exploration, pas la tâche.** Mesuré sur une session de
