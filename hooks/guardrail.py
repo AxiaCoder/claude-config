@@ -51,8 +51,9 @@ _WINDOWS_TEMP_ROOT = re.compile(r"^(?:[a-z]:|/[a-z])/users/[^/]+/appdata/local/t
 _RM_RECURSIVE = re.compile(
     r"\brm(?:\s+--?[\w-]+)*\s+(?:-\w*[rR]\w*|--recursive)(?:\s+--?[\w-]+)*"
 )
-# Une accolade hors `${` : bash l'étend en plusieurs chemins avant `rm`, `..` compris.
-_BRACE_EXPANSION = re.compile(r"(?<!\$)\{")
+# Le seul `$` et la seule accolade admis dans une cible, lus sur le texte brut : tout
+# autre `$` (quote `$'…'`, variable non gardée) ou accolade (expansion) fait refuser.
+_GUARDED_VARIABLE = re.compile(r"(?<!\\)\$\{\w+:\?[^}]*\}")
 # Coupe la liste des cibles au premier separateur de commande.
 _COMMAND_BREAK = re.compile(r"[;&|\n)]")
 # Une redirection se RETIRE, elle ne tronque pas. Tronquer a la premiere flechette
@@ -178,12 +179,13 @@ def check_recursive_delete(command: str) -> str | None:
     """
     for target in _deletion_targets(command):
         operand = _shell_word(target)
+        unguarded = _GUARDED_VARIABLE.sub("", target)
+        if "{" in unguarded:
+            return f"recursive delete on a brace expansion ({operand}) -- list the paths instead"
         # An unset variable is the classic way to delete the root: the path collapses to
         # nothing and the slash after it becomes the target. Bash only guarantees a value
         # with the `${VAR:?}` form -- `set -u` still lets an empty value through.
-        if _BRACE_EXPANSION.search(operand):
-            return f"recursive delete on a brace expansion ({operand}) -- list the paths instead"
-        if "$" in operand and ":?" not in operand:
+        if "$" in unguarded:
             return (
                 f"recursive delete on an unguarded variable path ({operand}) -- "
                 "use ${VAR:?} so the shell fails instead of expanding to nothing"
