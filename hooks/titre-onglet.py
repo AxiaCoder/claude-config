@@ -65,7 +65,7 @@ def session_title(transcript_path):
         if not isinstance(entry, dict):
             continue
         if entry.get("type") == "custom-title" and isinstance(entry.get("customTitle"), str) \
-                and entry["customTitle"].strip():
+                and CONTROL_CHARS.sub("", entry["customTitle"]).strip():
             return entry["customTitle"]
         if not ai_title and entry.get("type") == "ai-title" and isinstance(entry.get("aiTitle"), str):
             ai_title = entry["aiTitle"]
@@ -75,7 +75,7 @@ def session_title(transcript_path):
 def session_name(payload):
     """Return the session name: transcript title, else basename of cwd, stripped of control characters."""
     name = session_title(payload.get("transcript_path"))
-    if not name.strip():
+    if not CONTROL_CHARS.sub("", name).strip():
         cwd = payload.get("cwd") or ""
         name = os.path.basename(str(cwd).rstrip("/\\")) or str(cwd)
     return CONTROL_CHARS.sub("", name).strip()

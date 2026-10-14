@@ -163,6 +163,83 @@ def verifier_processus() -> list[str]:
     return defauts
 
 
+def verifier_cas_limites() -> list[str]:
+    """Bornes de la spec : elicitation, background_tasks absent ou mal typé, titres vides, nom vide."""
+    defauts: list[str] = []
+    cas = [
+        ({"hook_event_name": "Notification", "cwd": CWD, "notification_type": "elicitation_dialog"},
+         "✋ mon-projet"),
+        ({"hook_event_name": "Stop", "cwd": CWD}, "✅ mon-projet"),
+        ({"hook_event_name": "Stop", "cwd": CWD, "background_tasks": {"status": "running"}},
+         "✅ mon-projet"),
+        ({"hook_event_name": "Stop", "cwd": CWD, "background_tasks": ["running", None]},
+         "✅ mon-projet"),
+        ({"hook_event_name": "Stop", "cwd": CWD, "background_tasks": []}, "✅ mon-projet"),
+        ({"hook_event_name": "Stop", "cwd": "/home/axia/a\x1b\x07b\x9b"}, "✅ ab"),
+        ({"hook_event_name": "Stop"}, "✅"),
+        ({"hook_event_name": "UserPromptSubmit", "cwd": ""}, "⚙"),
+    ]
+    for charge, titre in cas:
+        rendu = _titre.render(charge)
+        if rendu != attendu(titre):
+            defauts.append(f"{charge!r} : {rendu!r} au lieu de {attendu(titre)!r}")
+    if _titre.render({"cwd": CWD}) != "":
+        defauts.append("charge sans hook_event_name rendue")
+
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [
+            {"type": "custom-title", "customTitle": "Renommée"},
+            {"type": "ai-title", "aiTitle": "Titre IA"},
+            {"type": "custom-title", "customTitle": "   "},
+            {"type": "custom-title", "customTitle": ""},
+        ])
+        nom = _titre.session_name({"transcript_path": chemin, "cwd": CWD})
+        if nom != "Renommée":
+            defauts.append(f"customTitle vide retenu : {nom!r}")
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [
+            {"type": "ai-title", "aiTitle": "Titre IA"},
+            {"type": "custom-title", "customTitle": ""},
+            {"type": "custom-title", "customTitle": 42},
+        ])
+        nom = _titre.session_name({"transcript_path": chemin, "cwd": CWD})
+        if nom != "Titre IA":
+            defauts.append(f"customTitle vide ou non textuel masque aiTitle : {nom!r}")
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [{"type": "ai-title", "aiTitle": "\x1b\x07  "}])
+        nom = _titre.session_name({"transcript_path": chemin, "cwd": CWD})
+        if nom != "mon-projet":
+            defauts.append(f"titre fait de contrôles seuls : {nom!r}")
+    with tempfile.TemporaryDirectory() as d:
+        chemin = pathlib.Path(d) / "melange.jsonl"
+        chemin.write_text(
+            '["custom-title"]\n'
+            '{"type": "custom-title", "customTitle": "Valide"}\n'
+            '{"type": "custom-title", tronqué\n'
+            '"ai-title"\n',
+            encoding="utf-8")
+        nom = _titre.session_name({"transcript_path": str(chemin), "cwd": CWD})
+        if nom != "Valide":
+            defauts.append(f"ligne invalide après le titre : {nom!r}")
+    return defauts
+
+
+def verifier_processus_silencieux() -> list[str]:
+    """Entrée invalide ou événement ignoré : exit 0, stdout et stderr vides."""
+    defauts: list[str] = []
+    entrees = [b"pas du json", b"", b"[]", b"null", b"\xff\xfe\x00",
+               json.dumps({"hook_event_name": "PreToolUse", "cwd": CWD}).encode("utf-8"),
+               json.dumps({"hook_event_name": "Notification", "cwd": CWD,
+                           "notification_type": "idle_prompt"}).encode("utf-8")]
+    for entree in entrees:
+        resultat = subprocess.run([sys.executable, str(_ICI / "titre-onglet.py")],
+                                  input=entree, capture_output=True, timeout=30)
+        if resultat.returncode != 0 or resultat.stdout or resultat.stderr:
+            defauts.append(f"entrée {entree!r} : exit {resultat.returncode}, "
+                           f"{resultat.stdout!r}, {resultat.stderr!r}")
+    return defauts
+
+
 def main() -> int:
     """Joue toutes les vérifications et rend 1 si l'une d'elles relève un défaut."""
     echec = False
@@ -171,7 +248,9 @@ def main() -> int:
                        ("transcript absent / illisible -> cwd", verifier_transcript_absent),
                        ("transcript > 100 Ko, titre en fin", verifier_gros_transcript),
                        ("caractères de contrôle retirés", verifier_controle),
-                       ("sortie du processus", verifier_processus)):
+                       ("sortie du processus", verifier_processus),
+                       ("cas limites de la spec", verifier_cas_limites),
+                       ("processus muet sur entrée invalide", verifier_processus_silencieux)):
         defauts = verif()
         echec = echec or bool(defauts)
         print(f"{'  ok ' if not defauts else 'ECHEC'} {nom}")
