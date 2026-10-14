@@ -185,6 +185,7 @@ Un marqueur qui survit au rendu arrête l'installation avant d'écrire le fichie
 | `post-write-lint` | après `Write`, `Edit` | lance `pnpm lint` — sur un projet AdonisJS seulement |
 | `collecteur-agents` | au démarrage, à la fin d'un sous-agent | pousse les métriques par sous-agent ; sans adresse configurée, il s'abstient sans faire échouer la session |
 | `statusline` | en continu | modèle, dossier, branche, contexte, quotas |
+| `titre-onglet` | à l'envoi d'un prompt, à la fin d'un tour, à une notification | titre d'onglet du terminal : `⚙` au travail, `⏳` attend une commande en arrière-plan, `✅` a rendu la main, `✋` attend l'utilisateur (demande de permission ou question — pas l'inactivité) — suivi du nom de la session ; le titre natif est coupé par `CLAUDE_CODE_DISABLE_TERMINAL_TITLE` |
 
 La télémétrie demande une instance VictoriaMetrics et son adresse dans le dossier perso
 (`TELEMETRIE_ENDPOINTS`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`) — VictoriaMetrics, Grafana et

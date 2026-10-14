@@ -71,6 +71,36 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" \"{{CLAUDE_HOME}}\\hooks\\titre-onglet.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" \"{{CLAUDE_HOME}}\\hooks\\titre-onglet.py\""
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" \"{{CLAUDE_HOME}}\\hooks\\titre-onglet.py\""
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
@@ -87,6 +117,7 @@
     "command": "\"{{PYTHON}}\" \"{{CLAUDE_HOME}}\\hooks\\statusline.py\""
   },
   "env": {
-    "OTEL_RESOURCE_ATTRIBUTES": "machine=windows"
+    "OTEL_RESOURCE_ATTRIBUTES": "machine=windows",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
   }
 }

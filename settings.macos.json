@@ -14,6 +14,36 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
@@ -82,6 +112,7 @@
     "command": "python3 \"{{CLAUDE_HOME}}/hooks/statusline.py\""
   },
   "env": {
-    "OTEL_RESOURCE_ATTRIBUTES": "machine=mac"
+    "OTEL_RESOURCE_ATTRIBUTES": "machine=mac",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
   }
 }
