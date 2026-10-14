@@ -12,6 +12,15 @@
             "command": "{{CLAUDE_HOME}}/hooks/post-write-lint.sh"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
