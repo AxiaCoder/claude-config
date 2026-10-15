@@ -4,6 +4,11 @@ description: À invoquer dès qu'une pull request doit s'ouvrir — « ouvre la 
 
 Ouvre une pull request depuis la branche courante.
 
+## 0. La surcharge du projet
+
+Si le dépôt a `.claude/surcharges/pr.md`, lis-le d'abord : il complète cette commande, et la
+remplace là où ils se contredisent.
+
 ## ⛔ D'abord, deux refus
 
 ⛔ **Pas sur `main`.** `git branch --show-current` d'abord ; sur `main`, on branche avant.
