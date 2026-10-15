@@ -139,10 +139,11 @@ LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
 ```
 
 **Tout commit écrit par Claude se termine par le trailer**
-`Co-Authored-By: <nom du modèle> <noreply@anthropic.com>`, où `<nom du modèle>` est celui que
-donne le prompt système (ex. `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`), précédé
-d'une ligne vide — quel que soit le canal : `git commit`, `developer_git_commit_proposal`,
-sous-agent. La ligne « Generated with Claude Code » ne va que dans un corps de PR.
+`Co-Authored-By: <nom du modèle> <noreply@anthropic.com>`, où `<nom du modèle>` est le nom
+complet, préfixe « Claude » compris, même quand le prompt système ne donne que `Opus 5.5`
+(ex. `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`), précédé d'une ligne vide — par
+`git commit` comme par `developer_git_commit_proposal`. La ligne « Generated with Claude Code »
+ne va que dans un corps de PR.
 
 ⛔ **Pas de lien de session dans un commit ni dans une PR** — ni ligne `Claude-Session:`, ni URL
 `claude.ai/code/session_…`, même quand l'outil les fournit comme attribution.
