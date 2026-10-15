@@ -5,6 +5,11 @@ description: Use when a review pass has just landed on a pull request, or when r
 
 # Traiter une passe de review
 
+## 0. La surcharge du projet
+
+Si le dépôt a `.claude/surcharges/traiter-une-review.md`, lis-le d'abord : il complète ce skill, et le
+remplace là où ils se contredisent.
+
 Ce skill couvre la **cadence** des passes — combien il en faut —, puis ce qui se passe une fois
 une review postée : corriger, répondre, et rendre compte. Conduire la review elle-même est un autre
 outil : `reviewer`, ou `/pr-review`.

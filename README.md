@@ -318,8 +318,8 @@ Une commande ou un skill porte le cas général ; un projet le complète par un 
 et la remplace là où elles se contredisent. Le permanent d'un projet — coordonnées Jira, format
 des branches — reste dans son `CLAUDE.md`.
 
-Lisent une surcharge : `/start-ticket`, `/new-ticket`, `/pr-review`,
-`verifier-avant-d-annoncer` et `audit-seo` — qui lit aussi les pages publiques que le
+Lisent une surcharge : `/start-ticket`, `/new-ticket`, `/pr`, `/pr-review`,
+`traiter-une-review`, `verifier-avant-d-annoncer` et `audit-seo` — qui lit aussi les pages publiques que le
 `CLAUDE.md` du projet déclare.
 
 ⛔ Un projet ne redéclare pas une commande ou un skill sous le même nom : à nom égal, la version
