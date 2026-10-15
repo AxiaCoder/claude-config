@@ -139,9 +139,9 @@ LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
 ```
 
 **Tout commit écrit par Claude se termine par le trailer**
-`Co-Authored-By: <nom du modèle> <noreply@anthropic.com>`, où `<nom du modèle>` est le nom
-complet, préfixe « Claude » compris, même quand le prompt système ne donne que `Opus 5.5`
-(ex. `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`), précédé d'une ligne vide — par
+`Co-Authored-By: <nom du modèle> <noreply@anthropic.com>`, où `<nom du modèle>` est « Claude »
+suivi du nom que donne le prompt système, sans la mention entre parenthèses (« Opus 5.5 (1M
+context) » → `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`), précédé d'une ligne vide — par
 `git commit` comme par `developer_git_commit_proposal`. La ligne « Generated with Claude Code »
 ne va que dans un corps de PR.
 
