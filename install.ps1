@@ -32,6 +32,7 @@
   betterleaks, a la version et au sha256 de git-hooks/betterleaks.version, est
   telecharge dans ~/.claude/bin pour le garde secrets du pre-commit.
 #>
+#Requires -Version 7
 [CmdletBinding()]
 param(
   [string] $Perso = '',
