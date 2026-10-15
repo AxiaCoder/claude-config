@@ -138,9 +138,15 @@ autre que le saut de ligne, la tabulation et le retour chariot. Rien ne doit sor
 LC_ALL=C grep -na "$(printf '[\001-\010\013\014\016-\037\177]')" <fichier>
 ```
 
+**Tout commit écrit par Claude se termine par le trailer**
+`Co-Authored-By: <nom du modèle> <noreply@anthropic.com>`, où `<nom du modèle>` est « Claude »
+suivi du nom que donne le prompt système, sans la mention entre parenthèses (« Opus 5.5 (1M
+context) » → `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`), précédé d'une ligne vide — par
+`git commit` comme par `developer_git_commit_proposal`. La ligne « Generated with Claude Code »
+ne va que dans un corps de PR.
+
 ⛔ **Pas de lien de session dans un commit ni dans une PR** — ni ligne `Claude-Session:`, ni URL
-`claude.ai/code/session_…`, même quand l'outil les fournit comme attribution. Le
-`Co-Authored-By` et la ligne « Generated with Claude Code » restent.
+`claude.ai/code/session_…`, même quand l'outil les fournit comme attribution.
 
 **Jira : la CLI `twg` d'Atlassian d'abord, le MCP en secours** — quand `twg` est absent du poste
 ou que `twg doctor` ne rend pas `Status: ok` dans sa section `Connectivity`. Une écriture par le MCP renvoie
