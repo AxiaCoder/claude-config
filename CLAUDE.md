@@ -343,7 +343,7 @@ extraits, pas le dossier.
 ⚠️ **Ne jamais recoller la sortie brute d'un sous-agent** comme réponse finale : elle se
 synthétise.
 
-Agents disponibles : `dev` et `reviewer` en `model: opus` ; `tester`, `qa` et `ci` en `model: sonnet`.
+Agents disponibles : `dev`, `reviewer`, `tester` et `ci` en `model: opus` ; `qa` en `model: sonnet`.
 
 ⚠️ **`ci` passe juste avant un push.** Il lit les workflows du dépôt et rejoue en local ce qui est
 rejouable. ⛔ **Vert chez lui ne promet pas une CI verte** — il écarte, il ne garantit pas. Rouge chez
