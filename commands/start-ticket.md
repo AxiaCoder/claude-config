@@ -29,12 +29,8 @@ une référence devenue fausse, une contrainte découverte en lisant le code.
 
 ## 3. Une interface sans maquette
 
-Si le ticket touche l'interface et que ni lui ni la fiche projet ne référencent une maquette, pose
-une seule question : « Cet écran n'a pas de maquette. Maquette d'abord, ou premier jet libre
-assumé ? ».
-
-- **Maquette d'abord** → skill `cadrer-un-visuel`.
-- **Premier jet libre** → une ligne dans le ticket, et le travail continue.
+Si le ticket touche l'interface et que ni lui ni la fiche projet ne référencent une maquette,
+applique le skill `cadrer-un-visuel` § « Le moment » : il porte la question et ses deux branches.
 
 ⛔ Un ticket sans interface ne déclenche rien.
 
@@ -57,6 +53,9 @@ assumé ? ».
 disparaît, et personne ne s'en aperçoit. Écris-le **avant** de passer à la suite, ou **dis
 explicitement que tu ne le notes pas**. Et ne réponds jamais « c'est couvert » sans avoir relu le
 ticket : effleurer n'est pas consigner.
+
+**Une retouche visuelle demandée par l'utilisateur** s'ajoute aussi au bloc « Reprises relevées » de
+la fiche projet (skill `cadrer-un-visuel`, § « Les interdits propres au projet »).
 
 **Découper, c'est créer de vraies sous-tâches, jamais des tickets frères** — la structure
 fonctionnellement exacte l'emporte sur celle qui se visualise le mieux. Les sous-tâches suivent le

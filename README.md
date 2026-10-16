@@ -24,8 +24,9 @@
 - **Des gardes** — `guardrail` coupe les boucles et les commandes destructrices ; un `pre-push`
   global refuse un push direct vers `main` d'un dépôt GitHub, et `garde-push` empêche l'agent de
   le désarmer.
-- **Des skills de méthode** — cadrer un projet, challenger un cadrage, déboguer en quatre phases,
-  traiter une review, vérifier avant d'annoncer, auditer un dépôt ou le SEO d'une page publique.
+- **Des skills de méthode** — cadrer un projet, cadrer un écran avant le code, challenger un
+  cadrage, déboguer en quatre phases, traiter une review, vérifier avant d'annoncer, auditer un
+  dépôt ou le SEO d'une page publique.
 - **Des commandes** — `/pr`, `/pr-review`, `/start-ticket`, `/new-ticket`.
 - **De la télémétrie** — l'OpenTelemetry natif de Claude Code, plus un collecteur qui rend aux
   sous-agents leur nom. Ce dépôt émet ; la pile qui reçoit et affiche est

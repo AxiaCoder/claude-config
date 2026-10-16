@@ -1,6 +1,6 @@
 ---
 name: cadrer-un-visuel
-description: Use when a screen or interface is about to be built without a mockup — raised by `cadrer-un-projet` or `start-ticket` when the work touches the UI and no mockup is referenced — or when the user talks about a mockup, a screen, a layout or a design. Frames the screen in conversation before any code, checks the user's design choices against a short set of UX principles and says so when one is off, then lands the decisions in the project sheet. Do not use for a pure back-end change, nor to review a screen that is already built.
+description: Use when a screen or interface is about to be built and no mockup is referenced — in the ticket or in the project sheet — typically raised by `cadrer-un-projet` or `start-ticket`. Frames the screen in conversation before any code, checks the user's design choices against a short set of UX principles and says so when one is off, then lands the decisions in the project sheet. Do not use for a pure back-end change, for a fix to a screen that already exists, when a mockup is already provided, nor to review a screen that is already built.
 ---
 
 # Cadrer un visuel en conversation
@@ -12,26 +12,33 @@ n'a pas toujours les bonnes pratiques UX, et exécuter sans rien dire ne les lui
 ## ⛔ Le moment
 
 Une interface va s'écrire, et **aucune maquette n'est référencée** — ni dans le ticket, ni dans la
-fiche projet. Le point de passage de `cadrer-un-projet` et de `start-ticket` pose une question :
-« maquette d'abord, ou premier jet libre assumé ? ».
+fiche projet. C'est ici, et nulle part ailleurs, que la question s'écrit : `cadrer-un-projet` et
+`start-ticket` y renvoient.
+
+**La question, une seule :** « Cet écran n'a pas de maquette. Maquette d'abord, ou premier jet
+libre assumé ? »
 
 | Réponse | Ce qui se passe |
 |---|---|
-| Maquette d'abord | ce skill |
-| Premier jet libre | une ligne dans le ticket ou la fiche projet, puis le travail continue — c'est un choix légitime, pris en connaissance de cause |
+| Maquette d'abord | le déroulé ci-dessous |
+| Premier jet libre | une ligne dans le ticket s'il y en a un, sinon dans la fiche projet, puis le travail continue — c'est un choix légitime, pris en connaissance de cause |
 
-⚠️ **Ne pas se déclencher sur un ticket sans interface.** Un cadrage visuel posé sur une
-correction de back-end est du bruit.
+⚠️ **Ne pas se déclencher sur un ticket sans interface**, ni sur le correctif d'un écran qui
+existe : un cadrage visuel posé là est du bruit.
 
 ## Ce que tu ne produis pas
 
-⛔ **Aucun document à part.** Les arbitrages vont dans `## Décisions & notes` de la fiche projet,
-comme le fait `cadrer-un-projet`. La maquette, elle, est un fichier de maquette.
+⛔ **Aucun document à part.** Les arbitrages vont dans `## Décisions & notes` de la fiche projet.
+**Sans fiche**, le repli est celui de `cadrer-un-projet` (§ « Ce que tu ne produis pas ») : créer
+`docs/PROJET.md` et la ligne du `CLAUDE.md` du dépôt qui le fait lire. La maquette, elle, est un
+fichier de maquette.
 
 ## Le déroulé, une étape à la fois
 
 ⛔ **Pas un formulaire** : une question, la réponse, la suivante.
 
+0. **Les reprises relevées.** Lis d'abord le bloc « Reprises relevées » de la fiche projet, s'il
+   existe : c'est ce que ce projet a déjà payé.
 1. **La charte minimale**, avant le premier écran : le ton, une couleur d'accent, une police, la
    densité. C'est ce qui évite le visuel générique. Si la fiche projet en porte une, lis-la au lieu
    de la redemander.
@@ -39,9 +46,10 @@ comme le fait `cadrer-un-projet`. La maquette, elle, est un fichier de maquette.
    secondes.
 3. **Le passage au socle** (ci-dessous) avant de dessiner.
 4. **Les états** : vide, chargement, erreur, succès, désactivé.
-5. **La maquette**, avec l'outil de maquettes disponible, aux trois tailles : bureau, tablette,
-   mobile.
-6. **L'enregistrement** dans la fiche projet.
+5. **La maquette**, avec l'outil de maquettes dont on dispose, aux trois tailles : bureau,
+   tablette, mobile. Sans outil, une description écrite de l'écran à ces trois tailles.
+6. **L'enregistrement** dans la fiche projet : le chemin de la maquette, puis les arbitrages. Sans
+   le chemin, la question revient au ticket suivant.
 
 ## Le socle de principes
 
@@ -71,9 +79,8 @@ tailles. Une impression de style n'est pas un défaut.
 ## Les interdits propres au projet
 
 ⛔ **Pas de liste d'interdits écrite d'avance** : elle se relève sur les reprises réelles. Chaque
-retouche visuelle que l'utilisateur doit demander s'ajoute en une ligne, dans un bloc « Reprises
-relevées » sous `## Décisions & notes`. **Lis ce bloc en premier** : c'est ce que ce projet a déjà
-payé.
+retouche visuelle que l'utilisateur doit demander, y compris après le code, s'ajoute en une ligne
+dans un bloc « Reprises relevées » sous `## Décisions & notes`. Ce bloc se lit à l'étape 0.
 
 ## ⚠️ Ce que ce cadrage ne remplace pas
 
