@@ -50,11 +50,22 @@ l'étape 5 l'a décidé.
    vivra-t-elle ?** Un fichier dans le dépôt, un artefact, autre chose : si la fiche projet ou les
    consignes de l'utilisateur ne le disent pas, demande-le, et ne crée aucun fichier dans le dépôt
    sans cette réponse. Puis dessine avec l'outil de maquettes dont on dispose, sous ce cadrage. Un
-   artefact se crée avec l'outil d'artefacts de la session : si le client n'en fournit pas, dis-le et
-   demande quoi faire à la place, sans créer de toi-même un fichier du dépôt. Sans aucun outil, une
-   description écrite de l'écran à ces trois tailles.
+   artefact se crée avec l'outil d'artefacts de la session. **Sans cet outil (Nimbalyst)**, dans
+   cet ordre, et tout chemin écrit en absolu :
+   1. écris la page HTML dans `~/.claude/maquettes/<projet>/<écran>.html`, jamais dans le dépôt —
+      `<projet>` : le nom du dossier de la fiche du brain (`projects/<nom>/README.md`), à défaut
+      — repli `docs/PROJET.md` — celui du dossier du dépôt ;
+   2. écris aussitôt dans `## Décisions & notes` de la fiche la ligne
+      `Maquette <écran> : <chemin du HTML> — à publier` ;
+   3. donne à l'utilisateur la phrase à coller dans un terminal **de la même machine** :
+      « Charge `artifact-design`, reprends et publie `<chemin du HTML>`, puis dans
+      `<chemin de la fiche>`, remplace la ligne `Maquette <écran> : <chemin du HTML> — à publier`
+      par `Maquette <écran> : <lien de l'artefact>`. »
+
+   Sans aucun outil, une description écrite de l'écran à ces trois tailles.
 6. **L'enregistrement** dans la fiche projet : l'emplacement de la maquette (chemin ou lien), puis
-   les arbitrages. Sans lui, la question revient au ticket suivant.
+   les arbitrages. Sans lui, la question revient au ticket suivant. Une maquette laissée au
+   terminal y est déjà, par la ligne « à publier » de l'étape 5 : ne l'écris pas une seconde fois.
 
 ## Le socle de principes
 
