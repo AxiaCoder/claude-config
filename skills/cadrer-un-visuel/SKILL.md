@@ -1,6 +1,6 @@
 ---
 name: cadrer-un-visuel
-description: Use when a screen or interface is about to be built and no mockup is referenced — in the ticket or in the project sheet — typically raised by `cadrer-un-projet` or `start-ticket`. Frames the screen in conversation before any code, checks the user's design choices against a short set of UX principles and says so when one is off, then lands the decisions in the project sheet. Do not use for a pure back-end change, for a fix to a screen that already exists, when a mockup is already provided, nor to review a screen that is already built.
+description: Use when a screen or interface is about to be built and no mockup is referenced — in the ticket or in the project sheet — or when the user asks to mock up, sketch or think through the design of such a screen. Load it BEFORE any mockup tool: it frames the screen in conversation, checks the user's design choices against a short set of UX principles and says so when one is off, settles where the mockup lives, and only then hands the drawing to the mockup tool. Typically raised by `cadrer-un-projet` or `start-ticket`, but also reached directly. Do not use for a pure back-end change, for a fix to a screen that already exists, when a mockup is already provided, nor to review a screen that is already built.
 ---
 
 # Cadrer un visuel en conversation
@@ -46,10 +46,13 @@ fichier de maquette.
    secondes.
 3. **Le passage au socle** (ci-dessous) avant de dessiner.
 4. **Les états** : vide, chargement, erreur, succès, désactivé.
-5. **La maquette**, avec l'outil de maquettes dont on dispose, aux trois tailles : bureau,
-   tablette, mobile. Sans outil, une description écrite de l'écran à ces trois tailles.
-6. **L'enregistrement** dans la fiche projet : le chemin de la maquette, puis les arbitrages. Sans
-   le chemin, la question revient au ticket suivant.
+5. **La maquette**, aux trois tailles : bureau, tablette, mobile. ⛔ **Avant de la produire, où
+   vivra-t-elle ?** Un fichier dans le dépôt, un artefact, autre chose : si la fiche projet ou les
+   consignes de l'utilisateur ne le disent pas, demande-le, et ne crée aucun fichier dans le dépôt
+   sans cette réponse. Puis dessine avec l'outil de maquettes dont on dispose, sous ce cadrage. Sans
+   outil, une description écrite de l'écran à ces trois tailles.
+6. **L'enregistrement** dans la fiche projet : l'emplacement de la maquette (chemin ou lien), puis
+   les arbitrages. Sans lui, la question revient au ticket suivant.
 
 ## Le socle de principes
 
