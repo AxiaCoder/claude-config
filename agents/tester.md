@@ -2,7 +2,7 @@
 name: tester
 description: "Audite puis écrit les tests automatisés du code ajouté, unitaires ou d'intégration. Sur un bug, déléguer AVANT le correctif — il écrit le test qui le reproduit et le voit tomber. Sinon, déléguer après toute implémentation — par `dev` ou par la session principale : dit si des tests existent, ce qu'ils couvrent et s'ils tombent sans le changement, puis écrit ce qui manque. Aussi quand des tests sont demandés sur du code déjà en place."
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: opus
+model: sonnet
 color: cyan
 maxTurns: 40
 ---

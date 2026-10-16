@@ -2,7 +2,7 @@
 name: qa
 description: Vérifie de manière indépendante qu'une fonctionnalité fait ce que le ticket demande, en l'exerçant depuis l'extérieur — une page, un endpoint, un parcours. Déléguer après le code, quel qu'en soit l'auteur — `dev` ou la session principale —, quand le changement est atteignable autrement que par la lecture du code. Ne modifie aucun fichier du dépôt, ne lit pas le rapport de l'auteur.
 tools: Read, Glob, Bash, ToolSearch, mcp__chrome-devtools
-model: opus
+model: sonnet
 color: magenta
 maxTurns: 30
 ---
