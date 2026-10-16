@@ -27,7 +27,18 @@ paraphraser le ticket. »*
 ⇒ **Ce qui mérite d'être dit en plus, c'est ce que le ticket ne dit pas** : une valeur qu'il oublie,
 une référence devenue fausse, une contrainte découverte en lisant le code.
 
-## 3. La branche
+## 3. Une interface sans maquette
+
+Si le ticket touche l'interface et que ni lui ni la fiche projet ne référencent une maquette, pose
+une seule question : « Cet écran n'a pas de maquette. Maquette d'abord, ou premier jet libre
+assumé ? ».
+
+- **Maquette d'abord** → skill `cadrer-un-visuel`.
+- **Premier jet libre** → une ligne dans le ticket, et le travail continue.
+
+⛔ Un ticket sans interface ne déclenche rien.
+
+## 4. La branche
 
 - Le nom **au format du dépôt** — lis-le dans `git branch -a` et dans le `CLAUDE.md` du dépôt, ne le
   devine pas.
@@ -40,7 +51,7 @@ une référence devenue fausse, une contrainte découverte en lisant le code.
 - ⚠️ **`--no-track` n'est pas un ornement** : sans lui, la branche suit `origin/<base>` : un `pull` tire
   la base, et un `git push` nu échoue — ou vise la base, selon `push.default`.
 
-## 4. En route
+## 5. En route
 
 **Ce qui se soulève en conversation part dans le ticket, dans le même mouvement** — sinon il
 disparaît, et personne ne s'en aperçoit. Écris-le **avant** de passer à la suite, ou **dis
@@ -54,6 +65,6 @@ sprint de leur parent. Pour le sprint lui-même : `/new-ticket` § « Le sprint 
 **Une pull request porte une seule chose.** Une PR qui en porte six ne converge pas : chaque passe
 de review modifie du code, donc fabrique la matière de la suivante.
 
-## 5. Prêt
+## 6. Prêt
 
 Affiche « Prêt à travailler sur <la clé du ticket> », et rappelle la suite : `/pr` quand c'est fait.
