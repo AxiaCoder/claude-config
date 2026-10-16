@@ -58,6 +58,9 @@ quinze questions d'un coup produit un formulaire, pas un cadrage.
 - **Un objectif mesurable**, pas une intention. *« la page charge en moins d'une seconde »*, pas
   *« la page est rapide »*.
 - **Le parcours principal**, en trois ou quatre étapes.
+- ⛔ **Un écran sans maquette ?** Si le parcours passe par une interface et que ni la fiche ni
+  l'utilisateur n'en référencent une, applique le skill `cadrer-un-visuel` § « Le moment » : il
+  porte la question et ses deux branches.
 - **Ce qui doit être vrai pour que ce soit fini** — le critère d'acceptation, qui deviendra l'`AC`
   d'un brief de sous-agent.
 
