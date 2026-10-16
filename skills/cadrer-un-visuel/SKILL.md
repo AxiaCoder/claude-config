@@ -51,12 +51,16 @@ l'étape 5 l'a décidé.
    consignes de l'utilisateur ne le disent pas, demande-le, et ne crée aucun fichier dans le dépôt
    sans cette réponse. Puis dessine avec l'outil de maquettes dont on dispose, sous ce cadrage. Un
    artefact se crée avec l'outil d'artefacts de la session. **Sans cet outil (Nimbalyst)**, écris
-   la page HTML dans `~/.claude/maquettes/<projet>/<écran>.html`, jamais dans le dépôt, et dis à
-   l'utilisateur de la publier depuis le terminal : « publie la maquette `<projet>/<écran>` ». La
-   session terminal charge `artifact-design`, reprend le fichier, le publie, puis enregistre le
-   lien à l'étape 6. Sans aucun outil, une description écrite de l'écran à ces trois tailles.
+   la page HTML dans `~/.claude/maquettes/<dépôt>/<écran>.html` (`<dépôt>` : le nom du dossier du
+   dépôt), jamais dans le dépôt, et donne à l'utilisateur la phrase à coller dans un terminal **de
+   la même machine** : « Charge `artifact-design`, reprends et publie
+   `~/.claude/maquettes/<dépôt>/<écran>.html`, puis remplace ce chemin par le lien de l'artefact
+   dans `<chemin de la fiche projet>`. » Sans aucun outil, une description écrite de l'écran à ces
+   trois tailles.
 6. **L'enregistrement** dans la fiche projet : l'emplacement de la maquette (chemin ou lien), puis
-   les arbitrages. Sans lui, la question revient au ticket suivant.
+   les arbitrages. Sans lui, la question revient au ticket suivant. Une maquette laissée au
+   terminal s'enregistre par son chemin local suivi de « — à publier » : la phrase de l'étape 5 le
+   remplace par le lien.
 
 ## Le socle de principes
 
