@@ -20,7 +20,7 @@ libre assumé ? »
 
 | Réponse | Ce qui se passe |
 |---|---|
-| Maquette d'abord | le déroulé ci-dessous |
+| Maquette d'abord (ou l'utilisateur vient de la demander : la question est répondue) | le déroulé ci-dessous |
 | Premier jet libre | une ligne dans le ticket s'il y en a un, sinon dans la fiche projet, puis le travail continue — c'est un choix légitime, pris en connaissance de cause |
 
 ⚠️ **Ne pas se déclencher sur un ticket sans interface**, ni sur le correctif d'un écran qui
@@ -30,8 +30,8 @@ existe : un cadrage visuel posé là est du bruit.
 
 ⛔ **Aucun document à part.** Les arbitrages vont dans `## Décisions & notes` de la fiche projet.
 **Sans fiche**, le repli est celui de `cadrer-un-projet` (§ « Ce que tu ne produis pas ») : créer
-`docs/PROJET.md` et la ligne du `CLAUDE.md` du dépôt qui le fait lire. La maquette, elle, est un
-fichier de maquette.
+`docs/PROJET.md` et la ligne du `CLAUDE.md` du dépôt qui le fait lire. La maquette, elle, vit là où
+l'étape 5 l'a décidé.
 
 ## Le déroulé, une étape à la fois
 
