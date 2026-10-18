@@ -41,11 +41,6 @@ chemin**, pas par hôte.
 Le mode page ne fait que ce qui se juge **sur une URL**. Ce qui demande de parcourir le site — le
 🟠 — reste à la mise en ligne.
 
-📌 **Connu et accepté : le mode page ne voit pas l'accès des robots IA.** Un `Disallow` qu'une
-branche ajouterait pour `OAI-SearchBot` ou `Claude-SearchBot` passe sans constat, parce que la
-comparaison ci-dessus ne regarde que l'indexation. Ne le remonte pas comme un manque : le 🟠 des
-robots IA se juge à la mise en ligne.
-
 ## 1. Lighthouse d'abord
 
 Il score déjà la catégorie SEO — titre, meta description, liens explorables, `robots.txt` valide,
