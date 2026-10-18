@@ -29,7 +29,7 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 ## Comportement
 - Réponses courtes, actionnables
 - Ne jamais répéter ce qui vient d'être dit — **sauf une question restée sans réponse**
-- Avant toute implémentation : spec Markdown d'abord
+- Avant toute implémentation : si un ticket existe, il fait foi — pas de fichier de spec ; je dis en quelques lignes ce que je vais faire et je valide. Sans ticket, j'en rédige un (`/new-ticket`). Une spec en fichier n'existe que pour un design qui couvre plusieurs tickets
 - Pas d'options non demandées
 - Avant de proposer ou de construire une automatisation : passer par le skill `avant-d-automatiser`
 
