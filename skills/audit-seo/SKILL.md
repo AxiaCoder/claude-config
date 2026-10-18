@@ -93,8 +93,8 @@ curl -s <url> | grep -c "<un fragment de texte visible sur la page>"
 
 **0 → le contenu n'est pas dans la réponse.** Googlebot exécute le JavaScript, mais dans une
 seconde vague, différée et moins fiable ; les autres robots — réseaux sociaux, moteurs
-alternatifs, IA — souvent pas du tout. C'est vrai de `GPTBot` et `PerplexityBot` en particulier :
-une page vide sans JavaScript est invisible pour eux.
+alternatifs, IA — souvent pas du tout. C'est vrai des robots de recherche IA (`OAI-SearchBot`,
+`Claude-SearchBot`, `PerplexityBot`) : une page vide sans JavaScript leur est invisible.
 
 ⇒ Le constat se pose, pas le remède : basculer en rendu serveur est une décision d'architecture,
 pas une correction d'audit.
@@ -122,10 +122,12 @@ nourrit la recherche IA n'est pas celui qui entraîne les modèles.
 
 - ⛔ **Autoriser ou bloquer l'entraînement est un choix du propriétaire**, pas un défaut : tu le
   rapportes, tu ne le recommandes pas.
-- ⚠️ `Google-Extended` et `Applebot-Extended` ne gouvernent ni Google Search ni la recherche Apple.
-  Ne jamais citer l'un d'eux bloqué comme cause d'une absence de l'index.
-- ⚠️ Les robots lancés à la demande d'un utilisateur (`ChatGPT-User`, `Perplexity-User`,
-  `Google-Agent`) ignorent souvent `robots.txt` : un contenu à protéger l'est par authentification,
+- ⚠️ `Google-Extended` et `Applebot-Extended` ne gouvernent ni Google Search (AI Overviews et AI
+  Mode compris) ni la recherche Apple. Ne jamais citer l'un d'eux bloqué comme cause d'une absence
+  de l'index. `Google-Extended` gouverne en revanche l'entraînement **et** les réponses sourcées de
+  Gemini : le bloquer retire le site de ces réponses-là, pas de Google Search.
+- ⚠️ Les robots lancés à la demande d'un utilisateur (`ChatGPT-User`, `Perplexity-User`)
+  ignorent souvent `robots.txt` : un contenu à protéger l'est par authentification,
   pas par `Disallow`.
 
 ### 🟡 Ce qui améliore sans débloquer
@@ -165,7 +167,7 @@ MODE:       page — <les URL> | mise en ligne
 LIGHTHOUSE: performance <n> · SEO <n> · accessibilité <n> — par URL
 INDEXABLE:  oui | non — <ce qui l'empêche>
 SANS JS:    le contenu est dans la réponse | absent
-ROBOTS IA:  recherche — <robots autorisés / bloqués> · entraînement — <robots autorisés / bloqués>
+ROBOTS IA:  recherche — <robots autorisés / bloqués> · entraînement — <robots autorisés / bloqués> | non vérifié (mode page)
 🔴 <url> — <le constat> — preuve : <la commande et ce qu'elle rend>
 🟠 …
 🟡 …
