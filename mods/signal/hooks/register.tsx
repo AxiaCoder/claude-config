@@ -1,3 +1,10 @@
+/**
+ * Mod `signal`: lets the model pin one single-line note above the prompt.
+ *
+ * The note stays visible until the user's next prompt, then is cleared. It asks for no answer: a
+ * decision is requested in the message itself. Nothing survives the session, so a note is never
+ * shown again after a resume, and a new note replaces the current one.
+ */
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
