@@ -93,7 +93,8 @@ curl -s <url> | grep -c "<un fragment de texte visible sur la page>"
 
 **0 → le contenu n'est pas dans la réponse.** Googlebot exécute le JavaScript, mais dans une
 seconde vague, différée et moins fiable ; les autres robots — réseaux sociaux, moteurs
-alternatifs, IA — souvent pas du tout.
+alternatifs, IA — souvent pas du tout. C'est vrai des robots de recherche IA (`OAI-SearchBot`,
+`Claude-SearchBot`, `PerplexityBot`) : une page vide sans JavaScript leur est invisible.
 
 ⇒ Le constat se pose, pas le remède : basculer en rendu serveur est une décision d'architecture,
 pas une correction d'audit.
@@ -109,10 +110,34 @@ pas une correction d'audit.
 
 ⚠️ **Lighthouse ne voit aucun de ces quatre points** : ils demandent plusieurs pages.
 
+### 🟠 Les robots IA accèdent-ils au site ?
+
+`curl -s <site>/robots.txt`, puis **deux lignes distinctes, jamais fondues en une** : un robot qui
+nourrit la recherche IA n'est pas celui qui entraîne les modèles.
+
+| Constat | Robots à lire | Ne prouve pas ce constat |
+|---|---|---|
+| citable dans une recherche IA | `OAI-SearchBot` (ChatGPT Search), `Claude-SearchBot`, `PerplexityBot`, `Googlebot` (AI Overviews et AI Mode) | `GPTBot`, `ClaudeBot`, `Google-Extended` |
+| utilisable pour entraîner un modèle | `GPTBot`, `ClaudeBot`, `CCBot`, `Google-Extended`, `Applebot-Extended` | les robots de recherche ci-dessus |
+
+- ⛔ **Autoriser ou bloquer l'entraînement est un choix du propriétaire**, pas un défaut : tu le
+  rapportes, tu ne le recommandes pas.
+- ⚠️ `Google-Extended` et `Applebot-Extended` ne gouvernent ni Google Search (AI Overviews et AI
+  Mode compris) ni la recherche Apple. Ne jamais citer l'un d'eux bloqué comme cause d'une absence
+  de l'index. `Google-Extended` gouverne en revanche l'entraînement **et** les réponses sourcées de
+  Gemini : le bloquer retire le site de ces réponses-là, pas de Google Search.
+- ⚠️ Les robots lancés à la demande d'un utilisateur (`ChatGPT-User`, `Perplexity-User`)
+  ignorent souvent `robots.txt` : un contenu à protéger l'est par authentification,
+  pas par `Disallow`.
+
 ### 🟡 Ce qui améliore sans débloquer
 
 Données structurées `schema.org`, longueur des titres, `og:` pour le partage social,
 `Core Web Vitals` (LCP, INP, CLS). Réels, mais **ils ne décident pas de la présence dans l'index**.
+
+**Citabilité par les IA** — des heuristiques, pas des règles : réponse directe dans les premiers
+mots d'une section, date de publication et de mise à jour, auteur identifié, sources citées pour
+les chiffres. Google lui-même range l'optimisation pour l'IA sous le SEO ordinaire.
 
 ## ⛔ Ce qui est du folklore, et que tu ne signales pas
 
@@ -120,6 +145,12 @@ Données structurées `schema.org`, longueur des titres, `og:` pour le partage s
   problème. La structure des titres compte pour la compréhension, pas pour une règle de comptage.
 - **« La meta description est un facteur de classement »** — non. Elle joue sur le taux de clic.
 - **Une densité de mots-clés cible** — abandonné depuis longtemps.
+- **`llms.txt` comme levier de citation** — Google écrit qu'il l'ignore, et aucun grand moteur IA
+  n'a confirmé le lire. Signaler son absence est du bruit.
+- **« Des blocs de 130 à 170 mots »** pour être cité — heuristique tierce, Google dit qu'on n'a pas
+  à découper le contenu pour l'IA.
+- **Les corrélations « mentions de marque » ou « YouTube »** avec les citations IA — études tierces
+  non vérifiées, rien d'actionnable sur une page.
 - **Un score Lighthouse de 100** — c'est un indicateur, pas un objectif. Un site à 78 bien indexé
   bat un site à 100 en `noindex`.
 
@@ -136,6 +167,7 @@ MODE:       page — <les URL> | mise en ligne
 LIGHTHOUSE: performance <n> · SEO <n> · accessibilité <n> — par URL
 INDEXABLE:  oui | non — <ce qui l'empêche>
 SANS JS:    le contenu est dans la réponse | absent
+ROBOTS IA:  recherche — <robots autorisés / bloqués> · entraînement — <robots autorisés / bloqués> | non vérifié (mode page)
 🔴 <url> — <le constat> — preuve : <la commande et ce qu'elle rend>
 🟠 …
 🟡 …
@@ -143,7 +175,8 @@ HORS PORTÉE: <ce qui demande Search Console, des données de trafic, ou une dé
 ```
 
 ⚠️ **Ce que tu ne peux pas savoir se dit.** L'indexation réelle, les requêtes qui amènent du
-trafic, les liens entrants : rien de tout ça ne se lit depuis le dépôt ni depuis une page. Le taire
+trafic, les liens entrants, et si le site est réellement cité dans les réponses des IA (il y faut
+un outil de mesure dédié, payant) : rien de tout ça ne se lit depuis le dépôt ni depuis une page. Le taire
 donnerait à l'audit une complétude qu'il n'a pas.
 
 ## Si le constat demande un navigateur
