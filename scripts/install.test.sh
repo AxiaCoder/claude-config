@@ -40,11 +40,19 @@ EOF
 EOF
 }
 
-# Lance install.sh du montage $1, les arguments suivants lui étant passés. Sortie : son code retour.
+# Lance install.sh --remplacer du montage $1, les arguments suivants lui étant passés. Sortie : son code retour.
 installer() {
 	m="$1"
 	shift
-	HOME="$tmp/$m/home" bash "$tmp/$m/repo/install.sh" "$@" >"$tmp/$m/sortie" 2>&1
+	HOME="$tmp/$m/home" bash "$tmp/$m/repo/install.sh" --remplacer "$@" >"$tmp/$m/sortie" 2>&1
+}
+
+# Lance install.sh du montage $1 avec les seuls arguments suivants, sur la config git globale vide du montage. Sortie : son code retour.
+installer_brut() {
+	m="$1"
+	shift
+	: >>"$tmp/$m/gitconfig"
+	GIT_CONFIG_GLOBAL="$tmp/$m/gitconfig" HOME="$tmp/$m/home" bash "$tmp/$m/repo/install.sh" "$@" >"$tmp/$m/sortie" 2>&1
 }
 
 # Affiche la valeur de settings.json du montage $1 au chemin $2 (« env.A », « model »).
@@ -498,11 +506,11 @@ socle_betterleaks() {
 	done
 }
 
-# Lance install.sh du montage $1 avec le bouchon curl en tête du PATH.
+# Lance install.sh --remplacer du montage $1 avec le bouchon curl en tête du PATH.
 installer_bouchon() {
 	m="$1"
 	shift
-	PATH="$tmp/bin-curl:$PATH" HOME="$tmp/$m/home" bash "$tmp/$m/repo/install.sh" "$@" >"$tmp/$m/sortie" 2>&1
+	PATH="$tmp/bin-curl:$PATH" HOME="$tmp/$m/home" bash "$tmp/$m/repo/install.sh" --remplacer "$@" >"$tmp/$m/sortie" 2>&1
 }
 
 # Affiche present ou absent selon que le fichier $1 existe.
@@ -541,6 +549,71 @@ verdict 9.9.9 "$("$tmp/bl-sans/home/.claude/bin/betterleaks" version 2>/dev/null
 socle_betterleaks bl-sans-dry "$sha_asset"
 installer_bouchon bl-sans-dry --sans-externes --dry-run; verdict 0 "$?" "--sans-externes dry-run : sans erreur"
 verdict absent "$(existe "$tmp/bl-sans-dry/home/.claude/claude-config.sans-externes")" "--sans-externes dry-run : mémo non écrit"
+
+# Affiche l'arborescence du dossier $1, avec la somme de contrôle de chaque fichier et la cible de chaque lien.
+empreinte() {
+	(cd "$1" && find . | sort | while IFS= read -r f; do
+		if [ -L "$f" ]; then
+			printf '%s -> %s\n' "$f" "$(readlink "$f")"
+		elif [ -f "$f" ]; then
+			printf '%s %s\n' "$f" "$(cksum <"$f")"
+		else
+			printf '%s/\n' "$f"
+		fi
+	done)
+}
+
+# Affiche le core.hooksPath de la config git globale du montage $1, « (vide) » s'il n'en a pas.
+hooks_path() {
+	v=$(GIT_CONFIG_GLOBAL="$tmp/$1/gitconfig" git config --global --get core.hooksPath)
+	echo "${v:-(vide)}"
+}
+
+# Sans option : install isolée dans ~/.claude-config, ~/.claude peuplé laissé intact.
+monter isole
+preexistants isole
+mkdir -p "$tmp/isole/home/.claude/agents"
+printf 'mon agent\n' >"$tmp/isole/home/.claude/agents/a.md"
+printf '{"env": {"H": "{{CLAUDE_HOME}}"}}\n' >"$tmp/isole/repo/settings.macos.json"
+empreinte "$tmp/isole/home/.claude" >"$tmp/isole/avant"
+installer_brut isole; verdict 0 "$?" "isolée : install sans erreur"
+empreinte "$tmp/isole/home/.claude" >"$tmp/isole/apres"
+verdict identique "$(cmp -s "$tmp/isole/avant" "$tmp/isole/apres" && echo identique || echo differe)" "isolée : ~/.claude identique avant/après"
+verdict present "$(existe "$tmp/isole/home/.claude-config/CLAUDE.md")" "isolée : CLAUDE.md dans ~/.claude-config"
+verdict present "$(existe "$tmp/isole/home/.claude-config/settings.json")" "isolée : settings.json dans ~/.claude-config"
+verdict lien "$([ -L "$tmp/isole/home/.claude-config/agents" ] && echo lien || echo pas-lien)" "isolée : agents lié dans ~/.claude-config"
+verdict "$(natifs "$tmp/isole/home/.claude-config")" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["env"]["H"])' "$tmp/isole/home/.claude-config/settings.json")" "isolée : {{CLAUDE_HOME}} rendu vers la cible"
+verdict "(vide)" "$(hooks_path isole)" "isolée : core.hooksPath global non touché"
+verdict annonce "$(grep -q 'garde pre-push non activé' "$tmp/isole/sortie" && echo annonce || echo muet)" "isolée : garde pre-push annoncé inactif"
+verdict annonce "$(grep -qF "CLAUDE_CONFIG_DIR='$tmp/isole/home/.claude-config' claude" "$tmp/isole/sortie" && echo annonce || echo muet)" "isolée : commande de lancement affichée"
+
+# --dossier : install dans le dossier donné, créé s'il manque ; ~/.claude vide et ~/.claude-config absent.
+monter dossier
+installer_brut dossier --dossier "$tmp/dossier/ailleurs"; verdict 0 "$?" "--dossier : install sans erreur"
+verdict present "$(existe "$tmp/dossier/ailleurs/CLAUDE.md")" "--dossier : CLAUDE.md dans le dossier"
+verdict 0 "$(ls -A "$tmp/dossier/home/.claude" | wc -l | tr -d ' ')" "--dossier : ~/.claude laissé vide"
+verdict absent "$(existe "$tmp/dossier/home/.claude-config")" "--dossier : ~/.claude-config non créé"
+
+# --dossier et --remplacer ensemble : refus, rien d'écrit.
+monter exclusives
+installer_brut exclusives --dossier "$tmp/exclusives/ailleurs" --remplacer
+verdict refus "$([ "$?" -ne 0 ] && echo refus || echo accepte)" "--dossier + --remplacer : refus"
+verdict 0 "$(ls -A "$tmp/exclusives/home/.claude" | wc -l | tr -d ' ')" "--dossier + --remplacer : ~/.claude vide"
+verdict absent "$(existe "$tmp/exclusives/ailleurs")" "--dossier + --remplacer : dossier non créé"
+verdict absent "$(existe "$tmp/exclusives/home/.claude-config")" "--dossier + --remplacer : ~/.claude-config non créé"
+verdict "(vide)" "$(hooks_path exclusives)" "--dossier + --remplacer : core.hooksPath non touché"
+
+# --remplacer : ~/.claude cible, core.hooksPath posé.
+monter remplacer
+installer_brut remplacer --remplacer; verdict 0 "$?" "--remplacer : install sans erreur"
+verdict lien "$([ -L "$tmp/remplacer/home/.claude/agents" ] && echo lien || echo pas-lien)" "--remplacer : agents lié dans ~/.claude"
+verdict pose "$(case "$(hooks_path remplacer)" in */remplacer/home/.claude/git-hooks*) echo pose ;; *) echo autre ;; esac)" "--remplacer : core.hooksPath global vers ~/.claude/git-hooks"
+verdict absent "$(existe "$tmp/remplacer/home/.claude-config")" "--remplacer : ~/.claude-config non créé"
+
+# Sans option, une install existante dans ~/.claude : conservée, rien dans ~/.claude-config.
+installer_brut remplacer; verdict 0 "$?" "existante : relance sans option sans erreur"
+verdict absent "$(existe "$tmp/remplacer/home/.claude-config")" "existante : ~/.claude-config non créé"
+verdict annonce "$(grep -q 'conservée' "$tmp/remplacer/sortie" && echo annonce || echo muet)" "existante : ~/.claude annoncé conservé"
 
 echo "$nb cas, $([ "$echec" -eq 0 ] && echo 'tous passent' || echo 'ECHEC')"
 exit "$echec"

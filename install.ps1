@@ -1,13 +1,24 @@
 <#
 .SYNOPSIS
-  Monte claude-config dans ~/.claude sur cette machine.
+  Monte claude-config dans un dossier de configuration Claude Code sur cette machine.
 
 .DESCRIPTION
-  Les cinq dossiers de configuration deviennent des jonctions vers ce repo, et
-  git-hooks devient le dossier de hooks git global (core.hooksPath), sauf si
-  un autre dossier y est deja declare.
+  La cible est, par defaut, ~/.claude-config : une installation isolee, qui ne
+  cree, ne deplace ni ne modifie rien dans ~/.claude et ne touche pas a la
+  config git globale. Claude Code s'y lance avec
+  $env:CLAUDE_CONFIG_DIR='<cible>'; claude. Sans option, une installation deja
+  faite dans ~/.claude (son agents est une jonction vers ce depot) y reste.
+  Les cinq dossiers de configuration deviennent des jonctions vers ce repo.
   CLAUDE.md, CAVEMAN.md et settings.json sont rendus : ils portent des chemins
   propres a la machine et ne peuvent pas etre lies. Le script est idempotent.
+
+.PARAMETER Dossier
+  Cible de l'installation isolee, creee si elle manque. Exclut -Remplacer.
+
+.PARAMETER Remplacer
+  Installe dans ~/.claude lui-meme : ses fichiers et dossiers en place sont
+  sauvegardes, et git-hooks devient le dossier de hooks git global
+  (core.hooksPath), sauf si un autre dossier y est deja declare. Exclut -Dossier.
 
 .PARAMETER Perso
   Dossier perso, optionnel : ses settings.json et settings.windows.json
@@ -15,11 +26,11 @@
   {{PERSO_CLAUDE_MD}}, avec {{PERSO}} remplace par le chemin du dossier. Son
   CLAUDE.complet.md, s'il en a un, remplace tout le CLAUDE.md du depot et fait
   ignorer son CLAUDE.md. Memorise dans
-  ~/.claude/claude-config.perso, repris sans -Perso aux passes suivantes.
+  <cible>/claude-config.perso, repris sans -Perso aux passes suivantes.
 
 .PARAMETER SansExternes
   N'installe rien de ce qui se telecharge (betterleaks) et desactive le garde
-  secrets du pre-commit. Memorise dans ~/.claude/claude-config.sans-externes,
+  secrets du pre-commit. Memorise dans <cible>/claude-config.sans-externes,
   repris aux passes suivantes. Inventaire des outils externes : DEPENDANCES.md.
 
 .PARAMETER AvecExternes
@@ -30,11 +41,13 @@
 
 .NOTES
   betterleaks, a la version et au sha256 de git-hooks/betterleaks.version, est
-  telecharge dans ~/.claude/bin pour le garde secrets du pre-commit.
+  telecharge dans <cible>/bin pour le garde secrets du pre-commit.
 #>
 #Requires -Version 7
 [CmdletBinding()]
 param(
+  [string] $Dossier = '',
+  [switch] $Remplacer,
   [string] $Perso = '',
   [switch] $SansExternes,
   [switch] $AvecExternes,
@@ -43,14 +56,33 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Repo        = $PSScriptRoot
-$ClaudeHome  = Join-Path $HOME '.claude'
+$ClaudeDefaut = Join-Path $HOME '.claude'
 $LinkedDirs  = 'agents', 'commands', 'skills', 'hooks', 'git-hooks'
 $Stamp       = Get-Date -Format 'yyyyMMdd-HHmmss'
-$BackupDir   = Join-Path $ClaudeHome "config-backup-$Stamp"
 
 function Step([string]$text) { Write-Host "  $text" }
 
-if (-not (Test-Path $ClaudeHome)) { throw "'$ClaudeHome' n'existe pas." }
+if ($Dossier -and $Remplacer) {
+  throw "-Dossier et -Remplacer s'excluent : -Remplacer installe dans $ClaudeDefaut, -Dossier ailleurs."
+}
+
+$agentsDefaut = Get-Item (Join-Path $ClaudeDefaut 'agents') -Force -ErrorAction SilentlyContinue
+$DejaDansDefaut = [bool]($agentsDefaut -and $agentsDefaut.LinkType -eq 'Junction' -and ($agentsDefaut.Target -contains (Join-Path $Repo 'agents')))
+if ($Remplacer) { $ClaudeHome = $ClaudeDefaut }
+elseif ($Dossier) {
+  if ($Dossier -match '^~([\\/]|$)') { $Dossier = $HOME + $Dossier.Substring(1) }
+  $ClaudeHome =[System.IO.Path]::GetFullPath($Dossier, (Get-Location).ProviderPath).TrimEnd('\', '/')
+}
+elseif ($DejaDansDefaut) {
+  $ClaudeHome = $ClaudeDefaut
+  Write-Host "Installation existante dans $ClaudeDefaut, conservee (-Dossier pour en changer)."
+}
+else { $ClaudeHome = Join-Path $HOME '.claude-config' }
+
+$Remplace = $ClaudeHome -eq $ClaudeDefaut
+$BackupDir = Join-Path $ClaudeHome "config-backup-$Stamp"
+
+if ($Remplace -and -not (Test-Path $ClaudeHome)) { throw "'$ClaudeHome' n'existe pas." }
 # Le lanceur py d'abord : le python.exe de WindowsApps n'est qu'un raccourci vers le Store.
 $Python = $null
 foreach ($candidat in @(@('py', '-3'), @('python'))) {
@@ -80,6 +112,11 @@ if ($Perso) {
 
 Write-Host "claude-config -> $ClaudeHome"
 if ($WhatIfOnly) { Write-Host "(simulation, rien ne sera ecrit)" }
+if (-not $Remplace) { Step "installation isolee : rien n'est ecrit dans $ClaudeDefaut" }
+if (-not (Test-Path $ClaudeHome -PathType Container)) {
+  Step "$(Split-Path $ClaudeHome -Leaf) : absent, creation de $ClaudeHome"
+  if (-not $WhatIfOnly) { New-Item -ItemType Directory -Force -Path $ClaudeHome | Out-Null }
+}
 
 # --- Dossiers : sauvegarde puis jonction ---------------------------------
 $agents = Get-Item (Join-Path $ClaudeHome 'agents') -Force -ErrorAction SilentlyContinue
@@ -389,7 +426,10 @@ if (-not $WhatIfOnly -and $null -ne $hooks) {
 # --- Hooks git globaux -----------------------------------------------------
 $hooksPath = (Join-Path $ClaudeHome 'git-hooks').Replace('\', '/')
 $actuel = (& git config --global --get core.hooksPath 2>$null)
-if (-not $actuel) {
+if (-not $Remplace) {
+  Step "git : core.hooksPath global non touche : garde pre-push non active (voir -Remplacer)"
+}
+elseif (-not $actuel) {
   Step "git : core.hooksPath global -> $hooksPath"
   if (-not $WhatIfOnly) { & git config --global core.hooksPath $hooksPath }
 }
@@ -402,7 +442,7 @@ else {
 
 # --- betterleaks, garde secrets du pre-commit ------------------------------
 
-# Pose dans ~/.claude/bin le betterleaks.exe epingle par git-hooks/betterleaks.version,
+# Pose dans <cible>/bin le betterleaks.exe epingle par git-hooks/betterleaks.version,
 # s'il n'y est pas deja a cette version. Rend $false, avec un avertissement, quand il n'a
 # pas pu etre pose : fichier de version absent, plateforme sans asset, telechargement,
 # sha256 ou extraction en echec. En simulation, annonce l'installation sans rien ecrire.
@@ -491,8 +531,12 @@ elseif (-not (Install-Betterleaks)) {
 
 Write-Host ""
 Write-Host "Termine. Verifier les liens :"
-Write-Host "  Get-Item ~\.claude\agents, ~\.claude\commands, ~\.claude\skills, ~\.claude\hooks, ~\.claude\git-hooks | Select-Object Name, LinkType, Target"
-Write-Host "  git config --global --get core.hooksPath"
+Write-Host "  Get-ChildItem '$ClaudeHome' -Force | Where-Object LinkType | Select-Object Name, LinkType, Target"
+if ($Remplace) { Write-Host "  git config --global --get core.hooksPath" }
+else {
+  Write-Host "Lancer Claude Code sur cette configuration :"
+  Write-Host "  `$env:CLAUDE_CONFIG_DIR='$ClaudeHome'; claude"
+}
 if (Test-Path $BackupDir) { Write-Host "Sauvegarde : $BackupDir" }
 if ($GardeSecretsInactif) {
   Write-Warning "garde secrets inactif : betterleaks absent. les commits sont refuses tant qu'il manque : relancer install.ps1, ou -SansExternes pour s'en passer."

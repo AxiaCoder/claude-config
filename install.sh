@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Monte claude-config dans ~/.claude sur macOS ou Linux.
+# Monte claude-config dans un dossier de configuration Claude Code, sur macOS ou Linux.
+#
+# La cible est, par défaut, ~/.claude-config : une installation isolée, qui ne crée,
+# ne déplace ni ne modifie rien dans ~/.claude et ne touche pas à la config git
+# globale. Claude Code s'y lance avec CLAUDE_CONFIG_DIR=<cible> claude. --dossier
+# choisit une autre cible. --remplacer installe dans ~/.claude lui-même : ses
+# fichiers et dossiers en place sont sauvegardés, et git-hooks devient le dossier
+# de hooks git global (core.hooksPath), sauf si un autre dossier y est déjà
+# déclaré. Sans option, une installation déjà faite dans ~/.claude (son agents
+# est un lien vers ce dépôt) y reste.
 #
 # Les cinq dossiers de configuration deviennent des liens symboliques vers ce
-# repo, et git-hooks devient le dossier de hooks git global (core.hooksPath),
-# sauf si un autre dossier y est déjà déclaré. CLAUDE.md, CAVEMAN.md et settings.json sont rendus : ils portent des
+# repo. CLAUDE.md, CAVEMAN.md et settings.json sont rendus : ils portent des
 # chemins propres à la machine et ne peuvent pas être liés. Le script est
 # idempotent.
 #
@@ -12,33 +20,37 @@
 # son CLAUDE.md prend la place de {{PERSO_CLAUDE_MD}}, avec {{PERSO}} remplacé
 # par le chemin du dossier. Son CLAUDE.complet.md, s'il en a un, remplace tout le
 # CLAUDE.md du dépôt et fait ignorer son CLAUDE.md. Il
-# est mémorisé dans ~/.claude/claude-config.perso : les passes suivantes le
+# est mémorisé dans <cible>/claude-config.perso : les passes suivantes le
 # reprennent sans --perso.
 #
 # betterleaks, à la version et au sha256 de git-hooks/betterleaks.version, est
-# téléchargé dans ~/.claude/bin pour le garde secrets du pre-commit. Inventaire des
+# téléchargé dans <cible>/bin pour le garde secrets du pre-commit. Inventaire des
 # outils externes : DEPENDANCES.md. --sans-externes n'installe rien de ce qui se
 # télécharge et désactive le garde secrets ; le choix est mémorisé dans
-# ~/.claude/claude-config.sans-externes, --avec-externes le défait.
+# <cible>/claude-config.sans-externes, --avec-externes le défait.
 #
-# Usage : bash install.sh [--perso <dossier>] [--sans-externes | --avec-externes] [--dry-run]
+# Usage : bash install.sh [--dossier <chemin> | --remplacer] [--perso <dossier>]
+#                         [--sans-externes | --avec-externes] [--dry-run]
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLAUDE_HOME="$HOME/.claude"
-PERSO_MEMO="$CLAUDE_HOME/claude-config.perso"
-EXTERNES_MEMO="$CLAUDE_HOME/claude-config.sans-externes"
+CLAUDE_DEFAUT="$HOME/.claude"
 EXTERNES=""
 PERSO=""
+DOSSIER=""
+REMPLACER=0
 DRY_RUN=0
 STAMP="$(date +%Y%m%d-%H%M%S)"
-BACKUP_DIR="$CLAUDE_HOME/config-backup-$STAMP"
 LINKED_DIRS=(agents commands skills hooks git-hooks)
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --perso)   PERSO="$2"; shift 2 ;;
+    --dossier)
+      [ $# -ge 2 ] && [ -n "$2" ] || { echo "--dossier attend un chemin." >&2; exit 1; }
+      DOSSIER="$2"; shift 2 ;;
+    --remplacer) REMPLACER=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --sans-externes) EXTERNES=sans; shift ;;
     --avec-externes) EXTERNES=avec; shift ;;
@@ -46,7 +58,36 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-[ -d "$CLAUDE_HOME" ] || { echo "'$CLAUDE_HOME' n'existe pas." >&2; exit 1; }
+if [ -n "$DOSSIER" ] && [ "$REMPLACER" -eq 1 ]; then
+  echo "--dossier et --remplacer s'excluent : --remplacer installe dans $CLAUDE_DEFAUT, --dossier ailleurs." >&2
+  exit 1
+fi
+
+DEJA_DANS_DEFAUT=0
+[ -L "$CLAUDE_DEFAUT/agents" ] && [ "$(readlink "$CLAUDE_DEFAUT/agents")" = "$REPO/agents" ] && DEJA_DANS_DEFAUT=1
+
+if [ "$REMPLACER" -eq 1 ]; then
+  CLAUDE_HOME="$CLAUDE_DEFAUT"
+elif [ -n "$DOSSIER" ]; then
+  case "$DOSSIER" in /*) ;; *) DOSSIER="$PWD/$DOSSIER" ;; esac
+  [ -d "$DOSSIER" ] && DOSSIER="$(cd "$DOSSIER" && pwd)"
+  CLAUDE_HOME="${DOSSIER%/}"
+elif [ "$DEJA_DANS_DEFAUT" -eq 1 ]; then
+  CLAUDE_HOME="$CLAUDE_DEFAUT"
+  echo "Installation existante dans $CLAUDE_DEFAUT, conservée (--dossier pour en changer)."
+else
+  CLAUDE_HOME="$HOME/.claude-config"
+fi
+
+REMPLACE=0
+[ "$CLAUDE_HOME" = "$CLAUDE_DEFAUT" ] && REMPLACE=1
+PERSO_MEMO="$CLAUDE_HOME/claude-config.perso"
+EXTERNES_MEMO="$CLAUDE_HOME/claude-config.sans-externes"
+BACKUP_DIR="$CLAUDE_HOME/config-backup-$STAMP"
+
+if [ "$REMPLACE" -eq 1 ]; then
+  [ -d "$CLAUDE_HOME" ] || { echo "'$CLAUDE_HOME' n'existe pas." >&2; exit 1; }
+fi
 PERSO_SOURCE="--perso"
 if [ -z "$PERSO" ] && [ -f "$PERSO_MEMO" ]; then
   PERSO="$(cat "$PERSO_MEMO")"
@@ -59,8 +100,14 @@ fi
 
 echo "claude-config -> $CLAUDE_HOME"
 [ "$DRY_RUN" -eq 1 ] && echo "(simulation, rien ne sera écrit)"
+[ "$REMPLACE" -eq 1 ] || echo "  installation isolée : rien n'est écrit dans $CLAUDE_DEFAUT"
 
 run() { [ "$DRY_RUN" -eq 1 ] || "$@"; }
+
+if [ ! -d "$CLAUDE_HOME" ]; then
+  echo "  $(basename "$CLAUDE_HOME") : absent, création de $CLAUDE_HOME"
+  run mkdir -p "$CLAUDE_HOME"
+fi
 
 PREMIERE=1
 [ -L "$CLAUDE_HOME/agents" ] && [ "$(readlink "$CLAUDE_HOME/agents")" = "$REPO/agents" ] && PREMIERE=0
@@ -304,7 +351,9 @@ PY
 
 hooks_path="$CLAUDE_HOME/git-hooks"
 actuel="$(git config --global --get core.hooksPath || true)"
-if [ -z "$actuel" ]; then
+if [ "$REMPLACE" -eq 0 ]; then
+  echo "  git : core.hooksPath global non touché : garde pre-push non activé (voir --remplacer)"
+elif [ -z "$actuel" ]; then
   echo "  git : core.hooksPath global -> $hooks_path"
   run git config --global core.hooksPath "$hooks_path"
 elif [ "${actuel%/}" = "$hooks_path" ]; then
@@ -313,7 +362,7 @@ else
   echo "  ATTENTION : core.hooksPath global vaut déjà '$actuel' : laissé tel quel, le garde pre-push n'est pas actif." >&2
 fi
 
-# Pose dans ~/.claude/bin le betterleaks épinglé par git-hooks/betterleaks.version, s'il
+# Pose dans <cible>/bin le betterleaks épinglé par git-hooks/betterleaks.version, s'il
 # n'y est pas déjà à cette version. Rend 1, avec un message sur stderr, quand il n'a pas
 # pu être posé : fichier de version absent, plateforme sans asset, téléchargement,
 # sha256 ou extraction en échec. En simulation, annonce l'installation sans rien écrire.
@@ -390,8 +439,13 @@ fi
 
 echo
 echo "Terminé. Vérifier les liens :"
-echo "  ls -l ~/.claude | grep -E 'agents|commands|skills|hooks'"
-echo "  git config --global --get core.hooksPath"
+echo "  ls -l '$CLAUDE_HOME' | grep -E 'agents|commands|skills|hooks'"
+if [ "$REMPLACE" -eq 1 ]; then
+  echo "  git config --global --get core.hooksPath"
+else
+  echo "Lancer Claude Code sur cette configuration :"
+  echo "  CLAUDE_CONFIG_DIR='$CLAUDE_HOME' claude"
+fi
 [ -d "$BACKUP_DIR" ] && echo "Sauvegarde : $BACKUP_DIR"
 if [ "$GARDE_SECRETS_INACTIF" -eq 1 ]; then
   echo "ATTENTION : garde secrets inactif : betterleaks absent. les commits sont refusés tant qu'il manque : relancer install.sh, ou --sans-externes pour s'en passer." >&2

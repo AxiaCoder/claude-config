@@ -19,7 +19,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_DIR = Path.home() / ".claude" / "hook-state"
+CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+STATE_DIR = CLAUDE_DIR / "hook-state"
 STATE_FILE = STATE_DIR / "guardrail-state.json"
 
 # Thresholds
