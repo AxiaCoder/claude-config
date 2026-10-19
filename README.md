@@ -91,7 +91,7 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
    bash install.sh --remplacer                    # dans ~/.claude
    bash install.sh --perso ~/notes/claude-perso   # avec un dossier perso
    bash install.sh --dry-run                      # voir ce qui se passerait
-   bash install.sh --sans-externes                # sans rien télécharger (garde secrets désactivé)
+   bash install.sh --remplacer --sans-externes    # dans ~/.claude, sans rien télécharger (garde secrets désactivé)
    ```
 
    Avec `--remplacer` seulement — l'installation isolée ne télécharge rien —, l'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
