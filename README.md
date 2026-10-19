@@ -94,7 +94,7 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
    bash install.sh --sans-externes                # sans rien télécharger (garde secrets désactivé)
    ```
 
-   L'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
+   Avec `--remplacer` seulement — l'installation isolée ne télécharge rien —, l'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
    `git-hooks/betterleaks.version`, dans `~/.claude/bin/` — le garde secrets du `pre-commit`
    et du `pre-push` s'en sert. Un sha256 qui diffère ou un réseau absent : betterleaks n'est pas posé, le reste
    de l'installation continue, et la fin le signale. `--sans-externes` (`-SansExternes`) s'en
@@ -222,7 +222,8 @@ le vérifier, et ce dont chacun a besoin → [`HOOKS.md`](./HOOKS.md).
 
 ### Hooks git globaux
 
-L'installation déclare `~/.claude/git-hooks` en `core.hooksPath` **global**. Git ne cumule
+Avec `--remplacer` seulement, l'installation déclare `~/.claude/git-hooks` en `core.hooksPath`
+**global** ; l'installation isolée ne touche pas à la config git. Git ne cumule
 jamais deux dossiers de hooks : tant que ce réglage vaut, `.git/hooks/` de chaque dépôt n'est
 plus lu. D'où le **relais** — chaque hook client de `git-hooks/` lance le hook du même nom
 dans `.git/hooks/` du dépôt, s'il existe et est exécutable, avec les mêmes arguments et la
@@ -385,7 +386,15 @@ python3 hooks/garde-push.test.py
 python3 scripts/verifier-les-ecrits.py .   # renvois morts et notes en double dans les .md
 ```
 
-**Désinstaller.**
+**Désinstaller une installation isolée** (`~/.claude-config`, ou le dossier de `--dossier`).
+Rien d'autre n'a été touché — ni `~/.claude`, ni la config git globale.
+
+1. Retirer d'abord les cinq liens, comme à l'étape 1 ci-dessous, dans ce dossier. ⚠️ Sous
+   Windows, une suppression récursive du dossier suivrait les jonctions et effacerait le
+   contenu de ce dépôt.
+2. Puis supprimer le dossier.
+
+**Désinstaller une installation faite avec `--remplacer`.**
 
 1. Retirer les cinq liens — le lien seulement, jamais son contenu :
    `rm ~/.claude/{agents,commands,skills,hooks,git-hooks}` sous macOS ;

@@ -25,7 +25,8 @@ le faire passer au vert. ⛔ Tu ne le modifies pas — s'il te paraît faux, tu 
 dans `ISSUES`.
 
 ⚠️ **Un bug sans test de reproduction** — `tester` n'a pas pu le reproduire automatiquement : lis
-`~/.claude/skills/systematic-debugging/SKILL.md` avant de toucher au code, et suis-en les phases 1 à
+`skills/systematic-debugging/SKILL.md` du dossier de config de Claude Code (`$CLAUDE_CONFIG_DIR`,
+à défaut `~/.claude`) avant de toucher au code, et suis-en les phases 1 à
 3 — cause racine, motif, hypothèse — puis corrige la cause. Écris dans `ISSUES` comment le
 reproduire, `tester` écrira le test. La cause donnée par le brief, elle, fait foi — voir plus bas.
 

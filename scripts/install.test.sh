@@ -595,6 +595,29 @@ verdict 0 "$(ls -A "$tmp/dossier/home/.claude" | wc -l | tr -d ' ')" "--dossier 
 verdict absent "$(existe "$tmp/dossier/home/.claude-config")" "--dossier : ~/.claude-config non créé"
 verdict "(vide)" "$(hooks_path dossier)" "--dossier : core.hooksPath global non touché"
 
+# --dossier '~/x' : ~ développé en $HOME, pas de dossier « ~ » sous le répertoire courant.
+monter tilde
+mkdir -p "$tmp/tilde/cwd"
+(cd "$tmp/tilde/cwd" && installer_brut tilde --dossier '~/x'); verdict 0 "$?" "--dossier '~/x' : install sans erreur"
+verdict present "$(existe "$tmp/tilde/home/x/CLAUDE.md")" "--dossier '~/x' : install dans \$HOME/x"
+verdict absent "$(existe "$tmp/tilde/cwd/~")" "--dossier '~/x' : aucun ~ littéral créé"
+
+# Isolée : betterleaks ni téléchargé ni signalé, une seule ligne l'annonce.
+socle_betterleaks bl-isole "$sha_asset"
+: >"$tmp/curl-appels"
+(PATH="$tmp/bin-curl:$PATH"; installer_brut bl-isole); verdict 0 "$?" "isolée betterleaks : install sans erreur"
+verdict absent "$(existe "$tmp/bl-isole/home/.claude-config/bin/betterleaks")" "isolée betterleaks : rien dans <cible>/bin"
+verdict 0 "$(wc -l <"$tmp/curl-appels" | tr -d ' ')" "isolée betterleaks : aucun téléchargement"
+verdict annonce "$(grep -qF 'betterleaks : non installé, hooks git non posés (voir --remplacer)' "$tmp/bl-isole/sortie" && echo annonce || echo muet)" "isolée betterleaks : non-installation annoncée"
+
+socle_betterleaks bl-isole-sha 0000000000000000000000000000000000000000000000000000000000000000
+(PATH="$tmp/bin-curl:$PATH"; installer_brut bl-isole-sha); verdict 0 "$?" "isolée sha faux : install sans erreur"
+verdict muet "$(grep -qE 'commits sont refusés|garde secrets' "$tmp/bl-isole-sha/sortie" && echo annonce || echo muet)" "isolée sha faux : ni garde secrets ni commits refusés"
+
+socle_betterleaks bl-isole-sans "$sha_asset"
+(PATH="$tmp/bin-curl:$PATH"; installer_brut bl-isole-sans --sans-externes); verdict 0 "$?" "isolée --sans-externes : install sans erreur"
+verdict absent "$(existe "$tmp/bl-isole-sans/home/.claude-config/claude-config.sans-externes")" "isolée --sans-externes : aucun mémo écrit"
+
 # --dossier et --remplacer ensemble : refus, rien d'écrit.
 monter exclusives
 installer_brut exclusives --dossier "$tmp/exclusives/ailleurs" --remplacer

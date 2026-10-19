@@ -31,7 +31,8 @@
 .PARAMETER SansExternes
   N'installe rien de ce qui se telecharge (betterleaks) et desactive le garde
   secrets du pre-commit. Memorise dans <cible>/claude-config.sans-externes,
-  repris aux passes suivantes. Inventaire des outils externes : DEPENDANCES.md.
+  repris aux passes suivantes. Sans effet en installation isolee, qui ne
+  telecharge rien. Inventaire des outils externes : DEPENDANCES.md.
 
 .PARAMETER AvecExternes
   Defait -SansExternes : retire le memo et installe betterleaks.
@@ -503,30 +504,35 @@ function Install-Betterleaks {
   }
 }
 
-$ExternesMemo = Join-Path $ClaudeHome 'claude-config.sans-externes'
-if ($SansExternes) {
-  Step "externes : desactives (-SansExternes), choix memorise dans $ExternesMemo"
-  if (-not $WhatIfOnly) { Set-Content $ExternesMemo '' -Encoding utf8 }
-  $Sans = $true
-}
-elseif ($AvecExternes) {
-  Step "externes : reactives (-AvecExternes)"
-  if (-not $WhatIfOnly) { Remove-Item $ExternesMemo -Force -ErrorAction SilentlyContinue }
-  $Sans = $false
+$GardeSecretsInactif = $false
+if (-not $Remplace) {
+  Step "betterleaks : non installe, hooks git non poses (voir -Remplacer)"
 }
 else {
-  $Sans = Test-Path $ExternesMemo
-}
-
-$GardeSecretsInactif = $false
-if ($Sans) {
-  Step "betterleaks : non installe (sans externes ; -AvecExternes pour revenir) : garde secrets desactive"
-  if (Test-Path (Join-Path $ClaudeHome 'bin/betterleaks.exe')) {
-    Step "betterleaks : $(Join-Path $ClaudeHome 'bin/betterleaks.exe') reste en place, le retirer a la main (DEPENDANCES.md)"
+  $ExternesMemo = Join-Path $ClaudeHome 'claude-config.sans-externes'
+  if ($SansExternes) {
+    Step "externes : desactives (-SansExternes), choix memorise dans $ExternesMemo"
+    if (-not $WhatIfOnly) { Set-Content $ExternesMemo '' -Encoding utf8 }
+    $Sans = $true
   }
-}
-elseif (-not (Install-Betterleaks)) {
-  $GardeSecretsInactif = $true
+  elseif ($AvecExternes) {
+    Step "externes : reactives (-AvecExternes)"
+    if (-not $WhatIfOnly) { Remove-Item $ExternesMemo -Force -ErrorAction SilentlyContinue }
+    $Sans = $false
+  }
+  else {
+    $Sans = Test-Path $ExternesMemo
+  }
+
+  if ($Sans) {
+    Step "betterleaks : non installe (sans externes ; -AvecExternes pour revenir) : garde secrets desactive"
+    if (Test-Path (Join-Path $ClaudeHome 'bin/betterleaks.exe')) {
+      Step "betterleaks : $(Join-Path $ClaudeHome 'bin/betterleaks.exe') reste en place, le retirer a la main (DEPENDANCES.md)"
+    }
+  }
+  elseif (-not (Install-Betterleaks)) {
+    $GardeSecretsInactif = $true
+  }
 }
 
 Write-Host ""

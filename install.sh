@@ -24,7 +24,8 @@
 # reprennent sans --perso.
 #
 # betterleaks, à la version et au sha256 de git-hooks/betterleaks.version, est
-# téléchargé dans <cible>/bin pour le garde secrets du pre-commit. Inventaire des
+# téléchargé dans <cible>/bin pour le garde secrets du pre-commit, quand la cible
+# est ~/.claude : l'installation isolée ne télécharge rien. Inventaire des
 # outils externes : DEPENDANCES.md. --sans-externes n'installe rien de ce qui se
 # télécharge et désactive le garde secrets ; le choix est mémorisé dans
 # <cible>/claude-config.sans-externes, --avec-externes le défait.
@@ -69,7 +70,12 @@ DEJA_DANS_DEFAUT=0
 if [ "$REMPLACER" -eq 1 ]; then
   CLAUDE_HOME="$CLAUDE_DEFAUT"
 elif [ -n "$DOSSIER" ]; then
-  case "$DOSSIER" in /*) ;; *) DOSSIER="$PWD/$DOSSIER" ;; esac
+  case "$DOSSIER" in
+    "~") DOSSIER="$HOME" ;;
+    "~/"*) DOSSIER="$HOME/${DOSSIER#"~/"}" ;;
+    /*) ;;
+    *) DOSSIER="$PWD/$DOSSIER" ;;
+  esac
   [ -d "$DOSSIER" ] && DOSSIER="$(cd "$DOSSIER" && pwd)"
   CLAUDE_HOME="${DOSSIER%/}"
 elif [ "$DEJA_DANS_DEFAUT" -eq 1 ]; then
@@ -413,28 +419,32 @@ installer_betterleaks() {
   rm -rf "${dl:?}"
 }
 
-case "$EXTERNES" in
-  sans)
-    echo "  externes : désactivés (--sans-externes), choix mémorisé dans $EXTERNES_MEMO"
-    [ "$DRY_RUN" -eq 1 ] || : > "$EXTERNES_MEMO"
-    SANS_EXTERNES=1 ;;
-  avec)
-    echo "  externes : réactivés (--avec-externes)"
-    run rm -f "$EXTERNES_MEMO"
-    SANS_EXTERNES=0 ;;
-  *)
-    SANS_EXTERNES=0
-    if [ -f "$EXTERNES_MEMO" ]; then SANS_EXTERNES=1; fi ;;
-esac
-
 GARDE_SECRETS_INACTIF=0
-if [ "$SANS_EXTERNES" -eq 1 ]; then
-  echo "  betterleaks : non installé (sans externes ; --avec-externes pour revenir) : garde secrets désactivé"
-  if [ -e "$CLAUDE_HOME/bin/betterleaks" ]; then
-    echo "  betterleaks : $CLAUDE_HOME/bin/betterleaks reste en place, le retirer à la main (DEPENDANCES.md)"
-  fi
+if [ "$REMPLACE" -eq 0 ]; then
+  echo "  betterleaks : non installé, hooks git non posés (voir --remplacer)"
 else
-  installer_betterleaks || GARDE_SECRETS_INACTIF=1
+  case "$EXTERNES" in
+    sans)
+      echo "  externes : désactivés (--sans-externes), choix mémorisé dans $EXTERNES_MEMO"
+      [ "$DRY_RUN" -eq 1 ] || : > "$EXTERNES_MEMO"
+      SANS_EXTERNES=1 ;;
+    avec)
+      echo "  externes : réactivés (--avec-externes)"
+      run rm -f "$EXTERNES_MEMO"
+      SANS_EXTERNES=0 ;;
+    *)
+      SANS_EXTERNES=0
+      if [ -f "$EXTERNES_MEMO" ]; then SANS_EXTERNES=1; fi ;;
+  esac
+
+  if [ "$SANS_EXTERNES" -eq 1 ]; then
+    echo "  betterleaks : non installé (sans externes ; --avec-externes pour revenir) : garde secrets désactivé"
+    if [ -e "$CLAUDE_HOME/bin/betterleaks" ]; then
+      echo "  betterleaks : $CLAUDE_HOME/bin/betterleaks reste en place, le retirer à la main (DEPENDANCES.md)"
+    fi
+  else
+    installer_betterleaks || GARDE_SECRETS_INACTIF=1
+  fi
 fi
 
 echo
