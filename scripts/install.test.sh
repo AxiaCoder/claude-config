@@ -593,6 +593,7 @@ installer_brut dossier --dossier "$tmp/dossier/ailleurs"; verdict 0 "$?" "--doss
 verdict present "$(existe "$tmp/dossier/ailleurs/CLAUDE.md")" "--dossier : CLAUDE.md dans le dossier"
 verdict 0 "$(ls -A "$tmp/dossier/home/.claude" | wc -l | tr -d ' ')" "--dossier : ~/.claude laissé vide"
 verdict absent "$(existe "$tmp/dossier/home/.claude-config")" "--dossier : ~/.claude-config non créé"
+verdict "(vide)" "$(hooks_path dossier)" "--dossier : core.hooksPath global non touché"
 
 # --dossier et --remplacer ensemble : refus, rien d'écrit.
 monter exclusives
