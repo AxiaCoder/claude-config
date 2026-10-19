@@ -235,6 +235,40 @@ def verifier_boucle() -> list[str]:
     return defauts
 
 
+def verifier_claude_config_dir() -> list[str]:
+    """Lance le hook sous un HOME et un CLAUDE_CONFIG_DIR jetables, et rend les défauts constatés.
+
+    Attendu : CLAUDE_CONFIG_DIR défini → l'état vit dans `$CLAUDE_CONFIG_DIR/hook-state/`, rien
+    sous `~/.claude` ; CLAUDE_CONFIG_DIR vide → l'état revient dans `~/.claude/hook-state/`.
+    """
+    defauts: list[str] = []
+    charge = json.dumps({
+        "session_id": "essai-config-dir",
+        "tool_name": "Read",
+        "tool_input": {"file_path": "/etc/hosts"},
+    })
+    for valeur in ("dossier", ""):
+        with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as dossier:
+            config_dir = dossier if valeur else ""
+            env = {**os.environ, "HOME": home, "USERPROFILE": home, "CLAUDE_CONFIG_DIR": config_dir}
+            code = subprocess.run(
+                [sys.executable, str(_ICI / "guardrail.py")],
+                input=charge, capture_output=True, text=True, env=env, timeout=30,
+            ).returncode
+            if code != 0:
+                defauts.append(f"CLAUDE_CONFIG_DIR={config_dir!r} : sortie {code}, attendu 0")
+            etat_maison = pathlib.Path(home) / ".claude" / "hook-state" / "guardrail-state.json"
+            etat_dossier = pathlib.Path(dossier) / "hook-state" / "guardrail-state.json"
+            if valeur:
+                if not etat_dossier.is_file():
+                    defauts.append("CLAUDE_CONFIG_DIR défini : pas d'état dans $CLAUDE_CONFIG_DIR/hook-state")
+                if (pathlib.Path(home) / ".claude").exists():
+                    defauts.append("CLAUDE_CONFIG_DIR défini : ~/.claude créé")
+            elif not etat_maison.is_file():
+                defauts.append("CLAUDE_CONFIG_DIR vide : pas d'état dans ~/.claude/hook-state")
+    return defauts
+
+
 CAS_WINDOWS: tuple[tuple[bool, str], ...] = (
     (True, "/tmp/build-x"),
     (True, "web/dist"),
@@ -397,6 +431,10 @@ def main() -> int:
     print(f"{'  ok ' if not defauts_boucle else 'ECHEC'} boucle : 4e appel identique bloqué, état dans hook-state")
     for defaut in defauts_boucle:
         print(f"  {defaut}")
+    defauts_config_dir = verifier_claude_config_dir()
+    print(f"{'  ok ' if not defauts_config_dir else 'ECHEC'} CLAUDE_CONFIG_DIR : l'état suit le dossier de config, ~/.claude à défaut")
+    for defaut in defauts_config_dir:
+        print(f"  {defaut}")
     defauts_windows = verifier_chemins_windows()
     print(f"{'  ok ' if not defauts_windows else 'ECHEC'} chemins Windows : ntpath ne fait pas refuser un jetable")
     for defaut in defauts_windows:
@@ -411,7 +449,7 @@ def main() -> int:
     print(f"{'  ok ' if not defauts_exemption else 'ECHEC'} exemption gitleaks : refusée quand l'écriture l'ajoute")
     for defaut in defauts_exemption:
         print(f"  {defaut}")
-    return 1 if echecs or defauts_boucle or defauts_windows or defauts_utf8 or defauts_exemption else 0
+    return 1 if echecs or defauts_boucle or defauts_config_dir or defauts_windows or defauts_utf8 or defauts_exemption else 0
 
 
 if __name__ == "__main__":

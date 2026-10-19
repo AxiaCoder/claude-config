@@ -61,7 +61,8 @@ rouge.
 
 ## La procédure vit dans le dépôt relu, pas ici
 
-`~/.claude/commands/pr-review.md`, puis `.claude/surcharges/pr-review.md` du dépôt s'il en a une —
+`commands/pr-review.md` du dossier de config de Claude Code (`$CLAUDE_CONFIG_DIR`, à défaut
+`~/.claude`), puis `.claude/surcharges/pr-review.md` du dépôt s'il en a une —
 elle complète la base, et la remplace là où elles se contredisent. **Lis-les et suis-les** — périmètre, échelle de sévérité, gabarit de post. ⛔ **L'échelle n'est pas
 recopiée ici** : une règle écrite deux fois diverge sans que rien ne le signale.
 

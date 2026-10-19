@@ -43,11 +43,10 @@ d'optimisation pour IDE assistés par IA. Il en a tiré son inspiration, et une 
 **Tout ce qui vient d'ailleurs** — installé par claude-config ou supposé présent, version,
 source, empreinte, comment le retirer : [`DEPENDANCES.md`](./DEPENDANCES.md).
 
-**Prérequis** : Claude Code, lancé au moins une fois (l'installation s'arrête si `~/.claude`
-n'existe pas) ; `git` ; Python 3 (bibliothèque standard seulement). Sous Windows, en plus :
+**Prérequis** : Claude Code ; `git` ; Python 3 (bibliothèque standard seulement). Sous Windows, en plus :
 PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks git.
 
-1. **Cloner là où le dépôt restera.** L'installation lie `~/.claude` à ce dossier : le déplacer
+1. **Cloner là où le dépôt restera.** L'installation lie le dossier de config à ce dossier : le déplacer
    ensuite casse les liens, jusqu'à la prochaine installation.
 
    ```bash
@@ -57,7 +56,27 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
 
 2. **Installer**, depuis le dossier du dépôt.
 
-   ⚠️ L'installation **remplace** votre `~/.claude/CLAUDE.md` et votre `~/.claude/CAVEMAN.md`,
+   **Par défaut, votre `~/.claude` n'est pas touché.** L'installation se fait à côté, dans
+   `~/.claude-config` — ou dans le dossier donné par `--dossier` (`-Dossier`) —, et ne modifie
+   pas non plus la config git globale. Pour lancer Claude Code sur cette config, la commande
+   affichée en fin d'installation :
+
+   ```bash
+   CLAUDE_CONFIG_DIR=~/.claude-config claude          # macOS / Linux
+   ```
+
+   ```powershell
+   $env:CLAUDE_CONFIG_DIR="$HOME\.claude-config"; claude   # Windows
+   ```
+
+   C'est un dossier de config neuf : Claude Code y demande une connexion au premier lancement.
+   Le garde `pre-push` (§ [Hooks git globaux](#hooks-git-globaux)) n'y est pas actif, faute de `core.hooksPath`.
+
+   **Pour adopter la config pour de bon**, `--remplacer` (`-Remplacer`) installe dans
+   `~/.claude`. Une installation déjà faite dans `~/.claude` y reste aux passes suivantes, sans
+   l'option. `--dossier` et `--remplacer` ensemble sont refusés.
+
+   ⚠️ Avec `--remplacer`, l'installation **remplace** votre `~/.claude/CLAUDE.md` et votre `~/.claude/CAVEMAN.md`,
    et dans `~/.claude/settings.json` les clés que ce dépôt définit — `hooks`, `statusLine`,
    `permissions` : les permissions ajoutées à la main dans `~/.claude/settings.json` sont
    effacées à chaque passe. Les hooks d'autres outils (iTerm2…) sont gardés, ceux ajoutés à la
@@ -67,20 +86,24 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
    aucune. `statusLine`, elle, remplace celle du dépôt.
 
    ```bash
-   bash install.sh                                # macOS / Linux
+   bash install.sh                                # macOS / Linux, dans ~/.claude-config
+   bash install.sh --dossier ~/essai-claude       # ailleurs
+   bash install.sh --remplacer                    # dans ~/.claude
    bash install.sh --perso ~/notes/claude-perso   # avec un dossier perso
    bash install.sh --dry-run                      # voir ce qui se passerait
-   bash install.sh --sans-externes                # sans rien télécharger (garde secrets désactivé)
+   bash install.sh --remplacer --sans-externes    # dans ~/.claude, sans rien télécharger (garde secrets désactivé)
    ```
 
-   L'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
+   Avec `--remplacer` seulement — l'installation isolée ne télécharge rien —, l'installation télécharge **betterleaks**, à la version et au sha256 épinglés dans
    `git-hooks/betterleaks.version`, dans `~/.claude/bin/` — le garde secrets du `pre-commit`
    et du `pre-push` s'en sert. Un sha256 qui diffère ou un réseau absent : betterleaks n'est pas posé, le reste
    de l'installation continue, et la fin le signale. `--sans-externes` (`-SansExternes`) s'en
    passe et est mémorisé ; `--avec-externes` (`-AvecExternes`) le défait.
 
    ```powershell
-   .\install.ps1                                  # Windows
+   .\install.ps1                                  # Windows, dans ~\.claude-config
+   .\install.ps1 -Dossier 'D:\essai-claude'       # ailleurs
+   .\install.ps1 -Remplacer                       # dans ~\.claude
    .\install.ps1 -Perso 'D:\notes\claude-perso'   # avec un dossier perso
    .\install.ps1 -WhatIfOnly                      # voir ce qui se passerait
    ```
@@ -113,6 +136,9 @@ Dans ce `CLAUDE.md` comme dans `CLAUDE.complet.md`, `{{PERSO}}` est remplacé pa
 ➡️ Un exemple prêt à copier : [`exemple-perso/`](./exemple-perso/).
 
 ## Comment ça marche
+
+Ci-dessous, `~/.claude` désigne le dossier de config cible : `~/.claude-config` par défaut,
+celui de `--dossier`, ou `~/.claude` avec `--remplacer`.
 
 `~/.claude` **reste un vrai dossier**. Seuls cinq dossiers y sont montés vers ce dépôt, par
 jonction NTFS (Windows) ou lien symbolique (macOS) :
@@ -165,7 +191,7 @@ L'état d'avant la passe est copié en `settings.json.prev`.
 
 | Marqueur | Remplacé par |
 |---|---|
-| `{{CLAUDE_HOME}}` | le chemin de `~/.claude` |
+| `{{CLAUDE_HOME}}` | le chemin du dossier de config cible — `~/.claude-config`, celui de `--dossier`, ou `~/.claude` |
 | `{{REPO}}` | le chemin de ce dépôt, ouvert à Claude Code par `permissions.additionalDirectories` |
 | `{{PYTHON}}` | sous Windows : l'interpréteur trouvé par `py -3`, sinon `python` |
 | `{{MODS}}` | chaque `mods/*/` qui porte un `.claude-plugin/plugin.json`, triés, joints par `;` (Windows) ou `:` (macOS). Sans mod, la clé qui le porte est retirée de `env` |
@@ -196,7 +222,8 @@ le vérifier, et ce dont chacun a besoin → [`HOOKS.md`](./HOOKS.md).
 
 ### Hooks git globaux
 
-L'installation déclare `~/.claude/git-hooks` en `core.hooksPath` **global**. Git ne cumule
+Avec `--remplacer` seulement, l'installation déclare `~/.claude/git-hooks` en `core.hooksPath`
+**global** ; l'installation isolée ne touche pas à la config git. Git ne cumule
 jamais deux dossiers de hooks : tant que ce réglage vaut, `.git/hooks/` de chaque dépôt n'est
 plus lu. D'où le **relais** — chaque hook client de `git-hooks/` lance le hook du même nom
 dans `.git/hooks/` du dépôt, s'il existe et est exécutable, avec les mêmes arguments et la
@@ -359,7 +386,15 @@ python3 hooks/garde-push.test.py
 python3 scripts/verifier-les-ecrits.py .   # renvois morts et notes en double dans les .md
 ```
 
-**Désinstaller.**
+**Désinstaller une installation isolée** (`~/.claude-config`, ou le dossier de `--dossier`).
+Rien d'autre n'a été touché — ni `~/.claude`, ni la config git globale.
+
+1. Retirer d'abord les cinq liens, comme à l'étape 1 ci-dessous, dans ce dossier. ⚠️ Sous
+   Windows, une suppression récursive du dossier suivrait les jonctions et effacerait le
+   contenu de ce dépôt.
+2. Puis supprimer le dossier.
+
+**Désinstaller une installation faite avec `--remplacer`.**
 
 1. Retirer les cinq liens — le lien seulement, jamais son contenu :
    `rm ~/.claude/{agents,commands,skills,hooks,git-hooks}` sous macOS ;

@@ -52,7 +52,8 @@ l'étape 5 l'a décidé.
    sans cette réponse. Puis dessine avec l'outil de maquettes dont on dispose, sous ce cadrage. Un
    artefact se crée avec l'outil d'artefacts de la session. **Sans cet outil (Nimbalyst)**, dans
    cet ordre, et tout chemin écrit en absolu :
-   1. écris la page HTML dans `~/.claude/maquettes/<projet>/<écran>.html`, jamais dans le dépôt —
+   1. écris la page HTML dans `<config>/maquettes/<projet>/<écran>.html`, jamais dans le dépôt —
+      `<config>` : le dossier de config de Claude Code, `$CLAUDE_CONFIG_DIR`, à défaut `~/.claude` ;
       `<projet>` : le nom du dossier de la fiche du brain (`projects/<nom>/README.md`), à défaut
       — repli `docs/PROJET.md` — celui du dossier du dépôt ;
    2. écris aussitôt dans `## Décisions & notes` de la fiche la ligne

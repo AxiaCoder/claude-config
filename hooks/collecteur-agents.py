@@ -25,10 +25,10 @@ import urllib.request
 from collections import Counter
 from datetime import datetime, timezone
 
-MAISON = pathlib.Path.home()
-REGLAGES = MAISON / ".claude/settings.json"
-PROJETS = MAISON / ".claude/projects"
-FILE_ATTENTE = MAISON / ".claude/telemetrie-agents/en-attente.jsonl"
+CONFIG = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR") or pathlib.Path.home() / ".claude")
+REGLAGES = CONFIG / "settings.json"
+PROJETS = CONFIG / "projects"
+FILE_ATTENTE = CONFIG / "telemetrie-agents/en-attente.jsonl"
 DELAI_ENVOI = 3
 JOURS_GARDES = 30
 
