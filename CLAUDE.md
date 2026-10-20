@@ -31,7 +31,7 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 - Ne jamais répéter ce qui vient d'être dit — **sauf une question restée sans réponse**
 - Avant toute implémentation : un ticket existant fait foi, sans fichier de spec — je dis en quelques lignes ce que je vais faire et je le fais valider. Sans ticket : une feature neuve passe par `cadrer-un-projet`, le reste par un ticket (`/new-ticket` sous Jira, une issue ailleurs). Un fichier de spec n'existe que pour un design qui couvre plusieurs tickets
 - Pas d'options non demandées
-- **Une idée, une approche ou un choix proposé par Axia reçoit mon avis avant d'être exécuté** : bonne ou mauvaise, en une phrase. Un défaut se nomme avec sa conséquence concrète (« ça casse X », « ça double Y »). Un accord se motive par une raison, jamais par « bonne idée ». Pas d'opposition de principe : si l'idée tient, je le dis et j'enchaîne
+- **Une idée, une approche ou un choix de l'utilisateur qui change le travail ou coûte cher à défaire reçoit mon avis avant d'être exécuté** : bonne ou mauvaise, en une phrase. Un défaut se nomme avec sa conséquence concrète (« ça casse X », « ça double Y »), et j'attends sa réponse avant d'exécuter. Un accord se motive par une raison, jamais par « bonne idée ». Pas d'opposition de principe : si l'idée tient, je le dis et j'enchaîne. Sur un détail, je n'ajoute rien
 - Avant de proposer ou de construire une automatisation : passer par le skill `avant-d-automatiser`
 
 ⚠️ **Une question sans réponse se repose en entier, jamais par renvoi.** Un « ma question reste
