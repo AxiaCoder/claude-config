@@ -117,7 +117,7 @@ ligne, est refusée par le `garde-push.py` installé — la lire depuis un fichi
 | Brique | Ce qu'elle demande |
 |---|---|
 | `guardrail.py` | rien — bibliothèque standard. **Commandes destructrices : outil `Bash` seulement, pas l'outil PowerShell**. Refuse aussi un Write, Edit, MultiEdit ou NotebookEdit qui **ajoute** une exemption `gitleaks:allow` / `betterleaks:allow` : il compte les marqueurs avant et après (fichier sur disque pour Write, cellule pour NotebookEdit) ; une écriture qui conserve leur nombre passe |
-| `collecteur-agents.py` | une adresse de collecte dans `env` (dossier perso), et une instance VictoriaMetrics derrière — celle de [home-server-telemetry](https://github.com/AxiaCoder/home-server-telemetry), par exemple |
+| `collecteur-agents.py` | une adresse de collecte dans `env` (dossier perso), et une instance VictoriaMetrics derrière — celle de [claude-code-telemetry](https://github.com/AxiaCoder/claude-code-telemetry), par exemple |
 | `session-git-context`, `post-write-lint` | `sh` sur macOS ; `pwsh` (PowerShell 7) sous Windows. `post-write-lint` demande aussi `pnpm` dans un projet AdonisJS |
 | `statusline.py` | rien — bibliothèque standard |
 | `titre-onglet.py` | rien — bibliothèque standard. Demande `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1` (`env` des settings), sans quoi Claude Code écrase le titre ; ne lit que les 100 derniers Ko du transcript |
