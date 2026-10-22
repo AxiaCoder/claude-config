@@ -24,7 +24,7 @@ const MAX_OPTION_LENGTH = 30
 
 const RULE_SECTION = {
   id: 'open-question:rule',
-  text: "While the open-question mod is loaded, a question still awaiting the user's answer when a subagent report comes in is pinned with `pin_question` instead of being asked again. Ask questions in your message first; never pin a question as you ask it. One pinned at a time: if two questions await when the report comes in, pin the first and ask the second again in full. An answer through the bar arrives as `Réponse à « … » :` and unpins by itself; call `unpin_question` only when an answer typed directly settles the question.",
+  text: "While the open-question mod is loaded, a question still awaiting the user's answer when a subagent report comes in is pinned with `pin_question` instead of being asked again. Ask questions in your message first; never pin a question as you ask it. Pin silently: never mention in your reply that a question was pinned. One pinned at a time: if two questions await when the report comes in, pin the first and ask the second again in full. An answer through the bar arrives as `Réponse à « … » :` and unpins by itself; call `unpin_question` only when an answer typed directly settles the question.",
   scope: 'session',
 } as const
 
