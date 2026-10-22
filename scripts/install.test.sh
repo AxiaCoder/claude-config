@@ -631,7 +631,7 @@ verdict "(vide)" "$(hooks_path exclusives)" "--dossier + --remplacer : core.hook
 monter remplacer
 installer_brut remplacer --remplacer; verdict 0 "$?" "--remplacer : install sans erreur"
 verdict lien "$([ -L "$tmp/remplacer/home/.claude/agents" ] && echo lien || echo pas-lien)" "--remplacer : agents lié dans ~/.claude"
-verdict pose "$(case "$(hooks_path remplacer)" in */remplacer/home/.claude/git-hooks*) echo pose ;; *) echo autre ;; esac)" "--remplacer : core.hooksPath global vers ~/.claude/git-hooks"
+verdict pose "$(case "$(hooks_path remplacer)" in (*/remplacer/home/.claude/git-hooks*) echo pose ;; (*) echo autre ;; esac)" "--remplacer : core.hooksPath global vers ~/.claude/git-hooks"
 verdict absent "$(existe "$tmp/remplacer/home/.claude-config")" "--remplacer : ~/.claude-config non créé"
 
 # Sans option, une install existante dans ~/.claude : conservée, rien dans ~/.claude-config.
