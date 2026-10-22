@@ -612,6 +612,7 @@ describe('prompt', () => {
     expect(sections.slice(0, -1)).toEqual([...ENGINE_SECTIONS])
     expect(sections[sections.length - 1]).toMatchObject({ id: 'open-question:rule', scope: 'session' })
     expect(sections[sections.length - 1]?.text).toContain('never pin a question as you ask it')
+    expect(sections[sections.length - 1]?.text).toContain('never mention in your reply that a question was pinned')
   })
 
   test('leaves the sections as next(e) answered when the request lacks pin_question', async ($, on) => {
