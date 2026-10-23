@@ -60,6 +60,9 @@ clos sans l'autre, et le premier qui part laisse le second sans état stable.
 - Puis crée-le par `twg jira workitem create`, champs personnalisés par `--field customfield_*`,
   dans le projet demandé ; le MCP Jira en secours (`CLAUDE.md` § Outillage).
 - Une épique se crée directement dans le statut de départ du projet, jamais en brouillon.
+- **Exception — un retour de review** (skill `traiter-une-review`, § « Le sort de chaque
+  retour ») : le ticket se crée sans le § 1 ni cette validation, au format du § 2. Sa clé est citée
+  dans le compte rendu de la review, où l'utilisateur le défait s'il n'en veut pas.
 
 ## Le sprint
 
