@@ -13,7 +13,8 @@ remplace là où ils se contredisent.
 
 ⛔ **Pas sur `main`.** `git branch --show-current` d'abord ; sur `main`, on branche avant.
 ⛔ **Pas de merge.** Ouvrir et fusionner sont deux gestes, et le second demande l'accord de l'utilisateur —
-même sur « finalise » ou « termine ».
+même sur « finalise » ou « termine » —, sauf ticket au niveau « autonome » (`CLAUDE.md` § Niveau
+d'autonomie d'un ticket).
 
 ## La porte avant d'ouvrir
 

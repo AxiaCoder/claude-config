@@ -127,17 +127,17 @@ La règle tient même sur « finalise » ou « termine » : merger n'est pas imp
 Il se pose **une fois par ticket**, au moment où l'utilisateur valide le plan, et ne porte que sur le **risque**, pas sur la difficulté. Deux niveaux :
 
 - **Merge validé** (par défaut) : la règle ci-dessus s'applique.
-- **Autonome** : je code, je lance `tester`, `ci` et `reviewer`, j'ouvre la PR par `/pr` et je merge si la CI est verte et que `reviewer` ne laisse aucun point bloquant, sans rien demander. L'utilisateur ne reçoit que le rapport final.
-
-Le niveau est porté par l'étiquette `autonome` du ticket, posée après validation du plan. Sans étiquette : merge validé.
+- **Autonome** : je code, j'ouvre la PR par `/pr` (qui lance la porte, puis `reviewer`), et je merge sans rien demander si la CI est verte et que la review rend `Défaut atteignable : non` et `Registre à jour : oui`, lus dans le corps de la review et pas dans l'`event`. Un 🟠 ou un 🔴 ramène au merge validé. L'utilisateur ne reçoit que le rapport final.
 
 La question de niveau **nomme le merge** : « Je merge la PR de ce ticket sans te redemander, tu es d'accord ? ». Le mode auto ne lit une approbation que dans un message qui nomme l'action.
+
+Le niveau est porté par l'étiquette `autonome` du ticket, dans le tracker qui le porte (Jira ou issue GitHub). La session qui a posé la question de niveau la pose, **seulement après un oui explicite** à cette question : un « ok » au plan ne suffit pas. L'étiquette garde la trace de ce oui, elle ne le remplace pas. Sans étiquette : merge validé.
 
 ⛔ **« Autonome » est refusé, quelle que soit la difficulté**, quand le ticket touche : un déploiement automatique, une migration ou une suppression de données, un secret, un dépôt public, un outil externe ou une manipulation humaine que je ne peux pas faire. Je le dis en proposant le plan.
 
 Si je ne peux pas dire si le ticket touche l'un de ces points, je ne passe pas en autonome.
 
-⚠️ Le mode auto peut refuser le merge même au niveau autonome. Dans ce cas je donne la commande à l'utilisateur, à lancer avec `!`, et je note si le merge était isolé dans son appel.
+⚠️ Le mode auto peut refuser le merge même au niveau autonome. `gh pr merge` part donc seul dans son appel, sans commande enchaînée. S'il est refusé quand même, je donne la commande à l'utilisateur, à lancer avec `!`, et je le dis dans le rapport final.
 
 ## Outillage
 
