@@ -295,7 +295,7 @@ connu le défaut qu'on n'a pas énoncé. « Le regroupement n'était tenu par au
 3. **une ligne de corrections**, courte : sha + ce qui a changé ;
 4. **les vérifications** : la commande lancée et ce qu'elle a rendu, le nombre de tests, les
    mutations posées ;
-5. **le sort de chaque retour** : un tableau d'une ligne par retour, avec l'un des trois sorts
+5. **le sort de chaque retour** : un tableau d'une ligne par retour, avec l'un des quatre sorts
    ci-dessous.
 
 Sur plusieurs passes, une section par passe, puis un total.
@@ -305,13 +305,20 @@ Sur plusieurs passes, une section par passe, puis un total.
 Aucun retour ne reste sans sort. Chacun est :
 
 - **corrigé dans la PR** — le sha ;
-- **un ticket créé** — sa clé, **créée avant** de rendre compte : « part en ticket » sans clé ne
-  compte pas ;
+- **un ticket créé** — sa clé : « part en ticket » sans clé ne compte pas. Ce ticket naît du
+  retour, dans le tracker du dépôt, sans la validation que demande `/new-ticket` pour un ticket
+  neuf : l'utilisateur en découvre la clé dans ce compte rendu, et c'est là qu'il le défait ;
 - **écarté, avec sa raison** — un avertissement que la review ne fonde pas, un retour que le code
-  contredit.
+  contredit ;
+- **en attente de décision** — ce que la review laisse à l'utilisateur (§4). Il se compte, et
+  il se redit à chaque compte rendu tant qu'il est ouvert.
 
 ⛔ **Un retour absent du tableau est un retour perdu.** Le total en fin de dernière passe doit
-retomber sur le nombre de retours reçus : N reçus = corrigés + tickets + écartés.
+retomber sur le nombre de retours reçus : N reçus = corrigés + tickets + écartés + en attente.
+
+📌 **« N reçus » compte les retours de défaut**, de toute passe et de tout reviewer, un même
+retour relevé deux fois comptant pour un. Il ne compte pas les ✅, ni les lignes d'état de la
+review (« Registre à jour : oui »).
 
 ### À dire explicitement, sans le noyer
 
@@ -328,8 +335,9 @@ vers les corrections efface en premier.
 ## 6. Fusionner
 
 **On fusionne quand plus aucun retour ne désigne un défaut atteignable dans le code tel qu'il
-est.** Le reste part en tickets (§5, « Le sort de chaque retour ») — **à une exception**, un écrit
-que *cette* pull request a elle-même rendu faux, qui se corrige dedans. Un 📘 ne bloque donc jamais seul, sauf dans ce
+est.** Le reste suit son sort (§5, « Le sort de chaque retour ») : un ticket, un écart motivé ou
+une décision laissée à l'utilisateur — **à une exception**, un écrit que *cette* pull request a
+elle-même rendu faux, qui se corrige dedans. Un 📘 ne bloque donc jamais seul, sauf dans ce
 cas-là.
 
 ⚠️ **Et quand l'attribution ne se tranche pas, on le dit.** Une attribution inventée envoie
