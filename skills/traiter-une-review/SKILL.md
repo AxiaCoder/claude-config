@@ -356,3 +356,7 @@ mérite pas sa passe.
 ⛔ **Demander la permission avant de fusionner, PR par PR.** Une phrase conditionnelle (« on merge
 si c'est bon ») est un mandat de vérifier, pas une permission d'avance : si la vérification échoue,
 le dire et ne pas fusionner.
+
+📌 **Seule exception : un ticket au niveau « autonome »**, dont l'étiquette garde la trace d'un oui
+donné d'avance à la question qui nomme le merge. Les conditions de la fusion y sont écrites à un
+seul endroit : `CLAUDE.md` § Niveau d'autonomie d'un ticket.
