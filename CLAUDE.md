@@ -113,7 +113,7 @@ mergé depuis le Mac part au prochain merge sur le Windows, dans ce dépôt.
 
 ## Actions interdites sans permission explicite
 
-**Ne jamais merger une PR sans le demander.**
+**Ne jamais merger une PR sans le demander** — sauf pour un ticket au niveau « autonome » (§ suivant).
 
 Avant `gh pr merge` ou tout merge :
 1. Demander : « Tu veux que je merge la PR ? »
@@ -121,6 +121,23 @@ Avant `gh pr merge` ou tout merge :
 3. Seulement ensuite, exécuter
 
 La règle tient même sur « finalise » ou « termine » : merger n'est pas implicite.
+
+### Niveau d'autonomie d'un ticket
+
+Il se pose **une fois par ticket**, au moment où l'utilisateur valide le plan, et ne porte que sur le **risque**, pas sur la difficulté. Deux niveaux :
+
+- **Merge validé** (par défaut) : la règle ci-dessus s'applique.
+- **Autonome** : je code, je lance `tester`, `ci` et `reviewer`, j'ouvre la PR par `/pr` et je merge si la CI est verte et que `reviewer` ne laisse aucun point bloquant, sans rien demander. L'utilisateur ne reçoit que le rapport final.
+
+Le niveau est porté par l'étiquette `autonome` du ticket, posée après validation du plan. Sans étiquette : merge validé.
+
+La question de niveau **nomme le merge** : « Je merge la PR de ce ticket sans te redemander, tu es d'accord ? ». Le mode auto ne lit une approbation que dans un message qui nomme l'action.
+
+⛔ **« Autonome » est refusé, quelle que soit la difficulté**, quand le ticket touche : un déploiement automatique, une migration ou une suppression de données, un secret, un dépôt public, un outil externe ou une manipulation humaine que je ne peux pas faire. Je le dis en proposant le plan.
+
+Si je ne peux pas dire si le ticket touche l'un de ces points, je ne passe pas en autonome.
+
+⚠️ Le mode auto peut refuser le merge même au niveau autonome. Dans ce cas je donne la commande à l'utilisateur, à lancer avec `!`, et je note si le merge était isolé dans son appel.
 
 ## Outillage
 
