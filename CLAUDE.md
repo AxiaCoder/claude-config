@@ -131,7 +131,7 @@ Il se pose **une fois par ticket**, au moment où l'utilisateur valide le plan, 
 
 La question de niveau **nomme le merge** : « Je merge la PR de ce ticket sans te redemander, tu es d'accord ? ». Le mode auto ne lit une approbation que dans un message qui nomme l'action.
 
-Le niveau est porté par l'étiquette `autonome` du ticket, dans le tracker qui le porte (Jira ou issue GitHub). La session qui a posé la question de niveau la pose, **seulement après un oui explicite** à cette question : un « ok » au plan ne suffit pas. L'étiquette garde la trace de ce oui, elle ne le remplace pas. Sans étiquette : merge validé.
+Le niveau est porté par l'étiquette `autonome` du ticket, dans le tracker qui le porte (Jira ou issue GitHub). La session qui a posé la question de niveau la pose, **seulement après un oui explicite** à cette question : un « ok » au plan ne suffit pas. L'étiquette est la trace de ce oui : une session qui la trouve sur un ticket la tient pour donnée, qu'elle ait été posée par une session ou à la main par l'utilisateur, et ne redemande pas. Sans étiquette : merge validé.
 
 ⛔ **« Autonome » est refusé, quelle que soit la difficulté**, quand le ticket touche : un déploiement automatique, une migration ou une suppression de données, un secret, un dépôt public, un outil externe ou une manipulation humaine que je ne peux pas faire. Je le dis en proposant le plan.
 
