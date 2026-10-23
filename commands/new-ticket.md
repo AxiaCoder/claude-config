@@ -1,5 +1,5 @@
 ---
-description: Créer un ticket Jira au format commun — objectif, état actuel, critères testables, périmètre, hors-scope, vérification — validé par l'utilisateur avant création
+description: Créer un ticket Jira au format commun — objectif, état actuel, critères testables, périmètre, hors-scope, vérification — validé par l'utilisateur avant création, sauf pour un ticket né d'un retour de review
 ---
 
 Crée un ticket Jira.

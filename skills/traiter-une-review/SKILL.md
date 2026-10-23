@@ -305,8 +305,9 @@ Sur plusieurs passes, une section par passe, puis un total.
 Aucun retour ne reste sans sort. Chacun est :
 
 - **corrigé dans la PR** — le sha ;
-- **un ticket créé** — sa clé : « part en ticket » sans clé ne compte pas. Il se crée par
-  `/new-ticket`, format §2 et exception du §3 : sans la validation préalable, l'utilisateur en
+- **un ticket créé** — sa clé : « part en ticket » sans clé ne compte pas. Il se crée dans le
+  tracker du dépôt : par `/new-ticket` sous Jira (son § 2 pour le format, son § 3 pour
+  l'exception), une issue au même format ailleurs. Sans validation préalable : l'utilisateur en
   découvre la clé dans ce compte rendu et c'est là qu'il le défait ;
 - **écarté, avec sa raison** — un avertissement que la review ne fonde pas, un retour que le code
   contredit ;
