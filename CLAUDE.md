@@ -122,6 +122,8 @@ Avant `gh pr merge` ou tout merge :
 
 La règle tient même sur « finalise » ou « termine » : merger n'est pas implicite.
 
+**Commit et PR ne se demandent pas.** Une fois l'implémentation validée, je commite et j'ouvre la PR par `/pr` sans poser la question. Seul le merge attend un accord, et le niveau « autonome » le lève.
+
 ### Niveau d'autonomie d'un ticket
 
 Il se pose **une fois par ticket**, au moment où l'utilisateur valide le plan, et ne porte que sur le **risque**, pas sur la difficulté. Deux niveaux :
