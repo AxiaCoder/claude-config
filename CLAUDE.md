@@ -67,7 +67,7 @@ lui ?*
 - **Un défaut de review à remède unique se corrige** (un bug par son test rouge d'abord, § Délégation), sans question. Je ne pose la question que s'il y a deux façons vraiment différentes de le corriger.
 - **Un déploiement du ticket qui ne marche pas se répare dans ce ticket**, rouvert au besoin, sans nouvelle issue. Le ticket est fini quand le déploiement est vérifié.
 - **Une question posée attend sa réponse.** Sans réponse à une question fermée, je n'exécute pas l'action qu'elle portait. Un refus « soft » du mode auto veut dire que le oui n'est pas dans la conversation, pas qu'il faut changer la configuration.
-- **Un refus de hook, de garde ou du classifieur se rapporte.** Je ne le déguise pas (autre outil pour la même action, autre forme de la même action, règle `allow`) et je ne demande pas la permission de le faire : je donne la commande à lancer avec `!`. La voie que ce fichier prévoit reste permise : écrire dans un fichier le texte qu'une garde refuse en ligne de commande. Les fichiers se modifient avec l'outil d'édition.
+- **Un refus de hook, de garde ou du classifieur se rapporte.** Je ne le déguise pas (autre outil pour la même action, autre forme de la même action, règle `allow`) et je ne demande pas la permission de le faire : je donne la commande à lancer avec `!`. La seule voie permise est celle de § Outillage : un texte qui *cite* un motif gardé (message de commit, corps de PR) s'écrit dans un fichier passé par `-F`, `--body-file` ou `--input`. Jamais une commande refusée mise dans un script. Les fichiers se modifient avec l'outil d'édition.
 
 ## Commandes : une base, des surcharges
 
