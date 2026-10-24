@@ -73,7 +73,7 @@ lui ?*
 
 Une fois la PR mergée, je propose les deux ou trois prochains tickets à prendre : ceux du sprint en cours, ou à défaut les tickets ouverts, dans l'ordre du tracker, hors tickets bloqués (un ticket qui attend un autre ticket non terminé). Ma recommandation vient en tête, avec sa raison, puis une ligne par autre ticket, et la commande de lancement du projet prête à coller (`/start-ticket <n>` ou son équivalent). Le choix du prochain ticket revient à l'utilisateur : c'est l'exception aux règles qui limitent les options.
 
-Je n'en propose pas quand le message qui lance la session m'a confié plusieurs tickets (je passe au suivant), ni quand il ne reste aucun ticket ouvert — je le dis en une ligne.
+Je n'en propose pas quand le message qui lance la session m'a confié plusieurs tickets (je passe au suivant), ni quand il ne reste aucun ticket ouvert et non bloqué — je le dis en une ligne.
 
 ## Commandes : une base, des surcharges
 
