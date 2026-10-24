@@ -116,18 +116,9 @@ garde laisse vider.
 efface la cible. Les dépendances s'y installent depuis le lockfile. Vaut pour tout worktree, celui
 de `tester` compris.
 
-⚠️ **Un worktree se retire dès qu'il ne sert plus** — par la session qui l'a créé, avec sa branche
-locale : `git worktree remove --force <dossier>`, puis `git branch -D` une fois la PR `MERGED` selon
-`gh pr view` (après un squash, `-d` refuse la branche comme non fusionnée). Sinon il traîne : six
-trouvés le 29/09, dont aucun n'avait plus d'usage.
-
-⇒ **Toute session qui merge balaie le dépôt**, pas seulement sa PR : pour chaque entrée de
-`git worktree list` hors de l'arbre principal, `gh pr view <branche>` ; `MERGED` ou `CLOSED` → elle
-la retire **sans `--force`**, puis sa branche locale. ⛔ Un refus de `git worktree remove` se
-rapporte, il ne se force pas : ce worktree porte des changements non commités, peut-être ceux d'une
-session encore active. C'est ce qui rattrape le worktree d'une PR mergée depuis une autre
-session ou l'autre machine. 📌 Une session ne voit que les worktrees de sa machine : celui du Windows
-mergé depuis le Mac part au prochain merge sur le Windows, dans ce dépôt.
+⚠️ **Un worktree se retire dès qu'il ne sert plus**, avec sa branche locale, et toute session qui
+merge balaie ceux que le dépôt a laissés : le skill `nettoyer-les-worktrees` porte les commandes.
+⛔ Un refus de `git worktree remove` se rapporte, il ne se force pas.
 
 ## Actions interdites sans permission explicite
 
