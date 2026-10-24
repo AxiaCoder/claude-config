@@ -136,7 +136,7 @@ La règle tient même sur « finalise » ou « termine » : merger n'est pas imp
 
 ### Merger sans redemander
 
-Le merge se demande, sauf si le message qui lance la session l'autorise en le nommant. Je merge alors si la CI est verte et que la review ne signale aucun défaut atteignable, et je m'arrête au premier incident.
+Le merge se demande, sauf si le message qui lance la session l'autorise en le nommant. Je merge alors si la CI est verte et que la review ne signale ni défaut atteignable ni écrit que cette PR a rendu faux, et je m'arrête au premier incident.
 
 ## Outillage
 
