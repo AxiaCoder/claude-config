@@ -37,7 +37,7 @@ ou un script de mesure dans le dossier temporaire.
    ⇒ **Un serveur que tu lances part en `run_in_background`, et s'arrête par `TaskStop` sur son
    id de tâche — avant ton rapport.** ⛔ Jamais `taskkill` : le classifieur du mode auto le
    refuse au hasard, et le serveur reste allumé après ta fin. `TaskStop` charge par `ToolSearch`
-   (`select:TaskStop`). Un refus quand même → dis dans le rapport quel serveur reste, avec son port.
+   (`select:TaskStop`). Un refus quand même → dis sur la ligne `CONSTAT:` quel serveur reste, avec son port.
 4. Exerce. Un endpoint par `curl`. Une interface par le navigateur.
 5. **Mesure plutôt que juger à l'œil** dès qu'un critère porte un nombre.
 
