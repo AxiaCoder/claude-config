@@ -44,12 +44,11 @@ chaque traitement réécrit, et chaque réécriture redonne à relire.
 ⚠️ **Et proposer moins de la même chose reste proposer la même chose.** « Une passe de vérification
 des écrits, et tout durcissement part en ticket » est une passe de plus, déguisée en modération.
 
-On rend compte **une fois par passe**, quand elle est tombée — pas au moment de la lancer. La forme
-est en §5, et le total qu'elle prévoit se donne **sur la dernière passe**.
-
-📌 **Sur un lot confié d'un coup** (`CLAUDE.md` § Ne pas solliciter pour rien), personne n'attend entre
-deux passes : les comptes rendus de passe ne partent pas un par un, ils se regroupent dans le rapport
-final — une section par passe, puis le total, comme au §5.
+On rend compte **une seule fois** : à la demande de fusion, ou à l'arrêt si le travail s'interrompt
+en route — pas quand une passe tombe, ni au moment d'en lancer une. Personne n'attend entre deux
+passes : la seconde part d'elle-même. Le compte rendu a la forme du §5, une section par passe puis le
+total. Sur un lot confié d'un coup (`CLAUDE.md` § Ne pas solliciter pour rien), c'est le rapport final
+de tout le lot ; un arrêt en route vaut rapport final pour ce qui précède.
 
 ---
 
