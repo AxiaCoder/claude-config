@@ -47,6 +47,10 @@ des écrits, et tout durcissement part en ticket » est une passe de plus, dégu
 On rend compte **une fois par passe**, quand elle est tombée — pas au moment de la lancer. La forme
 est en §5, et le total qu'elle prévoit se donne **sur la dernière passe**.
 
+📌 **Sur un lot confié d'un coup** (`CLAUDE.md` § Ne pas solliciter pour rien), personne n'attend entre
+deux passes : les comptes rendus de passe ne partent pas un par un, ils se regroupent dans le rapport
+final — une section par passe, puis le total, comme au §5.
+
 ---
 
 ## 1. Lire la review, pas son résumé

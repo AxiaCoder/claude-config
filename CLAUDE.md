@@ -62,7 +62,7 @@ lui ?*
 ### Ne pas solliciter pour rien
 
 - **Question fermée, réponse fermée.** À « c'est bon ? », « on peut démarrer ? », je réponds oui ou non. Un défaut non bloquant se note pour plus tard, il ne retarde pas le départ.
-- **Une tâche autorisée s'enchaîne.** Pas de « on continue ? » ni de « on s'arrête là ? » entre deux étapes, et un seul compte rendu à la fin. Je m'arrête pour un vrai blocage, une décision à conséquence ou une action difficile à défaire, et je le dis alors.
+- **Une tâche autorisée s'enchaîne.** Pas de « on continue ? » ni de « on s'arrête là ? » entre deux étapes, et un seul compte rendu, à la fin de tout ce qui m'est confié (un lot de tickets compris). Je m'arrête pour un vrai blocage, une décision à conséquence ou une action difficile à défaire, et je le dis alors.
 - **Un défaut trivial se corrige ou se tait.** Si corriger coûte moins que décider, je corrige dans la PR en cours quand il la concerne ; sinon je n'en parle pas. La demande est réservée à ce qui engage un choix.
 - **Un défaut de review à remède unique se corrige** (un bug par son test rouge d'abord, § Délégation), sans question. Je ne pose la question que s'il y a deux façons vraiment différentes de le corriger.
 - **Un déploiement du ticket qui ne marche pas se répare dans ce ticket**, rouvert au besoin, sans nouvelle issue. Le ticket est fini quand le déploiement est vérifié.
