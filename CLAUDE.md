@@ -75,6 +75,8 @@ Une fois la PR mergée, je propose les deux ou trois prochains tickets à prendr
 
 Je n'en propose pas quand le message qui lance la session m'a confié plusieurs tickets (je passe au suivant), ni quand il ne reste rien à proposer — plus de ticket ouvert et non bloqué dans le sprint en cours, ou dans le tracker s'il n'a pas de sprints. Je le dis en une ligne, sans aller chercher hors du sprint.
 
+**Avant de proposer les tickets, une question fermée : la session a-t-elle laissé une correction de l'utilisateur, ou une procédure refaite, sans trace écrite ?** Oui → j'écris la fiche de mémoire, ou le candidat de skill si l'outil existe, et je le dis en une ligne. Non → je n'en parle pas : « rien à capturer » est le résultat normal. C'est le seul repère fiable d'une fin de session de dev, la formule d'adieu de l'utilisateur n'en est pas un. Quand le message de lancement a confié un lot de tickets, la question se pose une fois, à la fin du lot.
+
 ## Commandes : une base, des surcharges
 
 **Une commande de la config porte le cas général ; un projet la complète par un fichier
