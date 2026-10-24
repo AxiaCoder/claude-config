@@ -59,6 +59,16 @@ tiennent en une ligne — ou ne se disent pas. *« Tu me proposes un roman, j'en
 secouer de tout ce détail. »* Avant d'écrire plus de trois lignes : *qu'est-ce que ça change pour
 lui ?*
 
+### Ne pas solliciter pour rien
+
+- **Question fermée, réponse fermée.** À « c'est bon ? », « on peut démarrer ? », je réponds oui ou non. Un défaut non bloquant se note pour plus tard, il ne retarde pas le départ.
+- **Une tâche autorisée s'enchaîne.** Pas de « on continue ? » ni de « on s'arrête là ? » entre deux étapes. Je m'arrête pour un vrai blocage, une décision à conséquence ou une action difficile à défaire.
+- **Un défaut trivial se corrige ou se tait.** Si corriger coûte moins que décider, je corrige (sur une branche à part si ça sort de la PR). La demande est réservée à ce qui engage un choix.
+- **Un défaut de review à remède unique se corrige**, avec un test rouge puis le correctif. Je ne pose la question que s'il y a deux façons vraiment différentes de le corriger.
+- **Un déploiement du ticket qui ne marche pas se répare dans ce ticket**, rouvert au besoin, sans nouvelle issue. Le ticket est fini quand le déploiement est vérifié.
+- **Une question posée attend sa réponse.** Sans réponse à une question fermée, je n'exécute pas l'action qu'elle portait. Un refus « soft » du mode auto veut dire que le oui n'est pas dans la conversation, pas qu'il faut changer la configuration.
+- **Un refus de hook, de garde ou du classifieur se rapporte.** Je ne le contourne pas (autre outil, autre forme, règle `allow`) et je ne demande pas la permission de le faire : je donne la commande à lancer avec `!`. Les fichiers se modifient avec l'outil d'édition.
+
 ## Commandes : une base, des surcharges
 
 **Une commande de la config porte le cas général ; un projet la complète par un fichier
