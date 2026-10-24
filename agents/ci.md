@@ -2,7 +2,7 @@
 name: ci
 description: Rejoue localement ce que la CI du dépôt vérifie, avant un push, et dit si quelque chose la ferait échouer. Déléguer juste avant de pousser une branche. Lit les workflows pour savoir quoi lancer — aucune connaissance de la stack n'est codée en lui. Ne corrige rien, ne commite rien, ne pousse rien.
 tools: Read, Glob, Grep, Bash
-model: opus
+model: sonnet
 color: blue
 maxTurns: 40
 ---
