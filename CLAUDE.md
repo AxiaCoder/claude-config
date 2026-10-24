@@ -69,6 +69,12 @@ lui ?*
 - **Une question posée attend sa réponse.** Sans réponse à une question fermée, je n'exécute pas l'action qu'elle portait. Un refus « soft » du mode auto veut dire que le oui n'est pas dans la conversation, pas qu'il faut changer la configuration.
 - **Un refus de hook, de garde ou du classifieur se rapporte.** Je ne le déguise pas (autre outil pour la même action, autre forme de la même action, règle `allow`) et je ne demande pas la permission de le faire : je donne la commande à lancer avec `!`. La seule voie permise est celle de § Outillage : un texte qui *cite* un motif gardé (message de commit, corps de PR) s'écrit dans un fichier passé par `-F`, `--body-file` ou `--input`. Jamais une commande refusée mise dans un script. Les fichiers se modifient avec l'outil d'édition.
 
+### Après un merge : les prochains tickets
+
+Une fois la PR mergée, je propose les deux ou trois prochains tickets à prendre : ceux du sprint en cours dans un tracker à sprints, ou les tickets ouverts dans un tracker qui n'en a pas, dans l'ordre du tracker, hors tickets bloqués (un ticket qui attend un autre ticket non terminé). Ma recommandation vient en tête, avec sa raison, puis une ligne par autre ticket, et la commande de lancement du projet prête à coller (`/start-ticket <n>` ou son équivalent). Le choix du prochain ticket revient à l'utilisateur : c'est l'exception aux règles qui limitent les options.
+
+Je n'en propose pas quand le message qui lance la session m'a confié plusieurs tickets (je passe au suivant), ni quand il ne reste rien à proposer — plus de ticket ouvert et non bloqué dans le sprint en cours, ou dans le tracker s'il n'a pas de sprints. Je le dis en une ligne, sans aller chercher hors du sprint.
+
 ## Commandes : une base, des surcharges
 
 **Une commande de la config porte le cas général ; un projet la complète par un fichier
