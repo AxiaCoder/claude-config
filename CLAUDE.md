@@ -222,8 +222,7 @@ la suite part à `dev`.
 et un `.json` qu'un module charge. Pas la doc, pas les réglages déclaratifs (`settings*.json`).
 
 Le débogage — chercher la cause — reste dans la session principale. Le correctif qui suit obéit à
-la question ci-dessus. **Le contexte se transmet dans le brief**, pas en gardant le code dans la
-session principale.
+la question ci-dessus.
 
 ### Combien à la fois — pas combien en tout
 
@@ -267,6 +266,9 @@ tourne rien qui touche l'arbre — une recherche web, un autre dépôt, un navig
 ⛔ **`qa` ne tourne pas pendant que `dev` écrit.** Il charge des pages et lance des commandes sur
 l'arbre de travail : lancé en parallèle, il exerce un état à moitié écrit et son constat ne vaut
 rien. Il part après le rendu du dev.
+
+⚠️ **Ne jamais recoller la sortie brute d'un sous-agent** comme réponse finale : elle se
+synthétise.
 
 ⚠️ **Interdire explicitement `checkout`, `switch` et `stash` à tout sous-agent**, et lui demander
 de confirmer la branche en fin de course.

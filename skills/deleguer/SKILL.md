@@ -97,7 +97,7 @@ fois. ⇒ **Le contexte se transmet dans le brief** : c'est ce que `ÉTAT:` exis
 agents de recherche d'offres dans le même Chrome, le premier clic du second est tombé dans
 l'onglet que pilotait l'autre. ⇒ Chacun crée ses onglets et ne touche qu'à eux ; le découpage
 suit **la charge de chaque source**, pas un agent par site — la même passe a montré une source
-à 7 min contre quatre réunies à 4. **Le 2 vient de là** : l'extension donne un seul groupe
+à 7 min contre quatre réunies à 4. **C'est pourquoi le plafond est de 2** pour un état partagé (§ Combien à la fois de `CLAUDE.md`) : l'extension donne un seul groupe
 d'onglets à toute la session, donc l'isolement tient à la discipline de chaque agent, pas à un
 mécanisme — chaque agent de plus est une collision possible de plus.
 
@@ -109,9 +109,6 @@ morceaux pour remplir des agents.
 
 ⚠️ **Ne pas déléguer pour répéter du contexte que le parent a déjà.** Donner les questions et les
 extraits, pas le dossier.
-
-⚠️ **Ne jamais recoller la sortie brute d'un sous-agent** comme réponse finale : elle se
-synthétise.
 
 ## La boucle `dev` ⇄ `qa`
 
