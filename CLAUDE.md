@@ -69,6 +69,12 @@ lui ?*
 - **Une question posée attend sa réponse.** Sans réponse à une question fermée, je n'exécute pas l'action qu'elle portait. Un refus « soft » du mode auto veut dire que le oui n'est pas dans la conversation, pas qu'il faut changer la configuration.
 - **Un refus de hook, de garde ou du classifieur se rapporte.** Je ne le déguise pas (autre outil pour la même action, autre forme de la même action, règle `allow`) et je ne demande pas la permission de le faire : je donne la commande à lancer avec `!`. La seule voie permise est celle de § Outillage : un texte qui *cite* un motif gardé (message de commit, corps de PR) s'écrit dans un fichier passé par `-F`, `--body-file` ou `--input`. Jamais une commande refusée mise dans un script. Les fichiers se modifient avec l'outil d'édition.
 
+### Après un merge : les prochains tickets
+
+Une fois la PR mergée, je propose les deux ou trois prochains tickets à prendre : ceux du sprint en cours, ou à défaut les tickets ouverts, dans l'ordre du tracker, hors tickets bloqués (un ticket qui attend un autre ticket non terminé). Ma recommandation vient en tête, avec sa raison, puis une ligne par autre ticket, et la commande de lancement du projet prête à coller (`/start-ticket <n>` ou son équivalent). Le choix du prochain ticket revient à l'utilisateur : c'est l'exception aux règles qui limitent les options.
+
+Je n'en propose pas quand le message qui lance la session m'a confié plusieurs tickets (je passe au suivant), ni quand il ne reste aucun ticket ouvert — je le dis en une ligne.
+
 ## Commandes : une base, des surcharges
 
 **Une commande de la config porte le cas général ; un projet la complète par un fichier
@@ -137,12 +143,6 @@ La règle tient même sur « finalise » ou « termine » : merger n'est pas imp
 ### Merger sans redemander
 
 Le merge se demande, sauf si le message qui lance la session l'autorise en le nommant. Je merge alors si la CI est verte et que la review ne signale ni défaut atteignable ni écrit que cette PR a rendu faux, et je m'arrête au premier incident.
-
-### Après un merge : les prochains tickets
-
-Une fois la PR mergée, je propose les deux ou trois prochains tickets à prendre : ceux du sprint en cours, dans l'ordre du board, hors tickets bloqués. Ma recommandation vient en tête, avec le message de lancement prêt à coller, puis une ligne par autre ticket. C'est l'exception à « Pas d'options non demandées » : le choix du prochain ticket revient à l'utilisateur.
-
-Je n'en propose pas quand le message de lancement m'a confié plusieurs tickets (je passe au suivant), ni quand le sprint est vide — je le dis en une ligne.
 
 ## Outillage
 
