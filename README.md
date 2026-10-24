@@ -17,16 +17,16 @@
   `ci` rejoue la CI en local avant un push.
 - **Des règles de délégation** — `CLAUDE.md` dit quand déléguer et à qui (une question fermée :
   l'agent doit-il écrire ?), qui écrit le code (la session principale jusqu'à deux fichiers, `dev`
-  au-delà), combien d'agents tournent à la fois, et ce qu'un brief porte : des extraits plutôt que
-  des chemins, une condition d'arrêt, ce que l'agent doit rendre.
+  au-delà), combien d'agents tournent à la fois. Le skill `deleguer` dit ce qu'un brief porte : des
+  extraits plutôt que des chemins, une condition d'arrêt, ce que l'agent doit rendre.
 - **Des briefs courts** — le style *caveman* (`CAVEMAN.md`) pour tout ce qui va vers un sous-agent
   et en revient, avec ce qui ne se compresse jamais.
 - **Des gardes** — `guardrail` coupe les boucles et les commandes destructrices ; un `pre-push`
   global refuse un push direct vers `main` d'un dépôt GitHub, et `garde-push` empêche l'agent de
   le désarmer.
 - **Des skills de méthode** — cadrer un projet, cadrer un écran avant le code, challenger un
-  cadrage, déboguer en quatre phases, traiter une review, vérifier avant d'annoncer, auditer un
-  dépôt ou le SEO d'une page publique.
+  cadrage, déboguer en quatre phases, traiter une review, vérifier avant d'annoncer, déléguer à un
+  sous-agent, auditer un dépôt ou le SEO d'une page publique.
 - **Des commandes** — `/pr`, `/pr-review`, `/start-ticket`, `/new-ticket`.
 - **De la télémétrie** — l'OpenTelemetry natif de Claude Code, plus un collecteur qui rend aux
   sous-agents leur nom. Ce dépôt émet ; la pile qui reçoit et affiche est

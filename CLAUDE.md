@@ -184,18 +184,9 @@ workitem <commande>"` donne les options exactes.
 
 ## Délégation aux sous-agents
 
-⚠️ **Ce qui fait couper un agent, c'est l'exploration, pas la tâche.** Mesuré sur une session de
-vingt relances : **treize** ont dû commencer par un ⛔ *« n'explore pas »*, et les coupures sont
-tombées en exploration, pas en écriture. Les agents relisaient ce que le brief citait déjà.
-
-⇒ **C'est pour ça que le brief porte des extraits verbatim et non des chemins.** Un extrait qui
-fait foi est un fichier que l'agent n'ouvre pas. ⛔ **Un chemin nu coûte deux fois** : au parent
-qui l'écrit vite, puis à l'agent qui va lire — et une fois de plus s'il coupe en route.
-
-⚠️ **Un lot par lancement.** Un brief qui porte « lot 1, lot 2, dernier lot » fait un lancement
-long, et un lancement long coupe. Trois briefs courts à la suite coûtent moins que trois coupures
-et leurs relances. Monter le budget de tours ne règle pas ça : passé de 25 à 40, les coupures sont
-restées — 7 sur 19 allers-retours, puis 8 sur 18.
+⚠️ **Avant tout lancement d'agent, charger le skill `deleguer`** : le gabarit du brief (`BUT`, `ÉTAT`,
+`AC`, `RENDS`…), le style caveman, un lot par lancement, et les mesures derrière ces règles. Un
+brief écrit sans lui revient à relire ce que le parent a déjà lu.
 
 ### Quand déléguer
 
@@ -208,14 +199,7 @@ une commande ?**
 | **Oui** | `general-purpose`, ou `dev` si c'est du code du dépôt |
 
 ⛔ **Pas de jugement à porter là-dessus** : ce n'est pas « la recherche est-elle assez large »,
-c'est « l'agent a-t-il besoin d'écrire ». La description de `general-purpose` promet d'aider *quand
-on n'est pas sûr de trouver du premier coup* — c'est exactement l'état d'esprit au moment de
-choisir, et c'est ce qui le fait gagner par défaut.
-
-📌 **Mesuré sur 30 jours** _(23/09/2026)_ : **95 lancements de `general-purpose` contre 10
-d'`Explore`**, alors que la règle ci-dessous nomme déjà `Explore` pour la recherche. Et le
-fourre-tout coûte **7,2 M de tokens de cache relu par lancement contre 2,2 M** — plus de trois fois
-plus. Le rapport entre les deux se suit par la télémétrie, quand elle est configurée.
+c'est « l'agent a-t-il besoin d'écrire ». `general-purpose` gagne par défaut dès qu'on hésite.
 
 Déléguer quand la tâche le mérite, pas par principe :
 
@@ -237,67 +221,8 @@ la suite part à `dev`.
 📌 **Un fichier de code, c'est ce que du code exécute ou importe** — `.ts`, `.py`, `.sh`, `.ps1`…,
 et un `.json` qu'un module charge. Pas la doc, pas les réglages déclaratifs (`settings*.json`).
 
-📌 **Mesuré du 24 au 28/09** : `dev` **0 lancement**, pour 80 éditions de code dans la session
-principale. La règle d'alors laissait le choix — *« un échange où le contexte accumulé vaut plus
-que la parallélisation »* — et cette clause gagnait à chaque fois. ⇒ **Le contexte se transmet dans
-le brief** : c'est ce que `ÉTAT:` existe pour porter.
-
 Le débogage — chercher la cause — reste dans la session principale. Le correctif qui suit obéit à
 la question ci-dessus.
-
-### Les briefs se rédigent en caveman
-
-**Un brief de sous-agent n'est pas une lettre.** Fragments, impératifs, symboles — le style de
-`CAVEMAN.md`, importé en fin de fichier. Un brief de quatre-vingts lignes de prose coûte à
-l'entrée et n'instruit pas mieux qu'un de vingt.
-
-Ce qui reste en prose : **les extraits verbatim**. Un chemin seul oblige le sous-agent à relire ce
-que le parent a déjà lu.
-
-```
-Task(subagent_type="dev", prompt="
-BUT: [une ligne]
-ÉTAT: [le code tel qu'il est — extraits verbatim, pas des chemins nus]
-LE DÉFAUT: [ce qui cloche, avec sa mesure]
-LA RÉFÉRENCE: [le modèle à suivre, et où le lire]
-FICHIERS: a.ts, b.ts
-CONTRAINTES: [stack, conventions]
-AC: [ce qui doit être vrai à la fin]
-RENDS: [la décision laissée ouverte, et les chiffres que seul l'agent verra]
-STOP: [quand s'arrêter]
-")
-```
-
-⛔ **`CONTRAINTES:` ne porte jamais ce que le `CLAUDE.md` du dépôt dit déjà.** Le harnais l'injecte
-dans le contexte de chaque sous-agent, avec le `CLAUDE.md` global, `CAVEMAN.md` et la mémoire
-automatique — **46 684 caractères en médiane, avant que le brief commence** *(mesuré le 26/09 sur
-303 lancements)*. Recopier `pnpm`, `JSDoc` ou une convention de commentaire le paie deux fois.
-
-⇒ Ce qui reste légitime dans `CONTRAINTES:` est ce que le dépôt **ne dit pas** : une contrainte
-propre à ce tour, une version imposée, un fichier à ne pas toucher.
-
-⚠️ **`RENDS:` est le miroir de ce que le brief laisse ouvert.** Il apparaît quand une décision
-revient à l'agent — un seuil, un nom, un choix parmi plusieurs — ou quand l'agent verra un chiffre
-que le parent ne verra pas : un compte, une mesure, une mutation rouge ou verte.
-
-⛔ **Un brief d'exécution pure n'en a pas.** Les valeurs sont données, rien n'est à choisir, rien
-ne remonte. Sur trente briefs, douze en portaient — et ceux qui n'en avaient pas traitaient des
-retours de review ou appliquaient des valeurs dictées.
-
-⛔ **Jamais ce que la déclaration garantit déjà** : la branche, le vert du lint, le bloc de sortie
-sont dus de toute façon. `RENDS:` ne demande que ce que personne d'autre ne peut savoir.
-
-⇒ `dev` et `tester` portent une ligne `RENDS:` en miroir dans leur bloc de sortie. **Sans elle, la
-question se répond en prose au milieu du résumé, et le parent la cherche.**
-
-⚠️ **Un brief porte une de ces trois têtes, parfois deux — jamais les trois.** Un tour qui ouvre
-un sujet pose un `ÉTAT`, un tour qui corrige le précédent pose `LE DÉFAUT`, un portage pose
-`LA RÉFÉRENCE`.
-
-Elles remplacent un champ `CONTEXTE:` qui **n'avait pas de condition d'arrêt** : on ne sait
-jamais quand on en a mis assez, et c'est ce qui gonfle un brief. Les trois s'arrêtent seules —
-l'état finit où finit la fonction citée, le défaut quand sa mesure est donnée, la référence au
-chemin du modèle plus les fonctions à y lire.
 
 ### Combien à la fois — pas combien en tout
 
@@ -320,10 +245,8 @@ principale quand c'est elle qui a écrit. Il reçoit le critère d'acceptation e
 d'entrée. Un vérificateur à qui on donne le compte rendu de l'implémenteur vérifie le compte
 rendu, pas la fonctionnalité.
 
-⚠️ **La boucle `dev` ⇄ `qa` est bornée à deux passes**, puis elle remonte quoi qu'il arrive. Le
-brief porte le rang de passe — un agent neuf ne compte pas tout seul, c'est le parent qui tient
-le compte. Au même écart constaté deux fois, `qa` rend `desaccord` : ce n'est plus un défaut,
-c'est un critère qui ne tranche pas, et ça se règle avec l'utilisateur.
+⚠️ **La boucle `dev` ⇄ `qa` est bornée à deux passes**, puis elle remonte quoi qu'il arrive (le
+rang de passe se tient dans le brief : détail dans le skill `deleguer`).
 
 Ce qui se plafonne, c'est ce qui tourne **en même temps** — et le plafond dépend de ce que
 l'agent touche, pas d'un chiffre unique :
@@ -340,33 +263,15 @@ parallèle, ou un qui édite pendant qu'un autre relit, se marchent dessus sans 
 signale. ⇒ Les plafonds se cumulent entre catégories, sauf celui-là : à côté d'un écrivain ne
 tourne rien qui touche l'arbre — une recherche web, un autre dépôt, un navigateur, oui.
 
-⚠️ **Le navigateur est un état partagé, même sans fichier commun.** Constaté le 12/10 : deux
-agents de recherche d'offres dans le même Chrome, le premier clic du second est tombé dans
-l'onglet que pilotait l'autre. ⇒ Chacun crée ses onglets et ne touche qu'à eux ; le découpage
-suit **la charge de chaque source**, pas un agent par site — la même passe a montré une source
-à 7 min contre quatre réunies à 4. **Le 2 vient de là** : l'extension donne un seul groupe
-d'onglets à toute la session, donc l'isolement tient à la discipline de chaque agent, pas à un
-mécanisme — chaque agent de plus est une collision possible de plus.
-
-📌 **Pour les lecteurs, la limite est le coût, pas la collision** : chaque agent repart du contexte
-injecté par le harnais (mesuré au § « Les briefs se rédigent en caveman »), et chaque rapport
-revient dans la conversation.
-⇒ **Une recherche se découpe en autant d'agents qu'elle a de pistes vraiment indépendantes** —
-c'est là que le parallélisme rend l'horloge. Ce qui ne se fait pas : découper une même piste en
-morceaux pour remplir des agents.
-
 ⛔ **`qa` ne tourne pas pendant que `dev` écrit.** Il charge des pages et lance des commandes sur
 l'arbre de travail : lancé en parallèle, il exerce un état à moitié écrit et son constat ne vaut
 rien. Il part après le rendu du dev.
 
-⚠️ **Interdire explicitement `checkout`, `switch` et `stash` à tout sous-agent**, et lui demander
-de confirmer la branche en fin de course.
-
-⚠️ **Ne pas déléguer pour répéter du contexte que le parent a déjà.** Donner les questions et les
-extraits, pas le dossier.
-
 ⚠️ **Ne jamais recoller la sortie brute d'un sous-agent** comme réponse finale : elle se
 synthétise.
+
+⚠️ **Interdire explicitement `checkout`, `switch` et `stash` à tout sous-agent**, et lui demander
+de confirmer la branche en fin de course.
 
 Agents disponibles : `dev`, `reviewer` et `tester` en `model: opus` ; `ci` et `qa` en `model: sonnet`.
 
