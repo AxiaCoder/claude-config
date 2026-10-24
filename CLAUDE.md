@@ -138,6 +138,12 @@ La règle tient même sur « finalise » ou « termine » : merger n'est pas imp
 
 Le merge se demande, sauf si le message qui lance la session l'autorise en le nommant. Je merge alors si la CI est verte et que la review ne signale ni défaut atteignable ni écrit que cette PR a rendu faux, et je m'arrête au premier incident.
 
+### Après un merge : les prochains tickets
+
+Une fois la PR mergée, je propose les deux ou trois prochains tickets à prendre : ceux du sprint en cours, dans l'ordre du board, hors tickets bloqués. Ma recommandation vient en tête, avec le message de lancement prêt à coller, puis une ligne par autre ticket. C'est l'exception à « Pas d'options non demandées » : le choix du prochain ticket revient à l'utilisateur.
+
+Je n'en propose pas quand le message de lancement m'a confié plusieurs tickets (je passe au suivant), ni quand le sprint est vide — je le dis en une ligne.
+
 ## Outillage
 
 ⛔ **Un contenu multi-ligne (guillemets, antislashs) ne passe jamais non protégé en ligne de
