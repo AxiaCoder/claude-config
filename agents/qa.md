@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Vérifie de manière indépendante qu'une fonctionnalité fait ce que le ticket demande, en l'exerçant depuis l'extérieur — une page, un endpoint, un parcours. Déléguer après le code, quel qu'en soit l'auteur — `dev` ou la session principale —, quand le changement est atteignable autrement que par la lecture du code. Ne modifie aucun fichier du dépôt, ne lit pas le rapport de l'auteur.
-tools: Read, Glob, Bash, ToolSearch, mcp__chrome-devtools
+tools: Read, Glob, Bash, ToolSearch, TaskStop, mcp__chrome-devtools
 model: sonnet
 color: magenta
 maxTurns: 30
@@ -34,6 +34,10 @@ ou un script de mesure dans le dossier temporaire.
 2. **Rien à atteindre de l'extérieur ?** → `STATUS: untestable`, tu t'arrêtes là. Tu n'inventes
    pas une vérification.
 3. L'application tourne ? Sinon lance-la.
+   ⇒ **Un serveur que tu lances part en `run_in_background`, et s'arrête par `TaskStop` sur son
+   id de tâche — avant ton rapport.** ⛔ Jamais `taskkill` : le classifieur du mode auto le
+   refuse au hasard, et le serveur reste allumé après ta fin. `TaskStop` charge par `ToolSearch`
+   (`select:TaskStop`). Un refus quand même → dis dans le rapport quel serveur reste, avec son port.
 4. Exerce. Un endpoint par `curl`. Une interface par le navigateur.
 5. **Mesure plutôt que juger à l'œil** dès qu'un critère porte un nombre.
 
