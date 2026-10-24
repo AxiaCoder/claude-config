@@ -1,6 +1,6 @@
 ---
 name: verifier-avant-d-annoncer
-description: Use before announcing that something works — before saying a quality gate passed, before presenting interface work, before starting a dev server, and when a symptom the user describes does not reproduce. Carries what has been announced wrongly before and what would have caught it — a green suite that proves nothing about the screen, a hollow test, a probe answered by someone else's server, an unlisted state, the wrong account. Reads the project's `.claude/surcharges/verifier-avant-d-annoncer.md` first. Do not use to handle a review — that is `traiter-une-review`.
+description: Use before announcing that something works — before saying a quality gate passed, before presenting interface work, before starting a dev server, and when a symptom the user describes does not reproduce, or before asserting the state of a ticket, a PR or a log. Carries what has been announced wrongly before and what would have caught it — a green suite that proves nothing about the screen, a hollow test, a probe answered by someone else's server, an unlisted state, the wrong account, a silence read as success. Reads the project's `.claude/surcharges/verifier-avant-d-annoncer.md` first. Do not use to handle a review — that is `traiter-une-review`.
 ---
 
 # Vérifier avant d'annoncer
@@ -172,3 +172,27 @@ poser d'abord les deux ou trois requêtes qui décrivent *son* état.
 **Avant d'annoncer une porte franchie, `git status` doit montrer les fichiers attendus modifiés.** Un
 `git stash` glissé dans une commande d'exploration vide l'arbre : le lint, le build et la suite qui
 suivent tournent alors sur `HEAD` — verts, et sans rapport avec le travail.
+
+---
+
+## 7. Une affirmation sur l'état d'autre chose se vérifie à la source
+
+**Annoncé à tort :** un silence lu comme un succès, un compte cité sans avoir été lancé, l'état d'un
+ticket repris d'un résumé, un écart mesuré sur une seule fenêtre, une déduction écrite comme un fait.
+
+- **Le silence n'est pas un succès.** Avant d'annoncer, je me demande si mon contrôle dirait
+  l'échec : code de sortie ou effet réel, pas l'absence de message d'un filtre. Une réponse vide
+  (200, corps vide) est une absence de réponse : je vérifie que le producteur a tourné, et que le
+  canal lu est le bon, avant toute conclusion négative.
+- **Ce que j'écris comme mesuré a été lancé.** Un `grep` ou un compte cité dans une réponse se
+  lance avant d'être écrit. Je n'affirme pas une régularité (« toujours », « jamais », « à chaque
+  fois ») sans n sur N. Une première page, un extrait de recherche ou une sortie coupée ne prouve
+  pas une absence : je compte ou je cherche sur l'ensemble.
+- **L'état d'un ticket, d'une PR, d'un commit ou d'un compte se lit à la source** (API, page), pas
+  dans un compte rendu intermédiaire : rapport d'agent, résumé, ancienne sortie. Un défaut classé
+  « fantôme » se tranche en lisant le log.
+- **Une mesure se donne avec sa plage.** Un écart mesuré sur une fenêtre choisie se rend avec ses
+  bornes ; s'il change de signe, il n'est pas mesurable. Quand des mesures répétées contredisent une
+  perception, j'interroge le dispositif d'observation avant de toucher au code.
+- **Pas de conclusion au-delà des faits.** Ce que j'en déduis sur ce qu'un tiers a lu ou décidé
+  s'écrit comme une hypothèse. Avant d'écrire « aucune règle ne couvre ça », je cherche la règle.
