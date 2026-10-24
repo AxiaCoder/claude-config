@@ -29,7 +29,7 @@ cent. L'argument est qu'un fichier écrit dans la langue de qui le relit se reli
 ## Comportement
 - Réponses courtes, actionnables
 - Ne jamais répéter ce qui vient d'être dit — **sauf une question restée sans réponse**
-- Avant toute implémentation : un ticket existant fait foi, sans fichier de spec — je dis en quelques lignes ce que je vais faire et je le fais valider. Sans ticket : une feature neuve passe par `cadrer-un-projet`, le reste par un ticket (`/new-ticket` sous Jira, une issue ailleurs). Un fichier de spec n'existe que pour un design qui couvre plusieurs tickets
+- Avant toute implémentation : un ticket existant fait foi, sans fichier de spec. S'il porte un objectif, des critères testables et un périmètre, j'annonce mon plan en une ligne et je démarre sans attendre ; sinon je dis en quelques lignes ce que je vais faire et je le fais valider. Sans ticket : une feature neuve passe par `cadrer-un-projet`, le reste par un ticket (`/new-ticket` sous Jira, une issue ailleurs). Un fichier de spec n'existe que pour un design qui couvre plusieurs tickets
 - Pas d'options non demandées
 - **Une idée, une approche ou un choix de l'utilisateur qui change le travail ou coûte cher à défaire reçoit mon avis avant d'être exécuté** : bonne ou mauvaise, en une phrase. Un défaut se nomme avec sa conséquence concrète (« ça casse X », « ça double Y »), et j'attends sa réponse avant d'exécuter cette idée — le reste du travail continue. Un accord se motive par une raison, jamais par « bonne idée ». Pas d'opposition de principe : si l'idée tient, je le dis et j'enchaîne. Sur un détail, je n'ajoute rien
 - Avant de proposer ou de construire une automatisation : passer par le skill `avant-d-automatiser`
@@ -123,7 +123,7 @@ mergé depuis le Mac part au prochain merge sur le Windows, dans ce dépôt.
 
 ## Actions interdites sans permission explicite
 
-**Ne jamais merger une PR sans le demander** — sauf pour un ticket au niveau « autonome » (§ suivant).
+**Ne jamais merger une PR sans le demander** — sauf si le message qui lance la session l'autorise (§ suivant).
 
 Avant `gh pr merge` ou tout merge :
 1. Demander : « Tu veux que je merge la PR ? »
@@ -132,24 +132,11 @@ Avant `gh pr merge` ou tout merge :
 
 La règle tient même sur « finalise » ou « termine » : merger n'est pas implicite.
 
-**Commit et PR ne se demandent pas.** Une fois le plan validé et l'implémentation rendue, je commite et j'ouvre la PR par `/pr` sans poser la question. Seul le merge attend un accord.
+**Commit et PR ne se demandent pas.** Une fois l'implémentation rendue, je commite et j'ouvre la PR par `/pr` sans poser la question. Seul le merge attend un accord.
 
-### Niveau d'autonomie d'un ticket
+### Merger sans redemander
 
-Il se pose **une fois par ticket**, au moment où l'utilisateur valide le plan, et ne porte que sur le **risque**, pas sur la difficulté. Deux niveaux :
-
-- **Merge validé** (par défaut) : la règle ci-dessus s'applique.
-- **Autonome** : je code, j'ouvre la PR par `/pr` (qui lance la porte, puis `reviewer`), et je merge sans rien demander si la CI est verte et que la review rend `Défaut atteignable : non` et `Registre à jour : oui`, lus dans le corps de la review et pas dans l'`event`. Un 🟠 ou un 🔴 ramène au merge validé. L'utilisateur ne reçoit que le rapport final.
-
-La question de niveau **nomme le merge** : « Je merge la PR de ce ticket sans te redemander, tu es d'accord ? ». Le mode auto ne lit une approbation que dans un message qui nomme l'action.
-
-Le niveau est porté par l'étiquette `autonome` du ticket, dans le tracker qui le porte (Jira ou issue GitHub). La session qui a posé la question de niveau la pose, **seulement après un oui explicite** à cette question : un « ok » au plan ne suffit pas. L'étiquette est la trace de ce oui : une session qui la trouve sur un ticket la tient pour donnée, qu'elle ait été posée par une session ou à la main par l'utilisateur, et ne redemande pas. Sans étiquette : merge validé.
-
-⛔ **« Autonome » est refusé, quelle que soit la difficulté**, quand le ticket touche : un déploiement automatique, une migration ou une suppression de données, un secret, un dépôt public, un outil externe ou une manipulation humaine que je ne peux pas faire. Je le dis en proposant le plan.
-
-Si je ne peux pas dire si le ticket touche l'un de ces points, je ne passe pas en autonome.
-
-⚠️ Le mode auto peut refuser le merge même au niveau autonome. `gh pr merge` part donc seul dans son appel, sans commande enchaînée. S'il est refusé quand même, je donne la commande à l'utilisateur, à lancer avec `!`, et je le dis dans le rapport final.
+Le merge se demande, sauf si le message qui lance la session l'autorise en le nommant. Je merge alors si la CI est verte et que la review ne signale ni défaut atteignable ni écrit que cette PR a rendu faux, et je m'arrête au premier incident.
 
 ## Outillage
 

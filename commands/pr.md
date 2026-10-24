@@ -1,5 +1,5 @@
 ---
-description: À invoquer dès qu'une pull request doit s'ouvrir — « ouvre la PR », « fais une PR », ou dès que l'implémentation d'un plan validé est rendue —, même avec un corps déjà rédigé ; jamais un `gh pr create` à la main. Porte avant (tester, qa, ci selon le diff), reviewer après, et un corps qui dit le défaut, sa mesure et ce qui a été vérifié
+description: À invoquer dès qu'une pull request doit s'ouvrir — « ouvre la PR », « fais une PR », ou dès que l'implémentation est rendue —, même avec un corps déjà rédigé ; jamais un `gh pr create` à la main. Porte avant (tester, qa, ci selon le diff), reviewer après, et un corps qui dit le défaut, sa mesure et ce qui a été vérifié
 ---
 
 Ouvre une pull request depuis la branche courante.
@@ -13,8 +13,8 @@ remplace là où ils se contredisent.
 
 ⛔ **Pas sur `main`.** `git branch --show-current` d'abord ; sur `main`, on branche avant.
 ⛔ **Pas de merge.** Ouvrir et fusionner sont deux gestes, et le second demande l'accord de l'utilisateur —
-même sur « finalise » ou « termine » —, sauf ticket au niveau « autonome » (`CLAUDE.md` § Niveau
-d'autonomie d'un ticket).
+même sur « finalise » ou « termine » —, sauf si le message qui lance la session l'autorise
+(`CLAUDE.md` § Merger sans redemander).
 
 ## La porte avant d'ouvrir
 
