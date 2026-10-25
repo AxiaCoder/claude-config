@@ -289,8 +289,8 @@ tr -d '\r' <"$marqueurs" | while IFS= read -r motif || [ -n "$motif" ]; do
 	case "$motif" in '' | '#'*) continue ;; esac
 	grep -a -n -i -E -e "$motif" "$tmp/contenus" >"$tmp/occurrences" 2>/dev/null
 	[ $? -le 1 ] || { : >"$tmp/echec-grep"; continue; }
-	awk -v motif="$motif" -v lieux="$tmp/lieux" '
-		BEGIN { while ((getline l < lieux) > 0) lieu[++i] = l }
+	motif="$motif" awk -v lieux="$tmp/lieux" '
+		BEGIN { motif = ENVIRON["motif"]; while ((getline l < lieux) > 0) lieu[++i] = l }
 		{
 			p = index($0, ":"); n = substr($0, 1, p - 1); texte = substr($0, p + 1)
 			sub(/\r$/, "", texte)
