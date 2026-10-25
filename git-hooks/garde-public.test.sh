@@ -398,6 +398,21 @@ export ALLOW_PUSH_PERSONAL
 essai PASSE "$PUBLIC" "motif invalide, ALLOW_PUSH_PERSONAL=1"
 unset ALLOW_PUSH_PERSONAL
 GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs"
+
+printf 'hote\\.interne\nhote\\\\autre\n' >"$tmp/marqueurs-echappe"
+GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs-echappe"
+git checkout -q -B f19 f4~1
+printf 'voir hote.interne\nvoir hote\\autre\n' >echappe.txt
+git add echappe.txt
+git commit -q -m "propre"
+essai BLOQUE "$PUBLIC" "marqueur contenant un antislash"
+if grep -q -i warning "$tmp/err"; then o=PRESENT; else o=ABSENT; fi
+verdict ABSENT "$o" "  stderr : aucun avertissement d'awk"
+if grep -q -F 'hote\.interne · ' "$tmp/err"; then o=PRESENT; else o=ABSENT; fi
+verdict PRESENT "$o" "  stderr : motif affiché avec son antislash"
+if grep -q -F 'hote\\autre · ' "$tmp/err"; then o=PRESENT; else o=ABSENT; fi
+verdict PRESENT "$o" "  stderr : motif à double antislash affiché tel quel"
+GARDE_PUBLIC_MARQUEURS="$tmp/marqueurs"
 git checkout -q f8
 
 echo "— relais —"
