@@ -15,6 +15,9 @@ Lit sur stdin le JSON d'un evenement de hook et ecrit sur stdout
 `<nom>` : dernier titre `/rename` non vide de tout le transcript, sinon dernier titre genere non
 vide ; a defaut le nom du dossier de travail.
 
+Sous Cloitre (`CLOITRE_TAB_ID` non vide), qui montre lui-meme l'etat de la session : le titre est
+le seul titre du transcript, sans icone ni repli sur le dossier ; sans titre, rien n'est ecrit.
+
 Etat par session dans `<temp>/claude-titre-onglet/<session_id>.json` : chemin du transcript,
 octet deja lu, derniers titres trouves, derniere icone ecrite. Le transcript n'est relu qu'a
 partir de cet octet ; un chemin different ou un fichier plus court le fait relire depuis 0, un
@@ -42,6 +45,7 @@ ICON_BACKGROUND = "⏳"
 ICON_DONE = "✅"
 WAITING_NOTIFICATIONS = frozenset({"permission_prompt", "elicitation_dialog"})
 ICON_WAITING = "✋"
+CLOITRE_VAR = "CLOITRE_TAB_ID"
 
 
 def empty_state():
@@ -191,8 +195,16 @@ def state_icon(payload):
     return None
 
 
+def under_cloitre():
+    """Return True when the session runs in a Cloitre tab, which shows the session state itself."""
+    return bool(os.environ.get(CLOITRE_VAR))
+
+
 def render(payload):
-    """Return the JSON line to print for the parsed payload, or "" when nothing is to be written."""
+    """Return the JSON line to print for the parsed payload, or "" when nothing is to be written.
+
+    Under Cloitre the title is the transcript title alone, and "" when the transcript has none.
+    """
     if not isinstance(payload, dict):
         return ""
     path = state_file(payload.get("session_id"))
@@ -203,10 +215,15 @@ def render(payload):
         icon = state_icon(payload)
     if icon is None:
         return ""
-    name = session_name(payload, state)
+    if under_cloitre():
+        title = CONTROL_CHARS.sub("", session_title(payload.get("transcript_path"), state)).strip()
+    else:
+        name = session_name(payload, state)
+        title = "%s %s" % (icon, name) if name else icon
     state["icon"] = icon
     save_state(path, state)
-    title = "%s %s" % (icon, name) if name else icon
+    if not title:
+        return ""
     return json.dumps({"terminalSequence": "\x1b]0;%s\x07" % title})
 
 

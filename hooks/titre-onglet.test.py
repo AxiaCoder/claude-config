@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 
 _ICI = pathlib.Path(__file__).resolve().parent
 _spec = importlib.util.spec_from_file_location("titre_onglet", _ICI / "titre-onglet.py")
@@ -24,6 +25,8 @@ _spec.loader.exec_module(_titre)
 CWD = "/home/axia/mon-projet"
 _TEMP_TEST = tempfile.mkdtemp(prefix="titre-onglet-test-")
 _titre.STATE_DIR = os.path.join(_TEMP_TEST, "claude-titre-onglet")
+CLOITRE = "CLOITRE_TAB_ID"
+os.environ.pop(CLOITRE, None)
 _ENV_TEST = dict(os.environ, TMP=_TEMP_TEST, TEMP=_TEMP_TEST, TMPDIR=_TEMP_TEST)
 
 
@@ -38,6 +41,20 @@ def lancer(entree: str) -> subprocess.CompletedProcess:
 def attendu(titre: str) -> str:
     """Rend la ligne JSON attendue pour titre."""
     return json.dumps({"terminalSequence": "\x1b]0;%s\x07" % titre})
+
+
+@contextmanager
+def sous_cloitre(valeur: str = "onglet-1"):
+    """Pose CLOITRE_TAB_ID à valeur le temps du bloc, puis rend os.environ tel qu'il était."""
+    avant = os.environ.get(CLOITRE)
+    os.environ[CLOITRE] = valeur
+    try:
+        yield
+    finally:
+        if avant is None:
+            os.environ.pop(CLOITRE, None)
+        else:
+            os.environ[CLOITRE] = avant
 
 
 def ecrire_transcript(dossier: str, lignes: list[dict]) -> str:
@@ -340,6 +357,66 @@ def verifier_processus_silencieux() -> list[str]:
     return defauts
 
 
+def verifier_cloitre() -> list[str]:
+    """Sous Cloître : titre du transcript seul, sans icône ni repli ; variable vide = hors Cloître."""
+    defauts: list[str] = []
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [
+            {"type": "ai-title", "aiTitle": "Titre IA"},
+            {"type": "custom-title", "customTitle": "Renommée "},
+        ])
+        with sous_cloitre():
+            rendu = _titre.render({"hook_event_name": "Stop", "cwd": CWD, "transcript_path": chemin})
+        if rendu != attendu("Renommée"):
+            defauts.append(f"customTitle : {rendu!r} au lieu de {attendu('Renommée')!r}")
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [{"type": "ai-title", "aiTitle": "Titre IA"}])
+        with sous_cloitre():
+            rendu = _titre.render({"hook_event_name": "UserPromptSubmit", "cwd": CWD,
+                                   "transcript_path": chemin})
+        if rendu != attendu("Titre IA"):
+            defauts.append(f"aiTitle seul : {rendu!r}")
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [{"type": "user", "message": "rien"}])
+        for charge in ({"hook_event_name": "Stop", "cwd": CWD, "transcript_path": chemin},
+                       {"hook_event_name": "Stop", "cwd": CWD},
+                       {"hook_event_name": "Stop", "cwd": CWD, "transcript_path": chemin + "x"}):
+            with sous_cloitre():
+                rendu = _titre.render(charge)
+            if rendu != "":
+                defauts.append(f"sans titre {charge!r} : {rendu!r} au lieu de rien")
+    with sous_cloitre(""):
+        rendu = _titre.render({"hook_event_name": "Stop", "cwd": CWD})
+    if rendu != attendu("✅ mon-projet"):
+        defauts.append(f"variable vide : {rendu!r}")
+    if CLOITRE in os.environ:
+        defauts.append("os.environ non restauré")
+
+    with tempfile.TemporaryDirectory() as d:
+        chemin = ecrire_transcript(d, [{"type": "custom-title", "customTitle": "Renommée"}])
+        attente = {"hook_event_name": "Notification", "cwd": CWD, "session_id": "c-1",
+                   "transcript_path": chemin, "notification_type": "permission_prompt"}
+        outil = {"hook_event_name": "PostToolUse", "cwd": CWD, "session_id": "c-1",
+                 "transcript_path": chemin}
+        with sous_cloitre():
+            rendus = [_titre.render(attente), _titre.render(outil), _titre.render(outil)]
+        if rendus != [attendu("Renommée"), attendu("Renommée"), ""]:
+            defauts.append(f"attente puis PostToolUse : {rendus!r}")
+
+        env = dict(_ENV_TEST, **{CLOITRE: "onglet-2"})
+        for charge, titre in ((dict(attente, session_id="cp-1"), "Renommée"),
+                              (dict(outil, session_id="cp-1"), "Renommée"),
+                              ({"hook_event_name": "Stop", "cwd": CWD}, None)):
+            resultat = subprocess.run([sys.executable, str(_ICI / "titre-onglet.py")],
+                                      input=json.dumps(charge).encode("utf-8"),
+                                      capture_output=True, timeout=30, env=env)
+            sortie = resultat.stdout.decode("utf-8")
+            if resultat.returncode != 0 or sortie != (attendu(titre) if titre else ""):
+                defauts.append(f"processus {charge['hook_event_name']} : "
+                               f"exit {resultat.returncode}, {sortie!r}")
+    return defauts
+
+
 def main() -> int:
     """Joue toutes les vérifications et rend 1 si l'une d'elles relève un défaut."""
     echec = False
@@ -352,7 +429,8 @@ def main() -> int:
                        ("caractères de contrôle retirés", verifier_controle),
                        ("sortie du processus", verifier_processus),
                        ("cas limites de la spec", verifier_cas_limites),
-                       ("processus muet sur entrée invalide", verifier_processus_silencieux)):
+                       ("processus muet sur entrée invalide", verifier_processus_silencieux),
+                       ("sous Cloître : titre seul", verifier_cloitre)):
         defauts = verif()
         echec = echec or bool(defauts)
         print(f"{'  ok ' if not defauts else 'ECHEC'} {nom}")
