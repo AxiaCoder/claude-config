@@ -110,7 +110,9 @@ PowerShell 7 (`pwsh`) et Git for Windows, dont le `sh` fait tourner les hooks gi
 
 3. **Vérifier** — les liens et les hooks, § [Maintenance](#maintenance).
 
-L'installation est idempotente : la relancer après un `git pull` met le poste à jour.
+L'installation est idempotente : la relancer après un `git pull` met le poste à jour. Les
+variables `env` que le dépôt a abandonnées sont listées dans les deux scripts et retirées du
+`settings.json` existant.
 
 ## Le dossier perso
 

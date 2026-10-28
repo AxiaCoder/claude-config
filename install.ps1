@@ -389,6 +389,14 @@ if ($merged['env'] -is [System.Management.Automation.PSCustomObject] -and
     $merged['env'].CLAUDE_CODE_PLUGIN_DIRS -ceq '') {
   $merged['env'].PSObject.Properties.Remove('CLAUDE_CODE_PLUGIN_DIRS')
 }
+# Variables que le depot ne pose plus : la fusion cle par cle les garderait a vie.
+# Liste identique dans install.sh.
+$retiredEnv = @('CLAUDE_CODE_DISABLE_TERMINAL_TITLE')
+if ($merged['env'] -is [System.Management.Automation.PSCustomObject]) {
+  foreach ($name in $retiredEnv) {
+    if ($merged['env'].PSObject.Properties[$name]) { $merged['env'].PSObject.Properties.Remove($name) }
+  }
+}
 $rendered = New-Object System.Collections.Generic.List[object]
 if ($null -ne $hooks) {
   $renderedKeys = New-Object 'System.Collections.Generic.HashSet[string]'
