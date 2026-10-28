@@ -12,45 +12,6 @@
             "command": "{{CLAUDE_HOME}}/hooks/post-write-lint.sh"
           }
         ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"{{CLAUDE_HOME}}/hooks/titre-onglet.py\""
-          }
-        ]
       }
     ],
     "SubagentStop": [
@@ -121,7 +82,6 @@
     "command": "python3 \"{{CLAUDE_HOME}}/hooks/statusline.py\""
   },
   "env": {
-    "OTEL_RESOURCE_ATTRIBUTES": "machine=mac",
-    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+    "OTEL_RESOURCE_ATTRIBUTES": "machine=mac"
   }
 }

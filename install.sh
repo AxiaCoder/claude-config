@@ -330,6 +330,12 @@ for layer in layers:
 # Un {{MODS}} rendu vide, aucun mod : la variable est retirée plutôt que posée vide.
 if isinstance(merged.get("env"), dict) and merged["env"].get("CLAUDE_CODE_PLUGIN_DIRS") == "":
     del merged["env"]["CLAUDE_CODE_PLUGIN_DIRS"]
+# Variables que le dépôt ne pose plus : la fusion clé par clé les garderait à vie.
+# Liste identique dans install.ps1.
+RETIRED_ENV = ["CLAUDE_CODE_DISABLE_TERMINAL_TITLE"]
+if isinstance(merged.get("env"), dict):
+    for name in RETIRED_ENV:
+        merged["env"].pop(name, None)
 rendered = []
 if hooks is not None:
     for event, blocks in hooks.items():
