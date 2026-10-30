@@ -21,12 +21,15 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 - une invocation de git, avec dans la même commande une affectation ou un retrait de
   `GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_COUNT`,
   `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_KEY_<n>`, `GIT_CONFIG_VALUE_<n>`, `HOME` ou
-  `XDG_CONFIG_HOME` (préfixe, `+=`, `export`, `export -n`, `unset`, `env -u`, `$env:`, le
-  lecteur `Env:` de PowerShell, `SetEnvironmentVariable`), ou un `env -i` / `env -` : sans
-  configuration globale, plus de `core.hooksPath`. Une commande lancée dans une chaîne
+  `XDG_CONFIG_HOME` (préfixe, `+=`, `export`, `export -n`, `declare +x`, `unset`, `env -u`,
+  `$env:`, le lecteur `Env:` de PowerShell, `SetEnvironmentVariable`), ou un `env -i` /
+  `env -`, d'autres options d'`env` intercalées ou non : sans configuration globale, plus de
+  `core.hooksPath`. Une commande lancée dans une chaîne
   (`sh -c '…'`, `eval`) ou un script sourcé n'est pas inspectée.
 
-Git est reconnu nu ou par son chemin, `git.exe` compris. La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
+Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
+antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
+sur l'une ou l'autre lecture. La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
 Cas de test : `python3 hooks/garde-push.test.py`
@@ -65,12 +68,13 @@ _VARIABLE_DE_CONFIG = (
     r"(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM|COUNT|PARAMETERS|KEY_\d+|VALUE_\d+)"
     r"|XDG_CONFIG_HOME|HOME)"
 )
+_OPTIONS_ENV = r"(?:\s+(?:-[CSu]\s*\S+|-\S+))*?"
 _ENVIRONNEMENT_DE_GIT = re.compile(
     rf"(?<![\w$])(?:\$env:)?{_VARIABLE_DE_CONFIG}(?=\s*\+?=)"
-    rf"|\b(?:unset|export\s+-n)(?:\s+[-\w]+)*?\s+{_VARIABLE_DE_CONFIG}\b"
-    rf"|\benv\s+(?:-u\s*|--unset[=\s]\s*){_VARIABLE_DE_CONFIG}\b"
-    r"|\benv\s+(?:-[a-z]*i[a-z]*|--ignore-environment|-)(?=\s)"
-    rf"|(?<![\w$])Env:{_VARIABLE_DE_CONFIG}\b"
+    rf"|\b(?:unset|export\s+-n|(?:declare|typeset|local)\s+\+x)(?:\s+[-\w]+)*?\s+{_VARIABLE_DE_CONFIG}\b"
+    rf"|\benv{_OPTIONS_ENV}\s+(?:-u\s*|--unset[=\s]\s*){_VARIABLE_DE_CONFIG}\b"
+    rf"|\benv{_OPTIONS_ENV}\s+(?:-[a-z]*i[a-z]*|--ignore-environment|-)(?=\s)"
+    rf"|(?<![\w${{])Env:[\\/]?{_VARIABLE_DE_CONFIG}\b"
     rf"|SetEnvironmentVariable\(\s*['\"]{_VARIABLE_DE_CONFIG}['\"]",
     re.IGNORECASE,
 )
@@ -82,13 +86,15 @@ def _est_git(jeton: str) -> bool:
     return re.split(r"[/\\]", jeton)[-1].lower() in _NOMS_GIT
 
 
-def _jetons(commande: str) -> list[str]:
-    """Découpe `commande` en mots shell, séparateurs isolés ; repli sur les espaces si les guillemets sont déséquilibrés.
+def _lectures(commande: str) -> tuple[list[str], list[str]]:
+    """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe, et celui
+    de PowerShell, où un antislash suivi d'une lettre, d'un chiffre, `_`, `.` ou `-` sépare un
+    chemin (`C:\\Git\\cmd\\git.exe`) et devient `/`."""
+    return _jetons(commande), _jetons(_ANTISLASH_DE_CHEMIN.sub("/", commande))
 
-    Un antislash suivi d'une lettre, d'un chiffre, `_`, `.` ou `-` devient `/` : un chemin
-    Windows (`C:\\Git\\cmd\\git.exe`) garde ses séparateurs.
-    """
-    commande = _ANTISLASH_DE_CHEMIN.sub("/", commande)
+
+def _jetons(commande: str) -> list[str]:
+    """Découpe `commande` en mots shell, séparateurs isolés ; repli sur les espaces si les guillemets sont déséquilibrés."""
     try:
         lexer = shlex.shlex(commande, posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
@@ -134,14 +140,15 @@ def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
     if _NO_VERIFY.search(commande) and _MOT_PUSH.search(commande):
         return "push --no-verify", GARDE_PUSH
-    jetons = _jetons(commande)
-    if any(_desarme_le_pre_commit(option) for option in _options_de_commit(jetons)):
-        return "commit --no-verify / -n", GARDE_SECRETS
+    lectures = _lectures(commande)
+    for jetons in lectures:
+        if any(_desarme_le_pre_commit(option) for option in _options_de_commit(jetons)):
+            return "commit --no-verify / -n", GARDE_SECRETS
     for motif, nom, garde in _MOTIFS_INTERDITS:
         if motif.search(commande):
             return nom, garde
     environnement = _ENVIRONNEMENT_DE_GIT.search(commande)
-    if environnement and any(_est_git(jeton) for jeton in jetons):
+    if environnement and any(_est_git(jeton) for jetons in lectures for jeton in jetons):
         return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
     return None
 
