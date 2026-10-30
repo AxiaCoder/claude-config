@@ -29,7 +29,12 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 
 Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
 antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
-sur l'une ou l'autre lecture. La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
+sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut, dans le texte que lit
+bash (continuations de ligne retirées), puis dans ce dernier privé de ses guillemets (et du `$`
+qui ouvre `$'…'` ou `$"…"`) et antislashs : `"HO"ME` ou `HO\\ME` y redevient `HOME`. Ne sont
+pas décodés : une séquence d'échappement ANSI-C (`$'\\x50'`), une expansion vide (`HO${x}ME`),
+une expansion d'accolades (`{HO,}ME`), l'échappement par backtick de PowerShell. La comparaison
+ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
 Cas de test : `python3 hooks/garde-push.test.py`
@@ -74,7 +79,9 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
     rf"|SetEnvironmentVariable\(\s*['\"]{_VARIABLE_DE_CONFIG}['\"]",
     re.IGNORECASE,
 )
-_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
+_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-]|\r?\n)")
+_GUILLEMETS_ET_ANTISLASHS = re.compile(r"\$?[\"']|\\")
+_CONTINUATION_DE_LIGNE = re.compile(r"\\\r?\n")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
 _OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
@@ -92,20 +99,25 @@ def _est_git(jeton: str) -> bool:
 
 
 def _lectures(commande: str) -> tuple[list[str], list[str]]:
-    """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe, et celui
-    de PowerShell, où un antislash suivi d'une lettre, d'un chiffre, `_`, `.` ou `-` sépare un
-    chemin (`C:\\Git\\cmd\\git.exe`) et devient `/`."""
-    return _jetons(commande), _jetons(_ANTISLASH_DE_CHEMIN.sub("/", commande))
+    """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe et où
+    antislash + saut de ligne disparaît, et celui de PowerShell, où un antislash suivi d'une
+    lettre, d'un chiffre, `_`, `.`, `-` ou d'un saut de ligne sépare un chemin
+    (`C:\\Git\\cmd\\git.exe`) et devient `/`."""
+    return (
+        _jetons(_CONTINUATION_DE_LIGNE.sub("", commande)),
+        _jetons(_ANTISLASH_DE_CHEMIN.sub("/", commande)),
+    )
 
 
 def _jetons(commande: str) -> list[str]:
-    """Découpe `commande` en mots shell, séparateurs isolés ; repli sur les espaces si les guillemets sont déséquilibrés."""
+    """Découpe `commande` en mots shell, séparateurs isolés ; si shlex échoue (guillemets
+    déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et antislashs."""
     try:
         lexer = shlex.shlex(commande, posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
         return list(lexer)
     except ValueError:
-        return commande.split()
+        return _jetons(_GUILLEMETS_ET_ANTISLASHS.sub("", commande))
 
 
 def _options_de_commit(jetons: list[str]) -> list[str]:
@@ -240,20 +252,23 @@ def _desarme_le_pre_commit(option: str) -> bool:
 
 def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
-    if _NO_VERIFY.search(commande) and _MOT_PUSH.search(commande):
-        return "push --no-verify", GARDE_PUSH
     lectures = _lectures(commande)
+    lue_par_bash = _CONTINUATION_DE_LIGNE.sub("", commande)
+    textes = (commande, lue_par_bash, _GUILLEMETS_ET_ANTISLASHS.sub("", lue_par_bash))
+    if any(_NO_VERIFY.search(texte) and _MOT_PUSH.search(texte) for texte in textes):
+        return "push --no-verify", GARDE_PUSH
     for jetons in lectures:
         if any(_desarme_le_pre_commit(option) for option in _options_de_commit(jetons)):
             return "commit --no-verify / -n", GARDE_SECRETS
     for motif, nom, garde in _MOTIFS_INTERDITS:
-        if motif.search(commande):
+        if any(motif.search(texte) for texte in textes):
             return nom, garde
     if not any(_est_git(jeton) for jetons in lectures for jeton in jetons):
         return None
-    environnement = _ENVIRONNEMENT_DE_GIT.search(commande)
-    if environnement:
-        return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
+    for texte in textes:
+        environnement = _ENVIRONNEMENT_DE_GIT.search(texte)
+        if environnement:
+            return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
     for jetons in lectures:
         retrait = _retrait_d_environnement(jetons)
         if retrait:
