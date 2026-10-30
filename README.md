@@ -213,7 +213,7 @@ Un marqueur qui survit au rendu arrête l'installation avant d'écrire le fichie
 | `session-git-context` | au démarrage | affiche la branche, le dernier commit et l'état de l'arbre |
 | `post-write-lint` | après `Write`, `Edit` | lance `pnpm lint` — sur un projet AdonisJS seulement |
 | `collecteur-agents` | au démarrage, à la fin d'un sous-agent | pousse les métriques par sous-agent ; sans adresse configurée, il s'abstient sans faire échouer la session |
-| `statusline` | en continu | modèle, dossier, branche, contexte, quotas |
+| `statusline` | en continu | deux lignes : contexte et quotas, puis modèle, dossier, branche, PR |
 
 La télémétrie demande une instance VictoriaMetrics et son adresse dans le dossier perso
 (`TELEMETRIE_ENDPOINTS`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`) — VictoriaMetrics, Grafana et

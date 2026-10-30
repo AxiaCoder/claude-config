@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Status line de Claude Code : modele | dossier (branche) | contexte | 5h / 7d | PR.
+"""Status line de Claude Code sur deux lignes : contexte | 5h | 7d, puis modele | dossier (branche) | PR.
 
-Lit sur stdin le JSON que le harnais passe a la commande `statusLine`, ecrit une seule
-ligne coloree ANSI sans retour final. Un champ absent omet son segment.
+Lit sur stdin le JSON que le harnais passe a la commande `statusLine`, ecrit deux lignes
+colorees ANSI sans retour final. Un champ absent omet son segment ; une ligne sans
+segment n'est pas ecrite.
 
 Sortie toujours 0 : un JSON invalide rend une ligne vide, jamais une trace.
 """
@@ -23,6 +24,8 @@ RED = "\033[31m"
 CYAN = "\033[36m"
 MAGENTA = "\033[35m"
 BLUE = "\033[94m"
+FILLED = "▬"
+EMPTY = "▬"
 
 
 def g(o, *keys):
@@ -49,7 +52,7 @@ def bar(pct, width=10):
     filled = round(pct / 100 * width)
     color = level_color(pct)
     return "%s%s%s%s%s %s%s%d%%%s" % (
-        color, "█" * filled, DIM, "░" * (width - filled), RESET,
+        color, FILLED * filled, DIM, EMPTY * (width - filled), RESET,
         BOLD, color, round(pct), RESET)
 
 
@@ -63,13 +66,24 @@ def git_branch(cwd):
 
 
 def render(d):
-    """Return the status line for the parsed harness payload d; missing fields are omitted."""
+    """Return the status line for the parsed harness payload d: usage on the first line,
+    session on the second; missing fields are omitted, and so is a line left empty."""
     if not isinstance(d, dict):
         return ""
-    parts = []
+    usage = []
+    u = g(d, "context_window", "used_percentage")
+    if u is not None:
+        usage.append("\U0001F9E0 " + bar(u))
+
+    for k, label in (("five_hour", "5h"), ("seven_day", "7d")):
+        p = g(d, "rate_limits", k, "used_percentage")
+        if p is not None:
+            usage.append("⏳ %s%s%s " % (DIM, label, RESET) + bar(p, 6))
+
+    session = []
     m = g(d, "model", "display_name")
     if m:
-        parts.append("\U0001F916 %s%s%s%s" % (BOLD, MAGENTA, m, RESET))
+        session.append("\U0001F916 %s%s%s%s" % (BOLD, MAGENTA, m, RESET))
 
     cwd = g(d, "workspace", "current_dir") or d.get("cwd")
     if cwd:
@@ -77,29 +91,21 @@ def render(d):
         br = git_branch(cwd)
         if br:
             seg += " \U0001F33F %s%s%s" % (CYAN, br, RESET)
-        parts.append(seg)
-
-    u = g(d, "context_window", "used_percentage")
-    if u is not None:
-        parts.append("\U0001F9E0 " + bar(u))
-
-    for k, label in (("five_hour", "5h"), ("seven_day", "7d")):
-        p = g(d, "rate_limits", k, "used_percentage")
-        if p is not None:
-            parts.append("⏳ %s%s%s " % (DIM, label, RESET) + bar(p, 6))
+        session.append(seg)
 
     n = g(d, "pr", "number")
     if n:
         ref = ("MR !" if g(d, "pr", "kind") == "mr" else "PR #") + str(n)
-        parts.append("\U0001F500 %s%s%s%s" % (BOLD, YELLOW, ref, RESET))
+        session.append("\U0001F500 %s%s%s%s" % (BOLD, YELLOW, ref, RESET))
 
-    return ("  %s│%s  " % (DIM, RESET)).join(parts)
+    sep = "  %s│%s  " % (DIM, RESET)
+    return "\n".join(sep.join(parts) for parts in (usage, session) if parts)
 
 
 def main() -> int:
     """Read the payload from stdin, print the status line, and always return 0."""
     try:
-        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stdout.reconfigure(encoding="utf-8", newline="\n")
         raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
         d = json.loads(raw or "{}")
     except Exception:
