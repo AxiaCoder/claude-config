@@ -29,8 +29,8 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 
 Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
 antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
-sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut et dans les mots
-déquotés de la lecture bash, recollés par des espaces : `"HO"ME` ou `HO\ME` y redevient `HOME`.
+sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut, puis dans ce même
+texte privé de ses guillemets et antislashs : `"HO"ME` ou `HO\\ME` y redevient `HOME`.
 La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
@@ -77,6 +77,7 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
     re.IGNORECASE,
 )
 _ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
+_GUILLEMETS_ET_ANTISLASHS = re.compile(r"[\"'\\]")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
 _OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
@@ -243,7 +244,7 @@ def _desarme_le_pre_commit(option: str) -> bool:
 def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
     lectures = _lectures(commande)
-    textes = (commande, " ".join(lectures[0]))
+    textes = (commande, _GUILLEMETS_ET_ANTISLASHS.sub("", commande))
     if any(_NO_VERIFY.search(texte) and _MOT_PUSH.search(texte) for texte in textes):
         return "push --no-verify", GARDE_PUSH
     for jetons in lectures:
