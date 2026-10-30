@@ -30,7 +30,9 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
 antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
 sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut, puis dans ce même
-texte privé de ses guillemets et antislashs : `"HO"ME` ou `HO\\ME` y redevient `HOME`.
+texte privé de ses guillemets (et du `$` qui ouvre `$'…'` ou `$"…"`) et antislashs : `"HO"ME`
+ou `HO\\ME` y redevient `HOME`. Une séquence d'échappement ANSI-C (`$'\\x50'`) ou une expansion
+vide (`HO${x}ME`) n'est pas décodée.
 La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
@@ -77,7 +79,7 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
     re.IGNORECASE,
 )
 _ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
-_GUILLEMETS_ET_ANTISLASHS = re.compile(r"[\"'\\]")
+_GUILLEMETS_ET_ANTISLASHS = re.compile(r"\$?[\"']|\\")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
 _OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
@@ -102,13 +104,14 @@ def _lectures(commande: str) -> tuple[list[str], list[str]]:
 
 
 def _jetons(commande: str) -> list[str]:
-    """Découpe `commande` en mots shell, séparateurs isolés ; repli sur les espaces si les guillemets sont déséquilibrés."""
+    """Découpe `commande` en mots shell, séparateurs isolés ; si shlex échoue (guillemets
+    déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et antislashs."""
     try:
         lexer = shlex.shlex(commande, posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
         return list(lexer)
     except ValueError:
-        return commande.split()
+        return _jetons(_GUILLEMETS_ET_ANTISLASHS.sub("", commande))
 
 
 def _options_de_commit(jetons: list[str]) -> list[str]:
