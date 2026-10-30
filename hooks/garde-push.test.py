@@ -305,6 +305,10 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, "echo hi # c\nenv -i git push"),
     (REFUS, f"git status #\nunset {HO}; git push"),
     (REFUS, f"git status #\r\nunset {HO}; git push"),
+    (REFUS, "git commit -m \"titre\n\ncorps\" -n # it's"),
+    (REFUS, "git commit -m \"titre\r\n\r\ncorps\" -n # it's"),
+    (REFUS, "echo $'\\''\ngit commit -m \"a\nb\" -n"),
+    (REFUS, "git commit -m \"a\nb\" -n; echo $'it\\'s'"),
     # --- continuation PowerShell : backtick en fin de ligne ---
     (REFUS, "git commit -m x `\n-n"),
     (REFUS, "git commit -m x `\r\n-n"),

@@ -116,14 +116,14 @@ def _jetons(commande: str) -> list[str]:
     """Découpe `commande` en mots shell, séparateurs isolés, un saut de ligne valant `;` (entre
     guillemets, il reste dans son mot) et `#` restant un caractère ordinaire ; si shlex échoue
     (guillemets déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et
-    antislashs."""
+    antislashs, où un saut de ligne n'est qu'un blanc."""
     try:
         lexer = shlex.shlex(commande.replace("\n", " ; "), posix=True, punctuation_chars=True)
         lexer.commenters = ""
         lexer.whitespace_split = True
         return list(lexer)
     except ValueError:
-        return _jetons(_GUILLEMETS_ET_ANTISLASHS.sub("", commande))
+        return _jetons(_GUILLEMETS_ET_ANTISLASHS.sub("", commande).replace("\n", " "))
 
 
 def _options_de_commit(jetons: list[str]) -> list[str]:
