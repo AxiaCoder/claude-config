@@ -61,6 +61,8 @@ def verifier_ordre() -> list[str]:
     sortie = lancer(json.dumps(COMPLET)).stdout
     if sortie.endswith(b"\n"):
         defauts.append("retour à la ligne final")
+    if b"\r" in sortie:
+        defauts.append("retour chariot dans la sortie du processus")
     if sortie.decode("utf-8") != ligne:
         defauts.append("sortie du processus différente du rendu")
     return defauts
