@@ -17,9 +17,14 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 - `sans-externes` ou `SansExternes` : l'option d'installation sans externes et son mémo
   `~/.claude/claude-config.sans-externes`, qui désarment le garde secrets ;
 - le marqueur d'exemption de gitleaks ou betterleaks (`…leaks:allow`), où qu'il soit dans
-  la commande : l'exemption d'un faux positif reste à l'utilisateur.
+  la commande : l'exemption d'un faux positif reste à l'utilisateur ;
+- une invocation de git, avec dans la même commande une affectation ou un retrait de
+  `GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_COUNT`,
+  `GIT_CONFIG_KEY_<n>`, `GIT_CONFIG_VALUE_<n>`, `HOME` ou `XDG_CONFIG_HOME` (préfixe,
+  `export`, `unset`, `env`, `$env:`, `Remove-Item Env:`), ou un `env -i` : sans configuration
+  globale, plus de `core.hooksPath`.
 
-La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
+Git est reconnu nu ou par son chemin, `git.exe` compris. La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
 Cas de test : `python3 hooks/garde-push.test.py`
@@ -53,6 +58,21 @@ _SEPARATEURS = frozenset({"&&", "||", ";", "|", "&", "(", ")", ";;", "|&"})
 _OPTIONS_GIT_A_VALEUR = frozenset({"-C", "-c", "--git-dir", "--work-tree", "--namespace"})
 _LETTRES_COMMIT_A_VALEUR = frozenset("mFcCtuS")
 _OPTION_COURTE = re.compile(r"-[A-Za-z]+")
+_NOMS_GIT = frozenset({"git", "git.exe"})
+_VARIABLE_DE_CONFIG = (
+    r"(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM|COUNT|KEY_\d+|VALUE_\d+)|XDG_CONFIG_HOME|HOME)"
+)
+_ENVIRONNEMENT_DE_GIT = re.compile(
+    rf"(?<![\w$])(?:\$env:)?{_VARIABLE_DE_CONFIG}(?=\s*=)"
+    rf"|\b(?:unset|env\s+-u|Remove-Item\s+Env:)\s*{_VARIABLE_DE_CONFIG}\b"
+    r"|\benv\s+(?:-i|--ignore-environment)\b",
+    re.IGNORECASE,
+)
+
+
+def _est_git(jeton: str) -> bool:
+    """Vrai si `jeton` désigne l'exécutable git, nu ou par un chemin `/` ou `\\`, `git.exe` compris."""
+    return re.split(r"[/\\]", jeton)[-1].lower() in _NOMS_GIT
 
 
 def _jetons(commande: str) -> list[str]:
@@ -70,7 +90,7 @@ def _options_de_commit(jetons: list[str]) -> list[str]:
     options: list[str] = []
     i = 0
     while i < len(jetons):
-        if jetons[i] != "git":
+        if not _est_git(jetons[i]):
             i += 1
             continue
         i += 1
@@ -102,11 +122,15 @@ def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
     if _NO_VERIFY.search(commande) and _MOT_PUSH.search(commande):
         return "push --no-verify", GARDE_PUSH
-    if any(_desarme_le_pre_commit(option) for option in _options_de_commit(_jetons(commande))):
+    jetons = _jetons(commande)
+    if any(_desarme_le_pre_commit(option) for option in _options_de_commit(jetons)):
         return "commit --no-verify / -n", GARDE_SECRETS
     for motif, nom, garde in _MOTIFS_INTERDITS:
         if motif.search(commande):
             return nom, garde
+    environnement = _ENVIRONNEMENT_DE_GIT.search(commande)
+    if environnement and any(_est_git(jeton) for jeton in jetons):
+        return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
     return None
 
 

@@ -26,6 +26,14 @@ SE = "sans-" + "externes"
 SEP = "Sans" + "Externes"
 GA = "gitleaks" + ":allow"
 BA = "betterleaks" + ":allow"
+GCG = "GIT_CONFIG_" + "GLOBAL"
+GCS = "GIT_CONFIG_" + "SYSTEM"
+GCN = "GIT_CONFIG_" + "NOSYSTEM"
+GCC = "GIT_CONFIG_" + "COUNT"
+GCK = "GIT_CONFIG_" + "KEY_"
+GCV = "GIT_CONFIG_" + "VALUE_"
+HO = "HO" + "ME"
+XCH = "XDG_" + "CONFIG_" + "HOME"
 
 REFUS, PASSE = 2, 0
 
@@ -83,7 +91,55 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f"printf '%s\\n' '# {GA.upper()}' | tee -a config.py"),
     (REFUS, f"cat >> config.py <<'EOF'\nx = 1  # {BA}\nEOF"),
     (REFUS, f"git commit -m 'ajoute {GA}'"),
+    # --- environnement de git : préfixe ---
+    (REFUS, f"{GCG}=/dev/null git commit -m x"),
+    (REFUS, f"{GCS}=/dev/null git push origin feat/x"),
+    (REFUS, f"{GCN}=1 git commit -m x"),
+    (REFUS, f"{GCC}=1 {GCK}0=core.editor {GCV}0=vim git commit -m x"),
+    (REFUS, f"{GCV}0=/dev/null git push"),
+    (REFUS, f"{HO}=/tmp git commit -m x"),
+    (REFUS, f"{XCH}=/tmp git push origin feat/x"),
+    (REFUS, f"{GCG.lower()}=/dev/null git commit -m x"),
+    (REFUS, f"{HO.lower()}=/tmp git push"),
+    (REFUS, f"cd repo && {HO}=/tmp git commit -m x"),
+    # --- environnement de git : instruction séparée ---
+    (REFUS, f"export {GCG}=/dev/null; git commit -m x"),
+    (REFUS, f"export {HO}=/tmp && git push origin feat/x"),
+    (REFUS, f"{GCG}=/dev/null; git commit -m x"),
+    (REFUS, f"{XCH}=/tmp && git push"),
+    (REFUS, f"unset {HO}; git commit -m x"),
+    (REFUS, f"unset {XCH} && git push"),
+    # --- environnement de git : PowerShell ---
+    (REFUS, f"$env:{GCG} = 'NUL'; git commit -m x"),
+    (REFUS, f"$env:{HO}='C:/tmp'; git push"),
+    (REFUS, f"$env:{XCH.lower()} = 'C:/tmp'; git push"),
+    (REFUS, f"Remove-Item Env:{HO}; git commit -m x"),
+    (REFUS, f"Remove-Item Env:{GCS}; git push"),
+    # --- environnement de git : env ---
+    (REFUS, f"env {GCG}=/dev/null git commit -m x"),
+    (REFUS, f"env {HO}=/tmp git push"),
+    (REFUS, f"env -u {HO} git commit -m x"),
+    (REFUS, f"env -u {XCH} git push"),
+    (REFUS, "env -i git commit -m x"),
+    (REFUS, "env -i PATH=/usr/bin git push origin feat/x"),
+    # --- git désigné par son chemin ---
+    (REFUS, "/usr/bin/git commit -n -m x"),
+    (REFUS, '"C:/Program Files/Git/cmd/git.exe" commit -n -m x'),
+    (REFUS, "git.exe commit -n -m x"),
+    (REFUS, f"{HO}=/tmp /usr/bin/git push origin feat/x"),
+    (REFUS, f"{GCG}=/dev/null git.exe commit -m x"),
     # --- doivent passer ---
+    (PASSE, f"echo ${HO}"),
+    (PASSE, f'cd "${HO}" && git status'),
+    (PASSE, "ls ~ && git log"),
+    (PASSE, f"{HO}=/tmp npm test"),
+    (PASSE, f"{XCH}=/tmp nvim"),
+    (PASSE, "env FOO=1 git status"),
+    (PASSE, "/usr/bin/git status"),
+    (PASSE, "git.exe log"),
+    (PASSE, f"git commit -m '{HO} sweet home'"),
+    (PASSE, "export GIT" + HO + "=x; git status"),
+    (PASSE, "CLAUDE_" + HO + "=/tmp git status"),
     (PASSE, "echo gitleaks detect"),
     (PASSE, "git push"),
     (PASSE, f"git {PM}"),
