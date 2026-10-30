@@ -79,7 +79,7 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
     rf"|SetEnvironmentVariable\(\s*['\"]{_VARIABLE_DE_CONFIG}['\"]",
     re.IGNORECASE,
 )
-_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-]|\r?\n)")
+_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
 _GUILLEMETS_ET_ANTISLASHS = re.compile(r"\$?[\"']|\\")
 _CONTINUATION_DE_LIGNE = re.compile(r"\\\r?\n")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
@@ -101,23 +101,44 @@ def _est_git(jeton: str) -> bool:
 def _lectures(commande: str) -> tuple[list[str], list[str]]:
     """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe et où
     antislash + saut de ligne disparaît, et celui de PowerShell, où un antislash suivi d'une
-    lettre, d'un chiffre, `_`, `.`, `-` ou d'un saut de ligne sépare un chemin
-    (`C:\\Git\\cmd\\git.exe`) et devient `/`."""
+    lettre, d'un chiffre, `_`, `.` ou `-` sépare un chemin (`C:\\Git\\cmd\\git.exe`) et
+    devient `/`, et où antislash + saut de ligne devient `/ ` sans couper la commande."""
     return (
         _jetons(_CONTINUATION_DE_LIGNE.sub("", commande)),
-        _jetons(_ANTISLASH_DE_CHEMIN.sub("/", commande)),
+        _jetons(_ANTISLASH_DE_CHEMIN.sub("/", _CONTINUATION_DE_LIGNE.sub("/ ", commande))),
     )
 
 
 def _jetons(commande: str) -> list[str]:
-    """Découpe `commande` en mots shell, séparateurs isolés ; si shlex échoue (guillemets
+    """Découpe `commande` en mots shell, séparateurs isolés, saut de ligne hors guillemets
+    compris ; si shlex échoue (guillemets
     déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et antislashs."""
     try:
-        lexer = shlex.shlex(commande, posix=True, punctuation_chars=True)
+        lexer = shlex.shlex(
+            _sauts_de_ligne_en_separateurs(commande), posix=True, punctuation_chars=True
+        )
         lexer.whitespace_split = True
         return list(lexer)
     except ValueError:
         return _jetons(_GUILLEMETS_ET_ANTISLASHS.sub("", commande))
+
+
+def _sauts_de_ligne_en_separateurs(commande: str) -> str:
+    """Rend `commande` où chaque saut de ligne hors guillemets et non échappé devient ` ; `."""
+    caracteres: list[str] = []
+    guillemet = ""
+    echappe = False
+    for caractere in commande:
+        if echappe:
+            echappe = False
+        elif caractere == "\\" and guillemet != "'":
+            echappe = True
+        elif caractere in "'\"" and guillemet in ("", caractere):
+            guillemet = "" if guillemet else caractere
+        elif caractere == "\n" and not guillemet:
+            caractere = " ; "
+        caracteres.append(caractere)
+    return "".join(caracteres)
 
 
 def _options_de_commit(jetons: list[str]) -> list[str]:
