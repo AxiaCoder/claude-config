@@ -29,10 +29,12 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 
 Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
 antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
-sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut, puis dans ce même
-texte privé de ses guillemets (et du `$` qui ouvre `$'…'` ou `$"…"`) et antislashs : `"HO"ME`
-ou `HO\\ME` y redevient `HOME`. Une séquence d'échappement ANSI-C (`$'\\x50'`) ou une expansion
-vide (`HO${x}ME`) n'est pas décodée.
+sur l'une ou l'autre lecture. Les continuations de ligne (antislash + saut de ligne) sont
+retirées d'abord. Les motifs se cherchent ensuite dans le texte, puis dans ce même texte privé de
+ses guillemets (et du `$` qui ouvre `$'…'` ou `$"…"`) et antislashs : `"HO"ME` ou `HO\\ME` y
+redevient `HOME`. Ne sont pas décodés : une séquence d'échappement ANSI-C (`$'\\x50'`), une
+expansion vide (`HO${x}ME`), une expansion d'accolades (`{HO,}ME`), l'échappement par backtick
+de PowerShell.
 La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
@@ -80,6 +82,7 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
 )
 _ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
 _GUILLEMETS_ET_ANTISLASHS = re.compile(r"\$?[\"']|\\")
+_CONTINUATION_DE_LIGNE = re.compile(r"\\\r?\n")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
 _OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
@@ -246,6 +249,7 @@ def _desarme_le_pre_commit(option: str) -> bool:
 
 def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
+    commande = _CONTINUATION_DE_LIGNE.sub("", commande)
     lectures = _lectures(commande)
     textes = (commande, _GUILLEMETS_ET_ANTISLASHS.sub("", commande))
     if any(_NO_VERIFY.search(texte) and _MOT_PUSH.search(texte) for texte in textes):
