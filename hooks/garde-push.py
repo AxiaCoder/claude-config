@@ -68,17 +68,16 @@ _VARIABLE_DE_CONFIG = (
     r"(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM|COUNT|PARAMETERS|KEY_\d+|VALUE_\d+)"
     r"|XDG_CONFIG_HOME|HOME)"
 )
-_OPTIONS_ENV = r"(?:\s+(?:-[CSu]\s*\S+|-\S+))*?"
+_EST_VARIABLE_DE_CONFIG = re.compile(_VARIABLE_DE_CONFIG, re.IGNORECASE)
 _ENVIRONNEMENT_DE_GIT = re.compile(
-    rf"(?<![\w$])(?:\$env:)?{_VARIABLE_DE_CONFIG}(?=\s*\+?=)"
-    rf"|\b(?:unset|export\s+-n|(?:declare|typeset|local)\s+\+x)(?:\s+[-\w]+)*?\s+{_VARIABLE_DE_CONFIG}\b"
-    rf"|\benv{_OPTIONS_ENV}\s+(?:-u\s*|--unset[=\s]\s*){_VARIABLE_DE_CONFIG}\b"
-    rf"|\benv{_OPTIONS_ENV}\s+(?:-[a-z]*i[a-z]*|--ignore-environment|-)(?=\s)"
+    rf"(?<![\w$])(?:\$env:)?{_VARIABLE_DE_CONFIG}\}}?(?=\s*\+?=)"
     rf"|(?<![\w${{])Env:[\\/]?{_VARIABLE_DE_CONFIG}\b"
     rf"|SetEnvironmentVariable\(\s*['\"]{_VARIABLE_DE_CONFIG}['\"]",
     re.IGNORECASE,
 )
 _ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
+_DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
+_OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
 
 def _est_git(jeton: str) -> bool:
@@ -122,6 +121,103 @@ def _options_de_commit(jetons: list[str]) -> list[str]:
     return options
 
 
+def _segments(jetons: list[str]) -> list[list[str]]:
+    """Coupe `jetons` en commandes simples, aux séparateurs shell."""
+    segments: list[list[str]] = [[]]
+    for jeton in jetons:
+        if jeton in _SEPARATEURS:
+            segments.append([])
+        else:
+            segments[-1].append(jeton)
+    return segments
+
+
+def _est_abreviation(jeton: str, option_longue: str) -> bool:
+    """Vrai si `jeton` vaut `option_longue` ou une abréviation d'au moins `--` et deux lettres."""
+    return len(jeton) >= 4 and option_longue.startswith(jeton)
+
+
+def _retrait_par_env(arguments: list[str]) -> str | None:
+    """Lit les options et affectations d'un `env` jusqu'à sa commande ; rend celle qui vide
+    l'environnement ou retire une variable de configuration de git, None sinon."""
+    i = 0
+    while i < len(arguments):
+        argument = arguments[i]
+        nom, egal, valeur = argument.partition("=")
+        if argument == "-" or (argument.startswith("--") and _est_abreviation(nom, "--ignore-environment")):
+            return "env -i"
+        if argument.startswith("--") and len(argument) > 2:
+            if _est_abreviation(nom, "--unset"):
+                variable = valeur if egal else (arguments[i + 1] if i + 1 < len(arguments) else "")
+                if _EST_VARIABLE_DE_CONFIG.fullmatch(variable):
+                    return f"env --unset {variable}"
+                i += 1 if egal else 2
+            elif not egal and any(_est_abreviation(nom, longue) for longue in _OPTIONS_LONGUES_ENV_A_VALEUR):
+                i += 2
+            else:
+                i += 1
+            continue
+        if argument == "--":
+            i += 1
+            continue
+        if argument.startswith("-"):
+            saut = 1
+            for position, lettre in enumerate(argument[1:], start=2):
+                if lettre == "i":
+                    return "env -i"
+                if lettre in "uCS":
+                    reste = argument[position:]
+                    if not reste:
+                        reste = arguments[i + 1] if i + 1 < len(arguments) else ""
+                        saut = 2
+                    if lettre == "u" and _EST_VARIABLE_DE_CONFIG.fullmatch(reste):
+                        return f"env -u {reste}"
+                    break
+            i += saut
+            continue
+        if egal and _EST_VARIABLE_DE_CONFIG.fullmatch(nom):
+            return f"env {nom}="
+        if not egal:
+            return None
+        i += 1
+    return None
+
+
+def _retrait_par_declaration(mot_cle: str, arguments: list[str]) -> str | None:
+    """Rend le retrait d'export ou d'existence d'une variable de configuration de git par
+    `unset`, `export -n` ou `declare`/`typeset`/`local` `+x`, None sinon."""
+    drapeaux = [argument for argument in arguments if argument[:1] in "-+"]
+    noms = [argument.partition("=")[0] for argument in arguments if argument[:1] not in "-+"]
+    if mot_cle == "unset":
+        retire = True
+    elif mot_cle == "export":
+        retire = any(d.startswith("-") and "n" in d for d in drapeaux)
+    else:
+        retire = any(d.startswith("+") and "x" in d for d in drapeaux)
+    if not retire:
+        return None
+    for nom in noms:
+        if _EST_VARIABLE_DE_CONFIG.fullmatch(nom):
+            return f"{mot_cle} {nom}"
+    return None
+
+
+def _retrait_d_environnement(jetons: list[str]) -> str | None:
+    """Rend le premier `env` ou la première déclaration de `jetons` qui retire une variable de
+    configuration de git ou vide l'environnement, None sinon."""
+    for segment in _segments(jetons):
+        for position, jeton in enumerate(segment):
+            if re.split(r"[/\\]", jeton)[-1] == "env":
+                retrait = _retrait_par_env(segment[position + 1 :])
+            elif jeton in _DECLARATIONS:
+                retrait = _retrait_par_declaration(jeton, segment[position + 1 :])
+            else:
+                continue
+            if retrait:
+                return retrait
+    return None
+
+
 def _desarme_le_pre_commit(option: str) -> bool:
     """Vrai si `option` de `git commit` vaut `--no-verify` (ou abréviation) ou porte `-n`, seul ou groupé."""
     if _NO_VERIFY.fullmatch(option):
@@ -147,9 +243,15 @@ def motif_refuse(commande: str) -> tuple[str, str] | None:
     for motif, nom, garde in _MOTIFS_INTERDITS:
         if motif.search(commande):
             return nom, garde
+    if not any(_est_git(jeton) for jetons in lectures for jeton in jetons):
+        return None
     environnement = _ENVIRONNEMENT_DE_GIT.search(commande)
-    if environnement and any(_est_git(jeton) for jetons in lectures for jeton in jetons):
+    if environnement:
         return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
+    for jetons in lectures:
+        retrait = _retrait_d_environnement(jetons)
+        if retrait:
+            return f"{retrait} devant git", GARDE_HOOKS
     return None
 
 

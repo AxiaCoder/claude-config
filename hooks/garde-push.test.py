@@ -37,6 +37,7 @@ XCH = "XDG_" + "CONFIG_" + "HOME"
 GCP = "GIT_CONFIG_" + "PARAMETERS"
 
 REFUS, PASSE = 2, 0
+DELAI = 2.0
 
 CAS: tuple[tuple[int, str], ...] = (
     # --- doivent être refusés ---
@@ -175,6 +176,23 @@ CAS: tuple[tuple[int, str], ...] = (
     (PASSE, "git commit -i -m x"),
     (PASSE, "env FOO=1 git commit -i -m x"),
     (PASSE, "env -u FOO git commit -m x"),
+    # --- environnement de git : passe 2 ---
+    (REFUS, f"${{env:{HO}}} = 'x'; git push"),
+    (REFUS, f"${{env:{GCG}}}='NUL'; git commit -m x"),
+    (REFUS, f"env --unset FOO -u {HO} git push"),
+    (REFUS, f"env --chdir . -u {HO} git push"),
+    (REFUS, "env --chdir / -i git push"),
+    (REFUS, f"env -vu {HO} git push"),
+    (REFUS, "env -S x -i git push"),
+    (REFUS, f"declare -g +x {HO}; git push"),
+    (REFUS, f"typeset -r +x {HO}; git push"),
+    (REFUS, f"export -n FOO {HO}; git push"),
+    (PASSE, "env -u FOO -u BAR git status"),
+    (PASSE, "env --chdir . git status"),
+    (PASSE, "declare -g X=1; git status"),
+    (PASSE, "env git commit -i -m x"),
+    (PASSE, "env" + " -u" * 40 + " x"),
+    (PASSE, "env" + " -u" * 40 + " git status"),
     # --- doivent passer ---
     (PASSE, f"echo ${HO}"),
     (PASSE, f'cd "${HO}" && git status'),
@@ -210,11 +228,18 @@ CAS: tuple[tuple[int, str], ...] = (
 )
 
 
-def lancer(entree: bytes) -> int:
-    """Lance le hook avec `entree` sur stdin et rend son code de sortie."""
-    return subprocess.run(
-        [sys.executable, str(_HOOK)], input=entree, capture_output=True, check=False
-    ).returncode
+def lancer(entree: bytes, delai: float = DELAI) -> int | str:
+    """Lance le hook avec `entree` sur stdin ; rend son code de sortie, ou "timeout" au-delà de `delai` secondes."""
+    try:
+        return subprocess.run(
+            [sys.executable, str(_HOOK)],
+            input=entree,
+            capture_output=True,
+            check=False,
+            timeout=delai,
+        ).returncode
+    except subprocess.TimeoutExpired:
+        return "timeout"
 
 
 def evenement(commande: str) -> bytes:
