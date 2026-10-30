@@ -267,6 +267,8 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, "git commit -\\\nn -m x"),
     (REFUS, "ALLOW_" + "PUSH_" + "MA\\\nIN=1 git push"),
     (PASSE, "git status\ngit log -n 1"),
+    (REFUS, "cd D:\\repo\\\r\ngit commit -n -m x"),
+    (REFUS, "cd D:\\repo\\\ngit commit -n -m x"),
     # --- doivent passer ---
     (PASSE, f"echo ${HO}"),
     (PASSE, f'cd "${HO}" && git status'),

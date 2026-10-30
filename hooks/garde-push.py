@@ -29,13 +29,12 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 
 Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
 antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
-sur l'une ou l'autre lecture. Les continuations de ligne (antislash + saut de ligne) sont
-retirées d'abord. Les motifs se cherchent ensuite dans le texte, puis dans ce même texte privé de
-ses guillemets (et du `$` qui ouvre `$'…'` ou `$"…"`) et antislashs : `"HO"ME` ou `HO\\ME` y
-redevient `HOME`. Ne sont pas décodés : une séquence d'échappement ANSI-C (`$'\\x50'`), une
-expansion vide (`HO${x}ME`), une expansion d'accolades (`{HO,}ME`), l'échappement par backtick
-de PowerShell.
-La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
+sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut, dans le texte que lit
+bash (continuations de ligne retirées), puis dans ce dernier privé de ses guillemets (et du `$`
+qui ouvre `$'…'` ou `$"…"`) et antislashs : `"HO"ME` ou `HO\\ME` y redevient `HOME`. Ne sont
+pas décodés : une séquence d'échappement ANSI-C (`$'\\x50'`), une expansion vide (`HO${x}ME`),
+une expansion d'accolades (`{HO,}ME`), l'échappement par backtick de PowerShell. La comparaison
+ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
 Cas de test : `python3 hooks/garde-push.test.py`
@@ -80,7 +79,7 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
     rf"|SetEnvironmentVariable\(\s*['\"]{_VARIABLE_DE_CONFIG}['\"]",
     re.IGNORECASE,
 )
-_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
+_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-]|\r?\n)")
 _GUILLEMETS_ET_ANTISLASHS = re.compile(r"\$?[\"']|\\")
 _CONTINUATION_DE_LIGNE = re.compile(r"\\\r?\n")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
@@ -100,10 +99,14 @@ def _est_git(jeton: str) -> bool:
 
 
 def _lectures(commande: str) -> tuple[list[str], list[str]]:
-    """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe, et celui
-    de PowerShell, où un antislash suivi d'une lettre, d'un chiffre, `_`, `.` ou `-` sépare un
-    chemin (`C:\\Git\\cmd\\git.exe`) et devient `/`."""
-    return _jetons(commande), _jetons(_ANTISLASH_DE_CHEMIN.sub("/", commande))
+    """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe et où
+    antislash + saut de ligne disparaît, et celui de PowerShell, où un antislash suivi d'une
+    lettre, d'un chiffre, `_`, `.`, `-` ou d'un saut de ligne sépare un chemin
+    (`C:\\Git\\cmd\\git.exe`) et devient `/`."""
+    return (
+        _jetons(_CONTINUATION_DE_LIGNE.sub("", commande)),
+        _jetons(_ANTISLASH_DE_CHEMIN.sub("/", commande)),
+    )
 
 
 def _jetons(commande: str) -> list[str]:
@@ -249,9 +252,9 @@ def _desarme_le_pre_commit(option: str) -> bool:
 
 def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
-    commande = _CONTINUATION_DE_LIGNE.sub("", commande)
     lectures = _lectures(commande)
-    textes = (commande, _GUILLEMETS_ET_ANTISLASHS.sub("", commande))
+    lue_par_bash = _CONTINUATION_DE_LIGNE.sub("", commande)
+    textes = (commande, lue_par_bash, _GUILLEMETS_ET_ANTISLASHS.sub("", lue_par_bash))
     if any(_NO_VERIFY.search(texte) and _MOT_PUSH.search(texte) for texte in textes):
         return "push --no-verify", GARDE_PUSH
     for jetons in lectures:
