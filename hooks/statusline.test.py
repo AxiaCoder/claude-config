@@ -106,6 +106,13 @@ def verifier_invalide() -> list[str]:
     return defauts
 
 
+def compter(rendu: str) -> tuple[int, int]:
+    """Cases pleines (avant le passage en grisé) et vides (après) de la première barre du rendu."""
+    pleines, _, reste = rendu.partition(_statusline.DIM)
+    vides = reste.partition(_statusline.RESET)[0]
+    return pleines.count(_statusline.FILLED), vides.count(_statusline.EMPTY)
+
+
 def verifier_bornes() -> list[str]:
     """Bornes de la barre : 0 vide, 100 pleine, hors plage ramené dans 0-100."""
     defauts: list[str] = []
@@ -113,11 +120,11 @@ def verifier_bornes() -> list[str]:
     for pct, pleins, affiche, couleur in ((0, 0, 0, s.GREEN), (100, 10, 100, s.RED),
                                           (150, 10, 100, s.RED), (-5, 0, 0, s.GREEN)):
         rendu = s.bar(pct)
-        if rendu.count("█") != pleins or rendu.count("░") != 10 - pleins:
-            defauts.append(f"{pct}% : {rendu.count('█')} pleins, {rendu.count('░')} vides")
+        if compter(rendu) != (pleins, 10 - pleins):
+            defauts.append(f"{pct}% : (pleins, vides) = {compter(rendu)}")
         if f"{s.BOLD}{couleur}{affiche}%" not in rendu:
             defauts.append(f"{pct}% : valeur affichée ou couleur fausse, {rendu!r}")
-    if s.bar(50, 6).count("█") != 3 or s.bar(50, 6).count("░") != 3:
+    if compter(s.bar(50, 6)) != (3, 3):
         defauts.append("barre de 6 à 50 % : pas 3 pleins + 3 vides")
     return defauts
 
@@ -139,8 +146,8 @@ def verifier_decimal() -> list[str]:
     ligne = _statusline.render({"context_window": {"used_percentage": 67.4}})
     if "67%" not in ligne or "67.4" in ligne:
         defauts.append(f"67.4 mal affiché : {ligne!r}")
-    if ligne.count("█") != 7:
-        defauts.append(f"67.4 : {ligne.count('█')} pleins au lieu de 7")
+    if compter(ligne)[0] != 7:
+        defauts.append(f"67.4 : {compter(ligne)[0]} pleins au lieu de 7")
     ligne = _statusline.render({"rate_limits": {"five_hour": {"used_percentage": 12.6}}})
     if "13%" not in ligne:
         defauts.append(f"12.6 pas arrondi à 13 : {ligne!r}")

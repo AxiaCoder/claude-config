@@ -24,6 +24,8 @@ RED = "\033[31m"
 CYAN = "\033[36m"
 MAGENTA = "\033[35m"
 BLUE = "\033[94m"
+FILLED = "▬"
+EMPTY = "▬"
 
 
 def g(o, *keys):
@@ -50,7 +52,7 @@ def bar(pct, width=10):
     filled = round(pct / 100 * width)
     color = level_color(pct)
     return "%s%s%s%s%s %s%s%d%%%s" % (
-        color, "█" * filled, DIM, "░" * (width - filled), RESET,
+        color, FILLED * filled, DIM, EMPTY * (width - filled), RESET,
         BOLD, color, round(pct), RESET)
 
 
