@@ -63,7 +63,6 @@ _SEPARATEURS = frozenset({"&&", "||", ";", "|", "&", "(", ")", ";;", "|&"})
 _OPTIONS_GIT_A_VALEUR = frozenset({"-C", "-c", "--git-dir", "--work-tree", "--namespace"})
 _LETTRES_COMMIT_A_VALEUR = frozenset("mFcCtuS")
 _OPTION_COURTE = re.compile(r"-[A-Za-z]+")
-_NOMS_GIT = frozenset({"git", "git.exe"})
 _VARIABLE_DE_CONFIG = (
     r"(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM|COUNT|PARAMETERS|KEY_\d+|VALUE_\d+)"
     r"|XDG_CONFIG_HOME|HOME)"
@@ -80,9 +79,16 @@ _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
 _OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
 
+def _nom_de_commande(jeton: str) -> str:
+    """Rend le nom d'exécutable que désigne `jeton` : dernier segment d'un chemin `/` ou `\\`,
+    en minuscules, sans `.exe`."""
+    nom = re.split(r"[/\\]", jeton)[-1].lower()
+    return nom.removesuffix(".exe")
+
+
 def _est_git(jeton: str) -> bool:
-    """Vrai si `jeton` désigne l'exécutable git, nu ou par un chemin `/` ou `\\`, `git.exe` compris."""
-    return re.split(r"[/\\]", jeton)[-1].lower() in _NOMS_GIT
+    """Vrai si `jeton` désigne l'exécutable git, nu ou par un chemin, `git.exe` compris."""
+    return _nom_de_commande(jeton) == "git"
 
 
 def _lectures(commande: str) -> tuple[list[str], list[str]]:
@@ -133,8 +139,8 @@ def _segments(jetons: list[str]) -> list[list[str]]:
 
 
 def _est_abreviation(jeton: str, option_longue: str) -> bool:
-    """Vrai si `jeton` vaut `option_longue` ou une abréviation d'au moins `--` et deux lettres."""
-    return len(jeton) >= 4 and option_longue.startswith(jeton)
+    """Vrai si `jeton` vaut `option_longue` ou une abréviation d'au moins `--` et une lettre."""
+    return len(jeton) >= 3 and option_longue.startswith(jeton)
 
 
 def _retrait_par_env(arguments: list[str]) -> str | None:
@@ -207,7 +213,7 @@ def _retrait_d_environnement(jetons: list[str]) -> str | None:
     configuration de git ou vide l'environnement, None sinon."""
     for segment in _segments(jetons):
         for position, jeton in enumerate(segment):
-            if re.split(r"[/\\]", jeton)[-1] == "env":
+            if _nom_de_commande(jeton) == "env":
                 retrait = _retrait_par_env(segment[position + 1 :])
             elif jeton in _DECLARATIONS:
                 retrait = _retrait_par_declaration(jeton, segment[position + 1 :])

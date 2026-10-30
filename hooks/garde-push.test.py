@@ -193,6 +193,17 @@ CAS: tuple[tuple[int, str], ...] = (
     (PASSE, "env git commit -i -m x"),
     (PASSE, "env" + " -u" * 40 + " x"),
     (PASSE, "env" + " -u" * 40 + " git status"),
+    # --- environnement de git : env par son nom ou une option abrégée ---
+    (REFUS, "ENV -i git push"),
+    (REFUS, "env.exe -i git push"),
+    (REFUS, f"/usr/bin/env.exe -u {HO} git push"),
+    (REFUS, f"Env -u {HO} git push"),
+    (REFUS, f"env --u {HO} git push"),
+    (REFUS, f"env --u={HO} git push"),
+    (REFUS, "env --c / -i git push"),
+    (REFUS, "env --s x -i git push"),
+    (PASSE, "env --chdir=/ git status"),
+    (PASSE, "ENV git status"),
     # --- doivent passer ---
     (PASSE, f"echo ${HO}"),
     (PASSE, f'cd "${HO}" && git status'),
