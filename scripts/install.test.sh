@@ -5,6 +5,15 @@
 #
 # install.sh tourne sur une copie, avec un faux dépôt, un faux dossier perso et un HOME
 # jetables : ni le vrai ~/.claude, ni le vrai dossier perso, ni la config git globale.
+#
+# Sous Windows (Git Bash, MSYS, Cygwin), rien ne tourne : sortie 0 et un message, install.sh visant macOS et Linux.
+
+case "$(uname -s)" in
+MINGW* | MSYS* | CYGWIN*)
+	echo "ignoré : install.sh vise macOS et Linux ; sous Windows, l'installation passe par install.ps1."
+	exit 0
+	;;
+esac
 
 ici=$(cd "$(dirname "$0")" && pwd -P)
 tmp=$(mktemp -d)
