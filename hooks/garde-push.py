@@ -82,6 +82,7 @@ _ENVIRONNEMENT_DE_GIT = re.compile(
 _ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
 _GUILLEMETS_ET_ANTISLASHS = re.compile(r"\$?[\"']|\\")
 _CONTINUATION_DE_LIGNE = re.compile(r"\\\r?\n")
+_CONTINUATION_POWERSHELL = re.compile(r"`\r?\n")
 _DECLARATIONS = frozenset({"declare", "typeset", "local", "export", "unset"})
 _OPTIONS_LONGUES_ENV_A_VALEUR = ("--chdir", "--split-string")
 
@@ -102,19 +103,23 @@ def _lectures(commande: str) -> tuple[list[str], list[str]]:
     """Rend les deux découpages de `commande` : celui de bash, où l'antislash échappe et où
     antislash + saut de ligne disparaît, et celui de PowerShell, où un antislash suivi d'une
     lettre, d'un chiffre, `_`, `.` ou `-` sépare un chemin (`C:\\Git\\cmd\\git.exe`) et
-    devient `/`, et où antislash + saut de ligne devient `/ ` sans couper la commande."""
+    devient `/`, où antislash + saut de ligne devient `/ ` et où backtick + saut de ligne
+    devient une espace, sans couper la commande."""
+    lignes_powershell = _CONTINUATION_POWERSHELL.sub(" ", _CONTINUATION_DE_LIGNE.sub("/ ", commande))
     return (
         _jetons(_CONTINUATION_DE_LIGNE.sub("", commande)),
-        _jetons(_ANTISLASH_DE_CHEMIN.sub("/", _CONTINUATION_DE_LIGNE.sub("/ ", commande))),
+        _jetons(_ANTISLASH_DE_CHEMIN.sub("/", lignes_powershell)),
     )
 
 
 def _jetons(commande: str) -> list[str]:
     """Découpe `commande` en mots shell, séparateurs isolés, un saut de ligne valant `;` (entre
-    guillemets, il reste dans son mot) ; si shlex échoue (guillemets
-    déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et antislashs."""
+    guillemets, il reste dans son mot) et `#` restant un caractère ordinaire ; si shlex échoue
+    (guillemets déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et
+    antislashs."""
     try:
         lexer = shlex.shlex(commande.replace("\n", " ; "), posix=True, punctuation_chars=True)
+        lexer.commenters = ""
         lexer.whitespace_split = True
         return list(lexer)
     except ValueError:

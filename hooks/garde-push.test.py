@@ -295,6 +295,20 @@ CAS: tuple[tuple[int, str], ...] = (
     (PASSE, "echo 'a\\'\ngit commit -m x\ngit log -n 1"),
     (PASSE, "echo \"it's\"\ngit commit -m x\ngit log -n 1"),
     (REFUS, "git commit -m x\\\n-n"),
+    # --- commentaire shell clos par le saut de ligne ---
+    (REFUS, "echo hi # c\ngit commit -n -m x"),
+    (REFUS, "echo hi # c\r\ngit commit -n -m x"),
+    (REFUS, "curl http://x/#frag\ngit commit -n -m x"),
+    (REFUS, "echo a#b\ngit commit -n -m x"),
+    (REFUS, "echo a#b\r\ngit commit -n -m x"),
+    (REFUS, f"echo hi #c\n{HO}=/tmp git push"),
+    (REFUS, "echo hi # c\nenv -i git push"),
+    (REFUS, f"git status #\nunset {HO}; git push"),
+    (REFUS, f"git status #\r\nunset {HO}; git push"),
+    # --- continuation PowerShell : backtick en fin de ligne ---
+    (REFUS, "git commit -m x `\n-n"),
+    (REFUS, "git commit -m x `\r\n-n"),
+    (REFUS, f"git commit -m x `\n{NV}"),
     # --- doivent passer ---
     (PASSE, f"echo ${HO}"),
     (PASSE, f'cd "${HO}" && git status'),
