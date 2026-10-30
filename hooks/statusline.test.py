@@ -39,15 +39,23 @@ def lancer(entree: str) -> subprocess.CompletedProcess:
 
 
 def verifier_ordre() -> list[str]:
-    """JSON complet : tous les segments présents, dans l'ordre, sans retour final."""
+    """JSON complet : usage puis session sur deux lignes, segments dans l'ordre, sans retour final."""
     defauts: list[str] = []
     ligne = _statusline.render(COMPLET)
-    reperes = ["\U0001F916", "\U0001F4C1", "\U0001F9E0", "⏳ \033[2m5h", "⏳ \033[2m7d", "\U0001F500"]
+    reperes = ["\U0001F9E0", "⏳ \033[2m5h", "⏳ \033[2m7d", "\n", "\U0001F916", "\U0001F4C1", "\U0001F500"]
     positions = [ligne.find(r) for r in reperes]
     if -1 in positions:
         defauts.append(f"segment manquant : {[r for r, p in zip(reperes, positions) if p == -1]}")
     elif positions != sorted(positions):
         defauts.append(f"ordre des segments {positions}")
+    if ligne.count("\n") != 1:
+        defauts.append(f"{ligne.count(chr(10)) + 1} lignes au lieu de 2")
+    for cle in ("context_window", "rate_limits"):
+        if "\n" not in _statusline.render({k: v for k, v in COMPLET.items() if k != cle}):
+            defauts.append(f"{cle} absent a fait perdre la seconde ligne")
+    for charge in ({"model": COMPLET["model"]}, {"context_window": COMPLET["context_window"]}):
+        if "\n" in _statusline.render(charge):
+            defauts.append(f"ligne vide rendue pour {list(charge)}")
     if "PR #95" not in ligne:
         defauts.append("référence de PR absente")
     sortie = lancer(json.dumps(COMPLET)).stdout
