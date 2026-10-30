@@ -291,6 +291,10 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f"$env:{HO}='C:/tmp'\r\ngit push"),
     (REFUS, f"git status\n{GCG}=/dev/null git commit -m x"),
     (REFUS, "echo ok\ngit -c core.hooksPath=/dev/null push"),
+    (PASSE, 'echo \\"\ngit commit -m x\ngit log -n 1'),
+    (PASSE, "echo 'a\\'\ngit commit -m x\ngit log -n 1"),
+    (PASSE, "echo \"it's\"\ngit commit -m x\ngit log -n 1"),
+    (REFUS, "git commit -m x\\\n-n"),
     # --- doivent passer ---
     (PASSE, f"echo ${HO}"),
     (PASSE, f'cd "${HO}" && git status'),

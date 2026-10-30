@@ -110,35 +110,15 @@ def _lectures(commande: str) -> tuple[list[str], list[str]]:
 
 
 def _jetons(commande: str) -> list[str]:
-    """Découpe `commande` en mots shell, séparateurs isolés, saut de ligne hors guillemets
-    compris ; si shlex échoue (guillemets
+    """Découpe `commande` en mots shell, séparateurs isolés, un saut de ligne valant `;` (entre
+    guillemets, il reste dans son mot) ; si shlex échoue (guillemets
     déséquilibrés, citation ANSI-C), découpe le texte privé de ses guillemets et antislashs."""
     try:
-        lexer = shlex.shlex(
-            _sauts_de_ligne_en_separateurs(commande), posix=True, punctuation_chars=True
-        )
+        lexer = shlex.shlex(commande.replace("\n", " ; "), posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
         return list(lexer)
     except ValueError:
         return _jetons(_GUILLEMETS_ET_ANTISLASHS.sub("", commande))
-
-
-def _sauts_de_ligne_en_separateurs(commande: str) -> str:
-    """Rend `commande` où chaque saut de ligne hors guillemets et non échappé devient ` ; `."""
-    caracteres: list[str] = []
-    guillemet = ""
-    echappe = False
-    for caractere in commande:
-        if echappe:
-            echappe = False
-        elif caractere == "\\" and guillemet != "'":
-            echappe = True
-        elif caractere in "'\"" and guillemet in ("", caractere):
-            guillemet = "" if guillemet else caractere
-        elif caractere == "\n" and not guillemet:
-            caractere = " ; "
-        caracteres.append(caractere)
-    return "".join(caracteres)
 
 
 def _options_de_commit(jetons: list[str]) -> list[str]:
