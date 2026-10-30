@@ -29,7 +29,9 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
 
 Git est reconnu nu ou par son chemin, `git.exe` compris. La commande est découpée deux fois,
 antislash d'échappement (bash) et antislash séparateur de chemin (PowerShell) : un refus vaut
-sur l'une ou l'autre lecture. La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
+sur l'une ou l'autre lecture. Les motifs se cherchent dans le texte brut et dans les mots
+déquotés de la lecture bash, recollés par des espaces : `"HO"ME` ou `HO\ME` y redevient `HOME`.
+La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
 
 Cas de test : `python3 hooks/garde-push.test.py`
@@ -240,20 +242,22 @@ def _desarme_le_pre_commit(option: str) -> bool:
 
 def motif_refuse(commande: str) -> tuple[str, str] | None:
     """Rend le réglage protégé que cite `commande` et le garde qu'il désarme, ou None si elle passe."""
-    if _NO_VERIFY.search(commande) and _MOT_PUSH.search(commande):
-        return "push --no-verify", GARDE_PUSH
     lectures = _lectures(commande)
+    textes = (commande, " ".join(lectures[0]))
+    if any(_NO_VERIFY.search(texte) and _MOT_PUSH.search(texte) for texte in textes):
+        return "push --no-verify", GARDE_PUSH
     for jetons in lectures:
         if any(_desarme_le_pre_commit(option) for option in _options_de_commit(jetons)):
             return "commit --no-verify / -n", GARDE_SECRETS
     for motif, nom, garde in _MOTIFS_INTERDITS:
-        if motif.search(commande):
+        if any(motif.search(texte) for texte in textes):
             return nom, garde
     if not any(_est_git(jeton) for jetons in lectures for jeton in jetons):
         return None
-    environnement = _ENVIRONNEMENT_DE_GIT.search(commande)
-    if environnement:
-        return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
+    for texte in textes:
+        environnement = _ENVIRONNEMENT_DE_GIT.search(texte)
+        if environnement:
+            return f"{environnement.group(0).strip()} devant git", GARDE_HOOKS
     for jetons in lectures:
         retrait = _retrait_d_environnement(jetons)
         if retrait:
