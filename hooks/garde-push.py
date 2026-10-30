@@ -20,9 +20,11 @@ de l'agent de les désarmer : il refuse (sortie 2) une commande qui contient
   la commande : l'exemption d'un faux positif reste à l'utilisateur ;
 - une invocation de git, avec dans la même commande une affectation ou un retrait de
   `GIT_CONFIG_GLOBAL`, `GIT_CONFIG_SYSTEM`, `GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_COUNT`,
-  `GIT_CONFIG_KEY_<n>`, `GIT_CONFIG_VALUE_<n>`, `HOME` ou `XDG_CONFIG_HOME` (préfixe,
-  `export`, `unset`, `env`, `$env:`, `Remove-Item Env:`), ou un `env -i` : sans configuration
-  globale, plus de `core.hooksPath`.
+  `GIT_CONFIG_PARAMETERS`, `GIT_CONFIG_KEY_<n>`, `GIT_CONFIG_VALUE_<n>`, `HOME` ou
+  `XDG_CONFIG_HOME` (préfixe, `+=`, `export`, `export -n`, `unset`, `env -u`, `$env:`, le
+  lecteur `Env:` de PowerShell, `SetEnvironmentVariable`), ou un `env -i` / `env -` : sans
+  configuration globale, plus de `core.hooksPath`. Une commande lancée dans une chaîne
+  (`sh -c '…'`, `eval`) ou un script sourcé n'est pas inspectée.
 
 Git est reconnu nu ou par son chemin, `git.exe` compris. La comparaison ignore la casse. Tout le reste passe (sortie 0), y compris une entrée
 illisible ou sans commande.
@@ -60,14 +62,19 @@ _LETTRES_COMMIT_A_VALEUR = frozenset("mFcCtuS")
 _OPTION_COURTE = re.compile(r"-[A-Za-z]+")
 _NOMS_GIT = frozenset({"git", "git.exe"})
 _VARIABLE_DE_CONFIG = (
-    r"(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM|COUNT|KEY_\d+|VALUE_\d+)|XDG_CONFIG_HOME|HOME)"
+    r"(?:GIT_CONFIG_(?:GLOBAL|SYSTEM|NOSYSTEM|COUNT|PARAMETERS|KEY_\d+|VALUE_\d+)"
+    r"|XDG_CONFIG_HOME|HOME)"
 )
 _ENVIRONNEMENT_DE_GIT = re.compile(
-    rf"(?<![\w$])(?:\$env:)?{_VARIABLE_DE_CONFIG}(?=\s*=)"
-    rf"|\b(?:unset|env\s+-u|Remove-Item\s+Env:)\s*{_VARIABLE_DE_CONFIG}\b"
-    r"|\benv\s+(?:-i|--ignore-environment)\b",
+    rf"(?<![\w$])(?:\$env:)?{_VARIABLE_DE_CONFIG}(?=\s*\+?=)"
+    rf"|\b(?:unset|export\s+-n)(?:\s+[-\w]+)*?\s+{_VARIABLE_DE_CONFIG}\b"
+    rf"|\benv\s+(?:-u\s*|--unset[=\s]\s*){_VARIABLE_DE_CONFIG}\b"
+    r"|\benv\s+(?:-[a-z]*i[a-z]*|--ignore-environment|-)(?=\s)"
+    rf"|(?<![\w$])Env:{_VARIABLE_DE_CONFIG}\b"
+    rf"|SetEnvironmentVariable\(\s*['\"]{_VARIABLE_DE_CONFIG}['\"]",
     re.IGNORECASE,
 )
+_ANTISLASH_DE_CHEMIN = re.compile(r"\\(?=[\w.-])")
 
 
 def _est_git(jeton: str) -> bool:
@@ -76,7 +83,12 @@ def _est_git(jeton: str) -> bool:
 
 
 def _jetons(commande: str) -> list[str]:
-    """Découpe `commande` en mots shell, séparateurs isolés ; repli sur les espaces si les guillemets sont déséquilibrés."""
+    """Découpe `commande` en mots shell, séparateurs isolés ; repli sur les espaces si les guillemets sont déséquilibrés.
+
+    Un antislash suivi d'une lettre, d'un chiffre, `_`, `.` ou `-` devient `/` : un chemin
+    Windows (`C:\\Git\\cmd\\git.exe`) garde ses séparateurs.
+    """
+    commande = _ANTISLASH_DE_CHEMIN.sub("/", commande)
     try:
         lexer = shlex.shlex(commande, posix=True, punctuation_chars=True)
         lexer.whitespace_split = True

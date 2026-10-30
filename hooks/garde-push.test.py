@@ -34,6 +34,7 @@ GCK = "GIT_CONFIG_" + "KEY_"
 GCV = "GIT_CONFIG_" + "VALUE_"
 HO = "HO" + "ME"
 XCH = "XDG_" + "CONFIG_" + "HOME"
+GCP = "GIT_CONFIG_" + "PARAMETERS"
 
 REFUS, PASSE = 2, 0
 
@@ -122,12 +123,37 @@ CAS: tuple[tuple[int, str], ...] = (
     (REFUS, f"env -u {XCH} git push"),
     (REFUS, "env -i git commit -m x"),
     (REFUS, "env -i PATH=/usr/bin git push origin feat/x"),
+    (REFUS, "env --ignore-environment git commit -m x"),
+    (REFUS, f"env -u{HO} git push"),
+    (REFUS, f"{HO}= git commit -m x"),
+    (REFUS, f"declare -x {HO}=/tmp; git commit -m x"),
+    (REFUS, f"$env:{HO}=$null; git push"),
     # --- git désigné par son chemin ---
     (REFUS, "/usr/bin/git commit -n -m x"),
     (REFUS, '"C:/Program Files/Git/cmd/git.exe" commit -n -m x'),
     (REFUS, "git.exe commit -n -m x"),
     (REFUS, f"{HO}=/tmp /usr/bin/git push origin feat/x"),
     (REFUS, f"{GCG}=/dev/null git.exe commit -m x"),
+    (REFUS, "GIT.EXE commit -n -m x"),
+    (REFUS, "C:\\Git\\cmd\\git.exe commit -n -m x"),
+    # --- environnement de git : formes détournées ---
+    (REFUS, f"export -n {HO}; git commit -m x"),
+    (REFUS, f"unset -v {HO}; git commit -m x"),
+    (REFUS, f"unset FOO {HO}; git commit -m x"),
+    (REFUS, f"env --unset={HO} git commit -m x"),
+    (REFUS, "env - git commit -m x"),
+    (REFUS, "env -iv git commit -m x"),
+    (REFUS, f"{HO}+=x git commit -m x"),
+    (REFUS, f"{GCG}+=x git commit -m x"),
+    (REFUS, f"Set-Item Env:{HO} x; git push"),
+    (REFUS, f"Remove-Item -Path Env:{HO}; git push"),
+    (REFUS, f"rm env:{HO}; git push"),
+    (REFUS, f"[Environment]::SetEnvironmentVariable('{HO}','x'); git push"),
+    (REFUS, f"export {GCP}=x; git push"),
+    (PASSE, f"cd $env:{HO}; git status"),
+    (PASSE, "echo $env:USERPROFILE; git log"),
+    (PASSE, "unset FOO; git status"),
+    (PASSE, "env -u FOO git status"),
     # --- doivent passer ---
     (PASSE, f"echo ${HO}"),
     (PASSE, f'cd "${HO}" && git status'),
