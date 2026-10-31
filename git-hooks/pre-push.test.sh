@@ -9,6 +9,23 @@ hook="$ici/pre-push"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
+# Bouchon ssh -G en tête du PATH : l'alias github-perso résout vers github.com, github-443
+# vers ssh.github.com, tout autre hôte vers lui-même.
+mkdir -p "$tmp/bin"
+cat >"$tmp/bin/ssh" <<'EOF'
+#!/bin/sh
+[ "$1" = -G ] || exit 255
+case "$2" in
+github-perso) echo "hostname github.com" ;;
+github-443) echo "hostname ssh.github.com" ;;
+*) echo "hostname $2" ;;
+esac
+echo "port 22"
+EOF
+chmod +x "$tmp/bin/ssh"
+PATH="$tmp/bin:$PATH"
+export PATH
+
 : >"$tmp/gitconfig-vide"
 GIT_CONFIG_GLOBAL="$tmp/gitconfig-vide"
 GIT_CONFIG_NOSYSTEM=1
@@ -73,6 +90,33 @@ for url in "$GH_SSH" "$GH_HTTPS"; do
 done
 essai BLOQUE "$D" "git@GitHub.com:a/b.git" "$(ligne "$M" "$S")"
 essai PASSE "$D" "$NAS" "$(ligne "$M" "$S")"
+essai PASSE "$D" "https://nas/github.com-mirror/b.git" "$(ligne "$M" "$S")" "· github.com hors hôte"
+
+echo "— alias ssh —"
+essai BLOQUE "$D" "git@github-perso:a/b.git" "$(ligne "$M" "$S")" "· alias vers github.com"
+essai PASSE "$D" "git@github-perso:a/b.git" "$(ligne feat "$S")" "· alias vers github.com"
+essai BLOQUE "$D" "git@github-443:a/b.git" "$(ligne "$M" "$S")" "· alias vers ssh.github.com"
+essai PASSE "$D" "git@nas-perso:a/b.git" "$(ligne "$M" "$S")" "· alias vers un autre hôte"
+essai BLOQUE "$D" "ssh://git@github-perso:2222/a/b" "$(ligne "$M" "$S")" "· alias ssh://, avec port"
+essai BLOQUE "$D" "ssh://git@github.com:22/a/b.git" "$(ligne "$M" "$S")" "· github.com en ssh://, avec port"
+essai BLOQUE "$D" "git+ssh://git@github-perso/a/b.git" "$(ligne "$M" "$S")" "· alias git+ssh://"
+essai BLOQUE "$D" "ssh+git://github-perso/a/b.git" "$(ligne "$M" "$S")" "· alias ssh+git://"
+essai PASSE "$D" "https://github-perso/a/b.git" "$(ligne "$M" "$S")" "· https:// ne passe pas par ssh"
+essai PASSE "$D" "git@-oProxyCommand=x:a/b.git" "$(ligne "$M" "$S")" "· hôte en option ssh"
+
+echo "— hôtes et formes d'URL —"
+essai BLOQUE "$D" "HTTPS://GitHub.COM/a/b.git" "$(ligne "$M" "$S")" "· hôte en majuscules"
+essai BLOQUE "$D" "https://user@github.com/a/b.git" "$(ligne "$M" "$S")" "· https avec utilisateur"
+essai BLOQUE "$D" "https://github.com:443/a/b" "$(ligne "$M" "$S")" "· https avec port"
+essai BLOQUE "$D" "git@ssh.github.com:a/b.git" "$(ligne "$M" "$S")" "· ssh.github.com"
+essai BLOQUE "$D" "https://www.github.com/a/b" "$(ligne "$M" "$S")" "· www.github.com"
+essai PASSE "$D" "https://www.github.com/a/b" "$(ligne feat "$S")" "· www.github.com"
+essai BLOQUE "$D" "git+ssh://git@github.com/a/b.git" "$(ligne "$M" "$S")" "· git+ssh://"
+essai PASSE "$D" "https://mygithub.com/a/b.git" "$(ligne "$M" "$S")" "· hôte qui finit par github.com"
+essai PASSE "$D" "https://github.com.evil.example/a/b.git" "$(ligne "$M" "$S")" "· hôte qui commence par github.com"
+essai PASSE "$D" "/srv/github.com/a.git" "$(ligne "$M" "$S")" "· chemin local absolu"
+essai PASSE "$D" "../github.com/a.git" "$(ligne "$M" "$S")" "· chemin local relatif"
+essai PASSE "$D" "file:///srv/github.com/a.git" "$(ligne "$M" "$S")" "· file://"
 essai BLOQUE "$D" "$GH_SSH" "$(ligne feat "$S")
 $(ligne "$M" "$S")
 $(ligne autre "$S")"
