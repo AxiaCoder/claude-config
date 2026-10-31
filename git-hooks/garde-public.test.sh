@@ -193,6 +193,7 @@ verdict 1 "$n" "  appels à gh pour a/repli"
 essai BLOQUE "https://github.com/a/public" "curl 200, sans appel à gh"
 n=$(grep -c . "$tmp/gh-appels")
 verdict 0 "$n" "  appels à gh"
+essai BLOQUE "https://www.github.com/a/public" "www.github.com, dépôt public"
 
 GARDE_PUBLIC_MARQUEURS="$tmp/absent"
 essai PASSE "$PUBLIC" "fichier de marqueurs absent"

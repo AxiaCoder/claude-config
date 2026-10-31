@@ -1,7 +1,16 @@
 # Bibliothèque sourcée (`. git-hooks/_remote-github`) par pre-push et _garde-public :
 # reconnaît un remote GitHub d'après son URL.
 #
-# Remote GitHub : hôte github.com ou ssh.github.com, ou alias SSH que `ssh -G` résout vers l'un des deux.
+# Remote GitHub : hôte github.com, www.github.com ou ssh.github.com, ou alias SSH que `ssh -G`
+# résout vers l'un d'eux.
+
+# Sortie 0 si l'hôte $1, en minuscules, est un hôte GitHub ; 1 sinon.
+est_hote_github() {
+	case "$1" in
+	github.com | www.github.com | ssh.github.com) return 0 ;;
+	*) return 1 ;;
+	esac
+}
 
 # Affiche « hôte chemin » d'après l'URL $1 (forme schéma://[user@]hôte[:port]/chemin ou
 # [user@]hôte:chemin), puis « ssh » ou « autre » selon que l'hôte peut être un alias SSH ;
@@ -36,14 +45,11 @@ depot_github() {
 	hote=${ligne%% *}
 	hote=${hote##*@}
 	hote=$(printf '%s' "${hote%%:*}" | tr 'A-Z' 'a-z')
-	case "$hote" in
-	github.com | ssh.github.com) ;;
-	*)
+	if ! est_hote_github "$hote"; then
 		[ "$genre" = ssh ] || return 1
 		case "$hote" in -*) return 1 ;; esac
 		reel=$(ssh -G "$hote" 2>/dev/null | awk '$1 == "hostname" { print tolower($2); exit }')
-		case "$reel" in github.com | ssh.github.com) ;; *) return 1 ;; esac
-		;;
-	esac
+		est_hote_github "$reel" || return 1
+	fi
 	printf '%s\n' "$chemin" | sed -e 's#^/*##' -e 's#/*$##' -e 's#\.git$##'
 }

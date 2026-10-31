@@ -270,8 +270,8 @@ liste pour chacun le marqueur, le `fichier:ligne` ou le commit, et un extrait.
   la branche par défaut du remote. Dans chacun, les lignes **ajoutées**, fichiers binaires
   compris, et les **noms** des fichiers ajoutés ou renommés ; puis son message, son **auteur**
   et son **committer** (nom et e-mail) ; pour un tag annoté, son message et son tagger. Une ligne supprimée ne compte pas.
-- **GitHub ou non** : l'hôte `github.com` ou `ssh.github.com`, ou un alias SSH
-  (`git@github-perso:owner/repo`) que `ssh -G` résout vers l'un des deux — `ssh.github.com`
+- **GitHub ou non** : l'hôte `github.com`, `www.github.com` ou `ssh.github.com`, ou un alias SSH
+  (`git@github-perso:owner/repo`) que `ssh -G` résout vers l'un d'eux — `ssh.github.com`
   est l'accès SSH par le port 443.
 - **Public ou non** : l'API GitHub **sans authentification**
   (`https://api.github.com/repos/<owner/repo>`) — un dépôt public y est toujours visible,

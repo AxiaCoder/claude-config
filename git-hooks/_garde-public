@@ -15,7 +15,7 @@
 # tag annoté : son message et son tagger. Comparaison octet par octet (LC_ALL=C) : la
 # casse n'est ignorée que pour les lettres ASCII.
 #
-# Remote GitHub : hôte github.com ou ssh.github.com, ou alias SSH que `ssh -G` résout vers l'un des deux.
+# Remote GitHub : selon git-hooks/_remote-github (alias SSH compris).
 #
 # Visibilité : l'API GitHub sans authentification (200 : public ; 404 : privé ou
 # inexistant), `gh repo view` en repli pour toute autre réponse. Seul « public » est gardé,

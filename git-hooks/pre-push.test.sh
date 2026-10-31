@@ -109,6 +109,8 @@ essai BLOQUE "$D" "HTTPS://GitHub.COM/a/b.git" "$(ligne "$M" "$S")" "· hôte en
 essai BLOQUE "$D" "https://user@github.com/a/b.git" "$(ligne "$M" "$S")" "· https avec utilisateur"
 essai BLOQUE "$D" "https://github.com:443/a/b" "$(ligne "$M" "$S")" "· https avec port"
 essai BLOQUE "$D" "git@ssh.github.com:a/b.git" "$(ligne "$M" "$S")" "· ssh.github.com"
+essai BLOQUE "$D" "https://www.github.com/a/b" "$(ligne "$M" "$S")" "· www.github.com"
+essai PASSE "$D" "https://www.github.com/a/b" "$(ligne feat "$S")" "· www.github.com"
 essai BLOQUE "$D" "git+ssh://git@github.com/a/b.git" "$(ligne "$M" "$S")" "· git+ssh://"
 essai PASSE "$D" "https://mygithub.com/a/b.git" "$(ligne "$M" "$S")" "· hôte qui finit par github.com"
 essai PASSE "$D" "https://github.com.evil.example/a/b.git" "$(ligne "$M" "$S")" "· hôte qui commence par github.com"
