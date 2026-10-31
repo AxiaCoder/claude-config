@@ -36,7 +36,7 @@ l'installation : son essai réel tourne avec le binaire de `~/.claude/bin`.
 | `curl` | `install.sh` (téléchargement de betterleaks), `_garde-public` (visibilité d'un dépôt) | betterleaks non installé ; `_garde-public` se replie sur `gh` |
 | `tar`, `shasum` ou `sha256sum` | `install.sh` (extraction, empreinte de betterleaks) | betterleaks non installé |
 | `gh`, connecté | `_garde-public` (repli pour la visibilité d'un dépôt) | push bloqué si l'API GitHub ne répond pas non plus |
-| `ssh` | `_garde-public` (résolution d'un alias SSH) | un alias vers GitHub n'est pas reconnu |
+| `ssh` | `_remote-github` (résolution d'un alias SSH, pour le garde de `main` et `_garde-public`) | un alias vers GitHub n'est pas reconnu |
 | `pnpm` | `post-write-lint`, dans un projet AdonisJS | le lint après écriture ne tourne pas |
 | `openssl` | `git-hooks/garde-secrets.test.sh`, essai réel seulement | le cas « clé privée PEM » est sauté |
 | une instance VictoriaMetrics et son adresse dans `env` | `collecteur-agents.py` | rien n'est envoyé |

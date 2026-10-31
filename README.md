@@ -240,8 +240,9 @@ Ne sont **pas** relayés : `reference-transaction` et `post-index-change`, que g
 chaque mise à jour de ref ou d'index — un relais coûte une quinzaine de millisecondes par
 appel ; `fsmonitor-watchman`, les hooks `p4-*` de `git p4` et les hooks serveur.
 
-**Le garde de push.** Il ne vise que les remotes **GitHub** : vers un autre remote, le push
-direct sur `main` passe. Pour le lever :
+**Le garde de push.** Il ne vise que les remotes **GitHub**, reconnus comme par le garde
+données personnelles (plus bas, « GitHub ou non ») : vers un autre remote, le push direct sur
+`main` passe. Pour le lever :
 
 ```bash
 ALLOW_PUSH_MAIN=1 git push …                 # une fois

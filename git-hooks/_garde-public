@@ -39,46 +39,9 @@ remote_nom=$1
 remote_url=$2
 Z=0000000000000000000000000000000000000000
 
-# Affiche « hôte chemin » d'après l'URL $1 (forme schéma://[user@]hôte[:port]/chemin ou
-# [user@]hôte:chemin), puis « ssh » ou « autre » selon que l'hôte peut être un alias SSH ;
-# sortie 1 pour un chemin local.
-hote_et_chemin() {
-	case "$1" in
-	ssh://* | git+ssh://* | ssh+git://*)
-		reste=${1#*://}
-		printf '%s %s ssh\n' "${reste%%/*}" "${reste#*/}"
-		;;
-	*://*)
-		reste=${1#*://}
-		printf '%s %s autre\n' "${reste%%/*}" "${reste#*/}"
-		;;
-	/* | ./* | ../*) return 1 ;;
-	*:*)
-		avant=${1%%:*}
-		case "$avant" in */*) return 1 ;; esac
-		printf '%s %s ssh\n' "$avant" "${1#*:}"
-		;;
-	*) return 1 ;;
-	esac
-}
+. "$(dirname "$0")/_remote-github"
 
-ligne=$(hote_et_chemin "$remote_url") || exit 0
-genre=${ligne##* }
-chemin=${ligne#* }
-chemin=${chemin% *}
-hote=${ligne%% *}
-hote=${hote##*@}
-hote=$(printf '%s' "${hote%%:*}" | tr 'A-Z' 'a-z')
-case "$hote" in
-github.com | ssh.github.com) ;;
-*)
-	[ "$genre" = ssh ] || exit 0
-	case "$hote" in -*) exit 0 ;; esac
-	reel=$(ssh -G "$hote" 2>/dev/null | awk '$1 == "hostname" { print tolower($2); exit }')
-	case "$reel" in github.com | ssh.github.com) ;; *) exit 0 ;; esac
-	;;
-esac
-depot=$(printf '%s\n' "$chemin" | sed -e 's#^/*##' -e 's#/*$##' -e 's#\.git$##')
+depot=$(depot_github "$remote_url") || exit 0
 
 marqueurs=${GARDE_PUBLIC_MARQUEURS:-}
 if [ -z "$marqueurs" ] || [ ! -r "$marqueurs" ]; then
