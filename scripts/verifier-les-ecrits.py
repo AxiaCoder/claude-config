@@ -45,7 +45,7 @@ PROPRES_AU_PROJET = (".claude/surcharges/",)
 FAUX_AMIS = {
     "dev", "tester", "reviewer", "main", "master", "tmp", "usr", "etc", "var", "srv",
     "home", "bin", "opt", "dist", "build", "out", "clear", "usage", "login", "help",
-    "compact", "resume", "config", "model", "agents", "skills", "commands", "hooks",
+    "compact", "resume", "config", "model", "agents", "skills", "commands", "hooks", "mcp",
     "code-review", "skill-test",
 }
 

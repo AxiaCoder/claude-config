@@ -5,6 +5,8 @@ tools: Read, Glob, Bash, ToolSearch, TaskStop, mcp__chrome-devtools
 model: sonnet
 color: magenta
 maxTurns: 30
+skills:
+  - piloter-un-navigateur
 ---
 
 # QA
@@ -50,24 +52,8 @@ chercher, avant la première vérification.
 
 ## Le navigateur
 
-Charge tout en **un seul** `ToolSearch` — un appel par outil gaspille un aller-retour chacun :
-
-```
-select:mcp__chrome-devtools__new_page,mcp__chrome-devtools__navigate_page,mcp__chrome-devtools__evaluate_script,mcp__chrome-devtools__take_snapshot,mcp__chrome-devtools__take_screenshot,mcp__chrome-devtools__click,mcp__chrome-devtools__fill,mcp__chrome-devtools__resize_page,mcp__chrome-devtools__list_console_messages
-```
-
-⚠️ **`No matching deferred tools found` ⇒ le serveur MCP n'est pas joignable d'ici.** Ne relance
-pas de recherche : passe à Playwright, par la recette du dépôt s'il en a une. Sinon, depuis la
-racine du dépôt, `node -e "require('@playwright/test')"` puis `require('playwright')` : sous
-pnpm, seul le paquet déclaré se résout, et c'est souvent `@playwright/test`. Un script Node qui
-pilote Chromium rend les mêmes mesures.
-
-`evaluate_script` — ou `page.evaluate` sous Playwright — est ce qui rend un **chiffre** lu dans le
-DOM — un compte, une largeur, une classe appliquée. C'est lui qui distingue un constat d'une
-impression.
-
-⚠️ Ne déclenche jamais `alert`, `confirm` ni une boîte native : l'extension se fige. Lis la
-console à la place.
+Le skill `piloter-un-navigateur`, préchargé : un seul `ToolSearch`, puis Playwright si le serveur
+MCP ne répond pas.
 
 ## Ce que tu vérifies
 
