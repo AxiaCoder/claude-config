@@ -27,9 +27,20 @@
 !/install.ps1
 !/install.sh
 
-# Le cache que le harness synchronise sous ~/.claude/skills, et qui atterrit ici
-# par le lien symbolique vers skills/.
-/skills/synced/
+# ~/.claude/skills est un lien vers skills/ : le cache du harness, sa corbeille
+# et les skills qu'un outil tiers installe y atterrissent. Même deny-all : une
+# skill du repo n'entre qu'en figurant ici.
+/skills/*
+!/skills/audit-seo/
+!/skills/auditer-un-depot/
+!/skills/avant-d-automatiser/
+!/skills/cadrer-un-projet/
+!/skills/cadrer-un-visuel/
+!/skills/challenger-un-cadrage/
+!/skills/deleguer/
+!/skills/systematic-debugging/
+!/skills/traiter-une-review/
+!/skills/verifier-avant-d-annoncer/
 
 # Les déclarations de types que Claude Code écrit à côté d'un mod quand il le charge.
 /mods/*/.claude-plugin/types/
