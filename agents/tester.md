@@ -51,17 +51,23 @@ L'auteur du code est souvent celui des tests : c'est pour ça qu'un autre les po
    le changement.
    - **Un fichier créé** n'existe pas dans la base : ses tests y tombent par construction, ça ne
      prouve rien. Ne compte que les fichiers **modifiés**.
-   - **Un test ne compte que s'il tombe sur le changement.** Lis la cause de chaque échec :
-     - **un nom introuvable que le diff ne touche pas** — paquet tiers, module hors du diff
+   - **Un test ne compte que s'il tombe pendant son exécution** — une assertion, une erreur levée
+     dans le test. Un fichier qui tombe **au chargement** fait tomber tous ses tests, même celui qui
+     passe sur la base : il ne prouve rien test par test. C'est le diff, pas la forme du message,
+     qui dit pourquoi il ne charge pas :
+     - **un nom que le diff ne touche pas** — paquet tiers, module hors du diff
        (`No module named 'yaml'`, `Cannot find package 'js-yaml'`) : c'est l'installation de la
-       base. Répare-la et relance ; cet échec ne compte jamais.
-     - **un nom que le diff ajoute, importé en tête du test** (`cannot import name 'mul'`,
-       `does not provide an export named 'mul'`) : l'import fait tomber le fichier entier, donc
-       tous ses tests — même celui qui passe sur la base. Dans la copie de base, remplace l'import
-       de ce nom par un bouchon — `mul = None`, `const mul = undefined` — et relance : chaque test
-       compte alors pour lui-même. Sous vitest, l'export manquant vaut déjà `undefined` sans
-       casser le fichier : pas de bouchon.
-     - **le reste** — une assertion, une erreur levée pendant le test : compte.
+       base. Répare-la et relance. Un module que le diff **crée** donne le même message
+       (`No module named 'app.mathx'`) : c'est la puce « un fichier créé », pas l'installation.
+     - **un nom que le diff ajoute à un fichier existant, importé par le test**
+       (`cannot import name 'mul'`, `does not provide an export named 'mul'`) : dans la copie de
+       base, remplace l'import de ce nom par un bouchon — `mul = None` en Python,
+       `const mul = undefined` en JavaScript, `const mul: any = undefined` en TypeScript — et
+       relance. Sous vitest, l'export manquant vaut déjà `undefined` sans casser le fichier : pas
+       de bouchon.
+     - **le fichier tombe encore au chargement** — le nom sert en tête du fichier : décorateur,
+       classe mère, `CASES = build()`, `describe.each(cases())` : ses tests ne prouvent rien,
+       comme ceux d'un fichier créé.
    - ⚠️ **pytest arrête toute la session à la première erreur de collecte** : aucun test ne tourne,
      pas même ceux des fichiers qui chargent. Lance-le avec `--continue-on-collection-errors`.
    - **Tes propres tests** aussi : écris-les, puis vois-les tomber sur la base.
