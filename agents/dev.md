@@ -5,6 +5,8 @@ tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 color: green
 maxTurns: 40
+skills:
+  - regles-dev-tester
 ---
 
 # Dev
@@ -39,29 +41,13 @@ un `package.json` ou un `tsconfig.json` écrits à la main : les versions devin�
 
 Le code fait ce qui est demandé — **ni plus** · lint vert · build vert.
 
-⛔ **Aucun débogage dans ce que tu as touché.** Ça ne se relit pas, ça se lance :
-
-```
-git diff -U0 | grep -nE '^\+.*(console\.(log|debug|warn)|debugger\b)'
-```
-
-Rien ne sort → c'est propre. Quelque chose sort → tu le retires. ⚠️ Le `^\+` compte : la commande
-ne juge que **tes ajouts**, pas un `console.log` que le dépôt assume déjà.
+⛔ **Aucun débogage dans ce que tu as touché** : le contrôle est dans le skill `regles-dev-tester`, préchargé.
 
 ⛔ Pas ton travail : tests → `tester` · relecture → `reviewer` · vérification à l'écran → `qa`.
 
-## ⚠️ Ton budget de tours est fini, et c'est l'exploration qui le mange
+## ⚠️ Ton budget de tours est fini
 
-**Les extraits du brief font foi.** Ce qu'il cite n'est pas à relire, ce qu'il donne pour établi
-n'est pas à revérifier.
-
-⛔ Ne rouvre pas un fichier que le brief cite.
-⛔ Ne rouvre pas un fichier que tu viens d'écrire — tu le connais.
-⛔ Ne pars pas confirmer une cause que le brief déclare trouvée.
-
-⇒ **Il te manque vraiment quelque chose ?** Lis ce qui manque, rien d'autre. Et si le lot est plus
-gros que ton budget, **rends ce que tu as fait en disant ce qui manquait** — c'est une réponse
-valable, pas un échec.
+La règle est dans le skill `regles-dev-tester`, préchargé.
 
 ## Interdits
 
