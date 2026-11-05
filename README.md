@@ -355,6 +355,31 @@ Lisent une surcharge : `/start-ticket`, `/new-ticket`, `/pr`, `/pr-review`,
 ⛔ Un projet ne redéclare pas une commande ou un skill sous le même nom : à nom égal, la version
 globale gagne et celle du projet est ignorée sans bruit.
 
+## Le plugin `atelier`
+
+Le dépôt est aussi un plugin, pour qui veut une version figée plutôt que `main` : agents,
+skills, commandes et hooks de garde, sans `CLAUDE.md` — un plugin ne le charge pas.
+
+**L'épingler.** Ajouter le catalogue **à un tag**, puis installer :
+
+```bash
+claude plugin marketplace add 'AxiaCoder/claude-config#atelier--v1.0.0'
+claude plugin install atelier@atelier
+```
+
+Ajouté sans `#<tag>`, le catalogue se lit sur `main` et suit chaque version publiée.
+
+⛔ **Le plugin ou `install.sh` sur un même poste, pas les deux** : chaque hook tournerait deux
+fois, et la détection de boucle de `guardrail.py` bloquerait dès le deuxième appel identique.
+
+**Publier une version.**
+
+1. Monter `version` dans `.claude-plugin/plugin.json` **et** dans `.claude-plugin/marketplace.json`,
+   puis le `ref` de ce dernier sur `atelier--v<version>`.
+2. Merger.
+3. Sur `main` à jour, depuis un arbre sans fichier non suivi : `claude plugin tag . --push`.
+   Il vérifie que les deux versions concordent, pas que le `ref` désigne le tag qu'il pose.
+
 ## Maintenance
 
 **Vérifier les liens.** Un lien cassé, ou remplacé par un vrai dossier, ne produit **aucune

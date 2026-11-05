@@ -12,6 +12,9 @@
 2. **Déclarer les hooks** dans l'overlay de l'OS — `settings.macos.json` ou
    `settings.windows.json`. ⛔ Avec `{{CLAUDE_HOME}}` pour le chemin, **jamais un chemin absolu**,
    et l'interpréteur de la plateforme : `python3` sur macOS, `{{PYTHON}}` sous Windows.
+   **Puis dans `hooks/hooks.json`**, celui du plugin `atelier`, avec `${CLAUDE_PLUGIN_ROOT}`
+   pour le chemin. ⛔ Un hook propre au poste — la télémétrie de `collecteur-agents.py` — n'y
+   entre pas.
 3. **Rendre la configuration** : `./install.sh` ou `.\install.ps1`.
 4. **Vérifier** — la section suivante, qui n'est pas optionnelle.
 
