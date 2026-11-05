@@ -6,6 +6,7 @@
 
 !/.gitignore
 !/.gitattributes
+!/.claude-plugin/
 !/README.md
 !/LICENSE
 !/CLAUDE.md

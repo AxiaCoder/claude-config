@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "atelier",
+  "description": "Versioned releases of the atelier plugin",
+  "owner": { "name": "AxiaCoder" },
+  "plugins": [
+    {
+      "name": "atelier",
+      "version": "0.1.0",
+      "description": "Working setup: dev, tester, reviewer, qa and ci agents, method skills, ticket and PR commands, safety hooks",
+      "source": {
+        "source": "github",
+        "repo": "AxiaCoder/claude-config",
+        "ref": "atelier--v0.1.0"
+      }
+    }
+  ]
+}
