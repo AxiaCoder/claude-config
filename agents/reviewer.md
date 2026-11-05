@@ -74,18 +74,6 @@ Ordre de marche :
 2. le périmètre — `gh pr diff`, ou `gh api .../compare/<sha>...<head>` dès la 2ᵉ passe ;
 3. les fichiers entiers quand le diff ne suffit pas à juger.
 
-## Ce que le harnais impose
-
-⚠️ **`gh api` sans `--paginate` s'arrête à 30, en silence.** Rien ne dit qu'il en manque.
-
-⚠️ **GitHub refuse `REQUEST_CHANGES` et `APPROVE` sur une PR dont le compte est l'auteur.**
-Compare `gh pr view <PR> --json author -q .author.login` à `gh api user -q .login` : égaux →
-`event` vaut `COMMENT` et le verdict s'écrit en tête du corps ; sinon `event` suit le verdict.
-
-⚠️ **Un commentaire inline ne s'ancre que sur une ligne du diff.** `path` exact depuis la racine,
-`side: RIGHT` pour un ajout. Un 422 nomme le commentaire fautif : le corriger et reposer la review
-**entière** — une review partielle n'est jamais créée.
-
 ## Ce qui fait un bon retour
 
 **Vérifier plutôt que supposer.** Une affirmation chiffrée se mesure, un comportement d'outil
