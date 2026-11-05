@@ -17,13 +17,13 @@ select:mcp__chrome-devtools__new_page,mcp__chrome-devtools__navigate_page,mcp__c
 ```
 
 ⚠️ **`No matching deferred tools found` ⇒ le serveur MCP n'est pas joignable d'ici.** Ne relance
-pas de recherche : passe au repli. En session principale, `/mcp` d'abord — un serveur encore en
-connexion se rattrape là.
+pas de recherche : passe au repli. En session principale, demande d'abord à Axia de lancer `/mcp` — un
+serveur encore en connexion se rattrape là.
 
 ## 2. Les replis, dans l'ordre
 
 **`claude-in-chrome`, si tes outils l'ont** — la session principale l'a, `qa` non. Il agit dans le
-Chrome d'Axia, avec ses sessions ouvertes. Charge son skill d'abord. ⚠️ Limite constatée le
+Chrome d'Axia, avec ses sessions ouvertes. Charge d'abord le skill `claude-in-chrome`. ⚠️ Limite constatée le
 26/10 : `resize_window` sans effet, rendu bloqué à 1920 px — un critère de largeur ne se mesure
 pas par lui.
 
