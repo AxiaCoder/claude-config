@@ -57,9 +57,8 @@ gh api "repos/<OWNER>/<REPO>/pulls/<PR>/reviews?per_page=100" --paginate \
 
 ⚠️ **Les trois morceaux réparent chacun une panne**, et les deux pannes sont muettes.
 
-`?per_page=100` **et** `--paginate` — sur tout appel `gh api` qui rend une liste : sans eux
-l'API s'arrête à **30** résultats, ici 30 reviews, page la plus
-ancienne d'abord. Passé ce seuil, `last` rend le sha d'une passe ancienne — donc un périmètre
+`?per_page=100` **et** `--paginate` : sans eux, tout appel `gh api` qui rend une liste
+s'arrête à **30** résultats. Ici, 30 reviews, page la plus ancienne d'abord. Passé ce seuil, `last` rend le sha d'une passe ancienne — donc un périmètre
 **trop large**, exactement ce que l'étape 2 existe pour empêcher. Et il s'atteint plus vite qu'il
 n'y paraît, parce que les réponses aux fils comptent aussi : sur une pull request fusionnée,
 **quatre passes réelles pesaient 30 reviews — le plafond, exactement**.
