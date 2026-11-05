@@ -445,6 +445,10 @@ Rien d'autre n'a été touché — ni `~/.claude`, ni la config git globale.
 Le `.gitignore` est un *deny-all* : rien n'est versionné sans figurer dans sa liste
 d'exceptions. Cette forme est délibérée — elle protège des fichiers qui n'existent pas encore.
 
+`skills/` suit la même règle, skill par skill : une skill neuve n'est versionnée qu'avec sa
+ligne `!/skills/<nom>/` dans le `.gitignore`. Le reste — cache et corbeille du harness, skills
+qu'un outil tiers installe sous `~/.claude/skills` — reste hors du dépôt.
+
 Ne jamais committer : `.claude.json` (il contient les jetons MCP en clair),
 `.credentials.json`, `history.jsonl`, `settings.local.json`.
 
