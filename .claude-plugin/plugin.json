@@ -1,0 +1,8 @@
+{
+  "name": "atelier",
+  "version": "1.0.0",
+  "description": "Working setup: dev, tester, reviewer, qa and ci agents, method skills, ticket and PR commands, safety hooks",
+  "author": { "name": "AxiaCoder" },
+  "repository": "https://github.com/AxiaCoder/claude-config",
+  "license": "MIT"
+}
