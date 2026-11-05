@@ -374,11 +374,18 @@ fois, et la détection de boucle de `guardrail.py` bloquerait dès le deuxième 
 
 **Publier une version.**
 
-1. Monter `version` dans `.claude-plugin/plugin.json` **et** dans `.claude-plugin/marketplace.json`,
-   puis le `ref` de ce dernier sur `atelier--v<version>`.
-2. Merger.
-3. Sur `main` à jour, depuis un arbre sans fichier non suivi : `claude plugin tag . --push`.
-   Il vérifie que les deux versions concordent, pas que le `ref` désigne le tag qu'il pose.
+**Rien à faire à la main** : release-please (`.github/workflows/release-please.yml`) s'en charge.
+
+1. Un merge `feat` ou `fix` sur `main` **ouvre ou met à jour la PR de release** : `version` montée
+   dans `.claude-plugin/plugin.json` et `.claude-plugin/marketplace.json`, `ref` du catalogue
+   aligné sur `atelier--v<version>`, entrée ajoutée au `CHANGELOG.md`.
+2. **Merger cette PR pose le tag** `atelier--v<version>`, avec sa GitHub Release.
+
+`docs`, `chore`, `test`… **ne montent rien**. D'où la règle : **le titre de PR suit les Conventional
+Commits**, c'est lui qui devient le message du commit sur `main`.
+
+**Prérequis unique** : Settings → Actions → General → cocher « Allow GitHub Actions to create and
+approve pull requests ».
 
 ## Maintenance
 
