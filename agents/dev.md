@@ -7,7 +7,6 @@ color: green
 maxTurns: 40
 skills:
   - regles-dev-tester
-  - atelier:regles-dev-tester
 ---
 
 # Dev
