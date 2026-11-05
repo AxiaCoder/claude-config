@@ -369,7 +369,7 @@ claude plugin install atelier@atelier
 
 Ajouté sans `#<tag>`, le catalogue se lit sur `main` et suit chaque version publiée.
 
-⛔ **Le plugin ou `install.sh` sur un même poste, pas les deux** : chaque hook tournerait deux
+⛔ **Le plugin ou l'installeur (`install.sh`, `install.ps1`) sur un même poste, pas les deux** : chaque hook tournerait deux
 fois, et la détection de boucle de `guardrail.py` bloquerait dès le deuxième appel identique.
 
 **Publier une version.**
