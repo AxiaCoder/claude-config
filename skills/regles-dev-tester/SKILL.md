@@ -21,7 +21,7 @@ ne juge que **tes ajouts**, pas un `console.log` que le dépôt assume déjà.
 
 **Pendant le travail, lance seulement les fichiers de tests que ton changement concerne** — chaque
 mutation, chaque essai de correctif, chaque test rouge. **La suite complète passe une fois, à la
-fin**, et une fois encore sur la base pour l'audit `TOMBENT`, ciblée elle aussi.
+fin.** Sur la base, pour l'audit `TOMBENT`, seulement les fichiers de tests recopiés.
 
 ⚠️ Une suite complète coûte des minutes : relancée à chaque essai, elle fait l'essentiel de la
 durée. Constaté le 13/11 sur MLT : un audit `tester` de 21 min, sept mutations, un brief qui ne
