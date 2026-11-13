@@ -66,4 +66,8 @@ de review modifie du code, donc fabrique la matière de la suivante.
 
 ## 6. Prêt
 
+**Avant d'afficher « Prêt », lis la spec parente, le code que le ticket touche et les commentaires du
+ticket, pas seulement sa description** — même sans demande de topo. Dis ce que le ticket ne dit pas
+(§ 2). Le topo reste sur demande ; la lecture, jamais.
+
 Affiche « Prêt à travailler sur <la clé du ticket> », et rappelle la suite : `/pr` quand c'est fait.
