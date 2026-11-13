@@ -25,7 +25,8 @@ savoir le code que tu vas écrire, je relis la PR. Si je te demande le topo sur 
 paraphraser le ticket. »*
 
 ⇒ **Ce qui mérite d'être dit en plus, c'est ce que le ticket ne dit pas** : une valeur qu'il oublie,
-une référence devenue fausse, une contrainte découverte en lisant le code.
+une référence devenue fausse, une contrainte découverte en lisant le code — donc après la lecture du
+§ 6, même si le topo est demandé avant.
 
 ## 3. Une interface sans maquette
 
@@ -65,5 +66,9 @@ sprint de leur parent. Pour le sprint lui-même : `/new-ticket` § « Le sprint 
 de review modifie du code, donc fabrique la matière de la suivante.
 
 ## 6. Prêt
+
+**Avant d'afficher « Prêt », lis la spec parente, le code que le ticket touche et les commentaires du
+ticket, pas seulement sa description** — même sans demande de topo. Dis ce que le ticket ne dit pas
+(§ 2). Le topo reste sur demande ; la lecture, jamais.
 
 Affiche « Prêt à travailler sur <la clé du ticket> », et rappelle la suite : `/pr` quand c'est fait.
