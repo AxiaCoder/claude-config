@@ -24,8 +24,8 @@ mutation, chaque essai de correctif, chaque test rouge. **La suite complète pas
 fin.** Sur la base, pour l'audit `TOMBENT`, seulement les fichiers de tests recopiés.
 
 ⚠️ Une suite complète coûte des minutes : relancée à chaque essai, elle fait l'essentiel de la
-durée. Constaté le 13/11 sur MLT : un audit `tester` de 21 min, sept mutations, un brief qui ne
-limitait pas les suites (~870 tests backend, ~880 frontend).
+durée. Constaté le 13/11 sur MLT : un audit `tester` de 21 min, sept mutations, un `CLAUDE.md` qui
+demandait les deux suites (~870 tests backend, ~880 frontend) après chaque modification.
 
 ⚠️ **Un échec isolé dans la suite complète, hors de ce que tu as touché** : relance ce fichier seul
 avant la suite entière.
