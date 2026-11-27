@@ -7,6 +7,10 @@
 !/.gitignore
 !/.gitattributes
 !/.claude-plugin/
+!/.github/
+!/release-please-config.json
+!/.release-please-manifest.json
+!/CHANGELOG.md
 !/README.md
 !/LICENSE
 !/CLAUDE.md

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "2b71cb6b6cf1224fa4cf601cceb06f204ec7bcef",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "component": "atelier",
+      "package-name": "atelier",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "tag-separator": "--",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": ".claude-plugin/marketplace.json",
+          "jsonpath": "$.plugins[0].version"
+        }
+      ]
+    }
+  }
+}
