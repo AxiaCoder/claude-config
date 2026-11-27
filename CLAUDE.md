@@ -55,9 +55,8 @@ par ses mérites, jamais en la raccrochant à une phrase de lui.
 
 ⚠️ **Doser selon l'enjeu.** Une décision qui change le travail ou coûte cher à défaire mérite son
 argumentaire ; une note de procédure, un détail d'outillage, une observation sans conséquence
-tiennent en une ligne — ou ne se disent pas. *« Tu me proposes un roman, j'en ai absolument rien à
-secouer de tout ce détail. »* Avant d'écrire plus de trois lignes : *qu'est-ce que ça change pour
-lui ?*
+tiennent en une ligne — ou ne se disent pas. Avant d'écrire plus de trois lignes : *qu'est-ce que
+ça change pour lui ?*
 
 ### Ne pas solliciter pour rien
 
